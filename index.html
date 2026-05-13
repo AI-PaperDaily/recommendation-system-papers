@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 论文推荐 | RecSys Papers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-gradient-start: #0f172a;
+            --bg-gradient-end: #1e1b4b;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --border: rgba(148, 163, 184, 0.2);
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --radius: 20px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 20px 80px;
+            position: relative;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            color: #c7d2fe;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 28px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+        
+        .hero-badge::before {
+            content: '🤖';
+            font-size: 1.2rem;
+        }
+        
+        .hero-badge span {
+            letter-spacing: 0.5px;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hero h1 span {
+            background: linear-gradient(135deg, #a5b4fc 0%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 40px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        
+        /* Platform Sections */
+        .platform-section {
+            margin-bottom: 60px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .section-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .section-icon.gongzhonghao {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+        
+        .section-icon.xiaohongshu {
+            background: linear-gradient(135deg, #e11d48 0%, #fb7185 100%);
+        }
+        
+        .section-info {
+            flex: 1;
+        }
+        
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+        
+        .section-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+        
+        .section-count {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        /* Article Cards */
+        .article-list {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .article-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .article-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
+        }
+        
+        .article-card:hover::before {
+            opacity: 1;
+        }
+        
+        .card-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .card-date {
+            color: var(--text-light);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .card-badge {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .card-action {
+            flex-shrink: 0;
+        }
+        
+        .card-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+        
+        .card-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+        
+        .card-link svg {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.3s ease;
+        }
+        
+        .card-link:hover svg {
+            transform: translateX(4px);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        
+        .empty-desc {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+        
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+        }
+        
+        footer p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: #a5b4fc;
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-stats {
+                gap: 24px;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            
+            .card-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .card-action {
+                width: 100%;
+            }
+            
+            .card-link {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .article-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        
+        .article-list .article-card:nth-child(1) { animation-delay: 0.1s; }
+        .article-list .article-card:nth-child(2) { animation-delay: 0.2s; }
+        .article-list .article-card:nth-child(3) { animation-delay: 0.3s; }
+        .article-list .article-card:nth-child(4) { animation-delay: 0.4s; }
+        .article-list .article-card:nth-child(5) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="hero">
+            <div class="hero-badge">
+                <span>每日精选 · 深度解读 · 推荐系统</span>
+            </div>
+            <h1>论文推荐 <span>RecSys Papers</span></h1>
+            <p>每日精选推荐系统领域最有价值的学术论文，用 AI 解读，用心呈现</p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">已发布文章</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">公众号深度解读</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">小红书精华</div>
+                </div>
+            </div>
+        </header>
+        <section class="platform-section">
+            <div class="section-header">
+                <div class="section-icon gongzhonghao">📝</div>
+                <div class="section-info">
+                    <h2 class="section-title">公众号深度解读</h2>
+                    <p class="section-subtitle">专业、详细、深入的技术分析</p>
+                </div>
+                <span class="section-count">1 篇</span>
+            </div>
+            <div class="article-list">
+                <article class="article-card">
+                    <div class="card-content">
+                        <div class="card-info">
+                            <div class="card-meta">
+                                <span class="card-date">2026-05-14</span>
+                                <span class="card-badge">推荐系统</span>
+                            </div>
+                            <h3 class="card-title">CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs</h3>
+                        </div>
+                        <div class="card-action">
+                            <a href="gongzhonghao/2026-05-14_CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs.md" class="card-link">
+                                阅读全文
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+        <section class="platform-section">
+            <div class="section-header">
+                <div class="section-icon xiaohongshu">✨</div>
+                <div class="section-info">
+                    <h2 class="section-title">小红书精华</h2>
+                    <p class="section-subtitle">简洁、活泼、随看随走的知识卡片</p>
+                </div>
+                <span class="section-count">0 篇</span>
+            </div>
+            <div class="empty-state">
+                <div class="empty-icon">✨</div>
+                <h3 class="empty-title">暂无小红书文章</h3>
+                <p class="empty-desc">小红书精华内容正在生成中，请稍候...</p>
+            </div>
+        </section>
+        <footer>
+            <p>由 <a href="#">Arxiv 推荐系统论文自动处理系统</a> 生成 · 每日自动更新</p>
+        </footer>
+    </div>
+</body>
+</html>
