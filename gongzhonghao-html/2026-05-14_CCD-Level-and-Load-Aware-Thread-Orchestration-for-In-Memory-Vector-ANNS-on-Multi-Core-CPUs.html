@@ -13,15 +13,15 @@
             --primary-dark: #4f46e5;
             --secondary: #8b5cf6;
             --accent: #f59e0b;
-            --bg-start: #0f172a;
-            --bg-end: #1e293b;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --text-light: #64748b;
-            --card-bg: rgba(30, 41, 59, 0.95);
-            --card-bg-light: rgba(51, 65, 85, 0.5);
-            --border: rgba(148, 163, 184, 0.15);
-            --code-bg: rgba(99, 102, 241, 0.15);
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -56,16 +56,16 @@
             font-size: 0.95rem;
             margin-bottom: 32px;
             padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.05);
+            background: #f8fafc;
             border: 1px solid var(--border);
             border-radius: 12px;
             transition: all 0.3s ease;
         }
         
         .back-link:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: #f1f5f9;
             border-color: var(--primary);
-            color: var(--text-primary);
+            color: var(--primary);
             transform: translateX(-4px);
         }
         
@@ -80,7 +80,7 @@
             padding: 48px;
             margin-bottom: 24px;
             border: 1px solid var(--border);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
         }
@@ -119,7 +119,7 @@
         .article-title {
             font-size: 2rem;
             font-weight: 700;
-            color: white;
+            color: #1e293b;
             line-height: 1.4;
             margin-bottom: 16px;
         }
@@ -143,12 +143,12 @@
             border-radius: 24px;
             padding: 48px;
             border: 1px solid var(--border);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
         }
         
         .article-content h1 {
             font-size: 1.6rem;
-            color: white;
+            color: #1e293b;
             margin: 40px 0 20px;
             padding-bottom: 16px;
             border-bottom: 2px solid transparent;
@@ -157,7 +157,7 @@
         
         .article-content h2 {
             font-size: 1.35rem;
-            color: white;
+            color: #1e293b;
             margin: 32px 0 16px;
             padding-left: 16px;
             border-left: 4px solid var(--primary);
@@ -165,7 +165,7 @@
         
         .article-content h3 {
             font-size: 1.15rem;
-            color: #c7d2fe;
+            color: #6366f1;
             margin: 28px 0 12px;
             padding-left: 12px;
             border-left: 3px solid var(--secondary);
@@ -203,16 +203,16 @@
         
         .article-content code {
             background: var(--code-bg);
-            color: #a5b4fc;
+            color: #4f46e5;
             padding: 3px 10px;
             border-radius: 6px;
             font-family: 'Fira Code', monospace;
             font-size: 0.88em;
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.15);
         }
         
         .article-content pre {
-            background: rgba(0, 0, 0, 0.4);
+            background: #f8fafc;
             border-radius: 16px;
             padding: 24px;
             margin: 24px 0;
@@ -228,7 +228,7 @@
             left: 0;
             right: 0;
             height: 40px;
-            background: rgba(255, 255, 255, 0.03);
+            background: #f1f5f9;
             border-radius: 16px 16px 0 0;
             border-bottom: 1px solid var(--border);
         }
@@ -237,7 +237,7 @@
             background: transparent;
             padding: 0;
             border: none;
-            color: #e2e8f0;
+            color: #1e293b;
             font-size: 0.9rem;
             line-height: 1.6;
         }
@@ -284,7 +284,7 @@
         }
         
         .article-content tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.02);
+            background: #f8fafc;
         }
         
         .article-content tr:hover {
@@ -292,15 +292,15 @@
         }
         
         .article-content a {
-            color: #818cf8;
+            color: #6366f1;
             text-decoration: none;
             border-bottom: 1px solid transparent;
             transition: all 0.3s ease;
         }
         
         .article-content a:hover {
-            color: #a5b4fc;
-            border-bottom-color: #a5b4fc;
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
         }
         
         .article-content hr {
@@ -312,24 +312,97 @@
         
         .article-content img {
             max-width: 100%;
+            max-height: 600px;
+            width: auto;
             height: auto;
             border-radius: 12px;
             margin: 20px 0;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
         }
         
         .article-content strong {
-            color: #c7d2fe;
+            color: #1e293b;
             font-weight: 600;
         }
         
         .article-content em {
-            color: #f0abfc;
+            color: #8b5cf6;
         }
         
         .highlight {
-            background: rgba(0, 0, 0, 0.3) !important;
+            background: rgba(99, 102, 241, 0.08) !important;
             border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
         }
         
         @media (max-width: 768px) {
@@ -358,8 +431,8 @@
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-link">
-            返回首页
+        <a href="../index.html" class="back-link">
+            ← 返回首页
         </a>
         
         <header class="article-header">
@@ -373,78 +446,85 @@
         </header>
         
         <article class="article-content">
-            <h1>小红书（RedNote）破解多核CPU向量搜索瓶颈：新框架吞吐量提升3.7倍，延迟降低90%！</h1>
-<h2>引言</h2>
-<p>在搜索、推荐和广告系统飞速发展的今天，<strong>向量近似最近邻搜索（ANNS）</strong>已成为支撑海量非结构化数据检索的核心引擎。以小红书（RedNote）为例，其服务承载着数亿月活用户（MAU），面对上千万级向量表，需要维持毫秒级延迟下数千万的每秒查询次数（QPS）。随着GPU成本高企，基于CPU的内存向量索引（如HNSW、IVF）成为更具性价比的选择。</p>
-<p>然而，现代CPU架构正经历从单芯片（Monolithic）向多芯片模组（CCD-based Multi-Chiplet）的转变。虽然核心数在增加，但一个棘手的问题随之浮现：<strong>简单地增加CPU核心数量，并不能带来线性的性能提升</strong>。论文研究者发现，在真实生产环境中，向量搜索呈现出高度的访问局部性，而现有线程调度策略未能适配CCD架构下独立L3缓存的硬件特性，导致严重的缓存污染和负载不均衡。针对这一痛点，论文提出了一种<strong>CCD级别、负载感知的线程编排框架</strong>，通过缓存友好的任务分发和拓扑感知的任务窃取，实现了吞吐量最高<strong>3.7倍</strong>的提升，并将P99.9延迟降低了<strong>90%</strong>。</p>
-<p><img alt="图1：RedNote服务中非CCD与CCD架构CPU的部署比例变化" src="https://arxiv.org/html/2605.10090v1/x1.png" /><br />
-<em>图1展示了RedNote近年来在服务中部署CCD架构CPU的比例持续上升，目前已几乎取代了传统的单芯片CPU。这意味着面向CCD架构的优化已成为提升服务性能的必经之路。</em></p>
-<h2>一、背景：为什么核心越多，性能越差？</h2>
-<h3>1.1 向量索引的工作负载特征</h3>
-<p>论文关注的两种主流索引——<strong>HNSW（分层可导航小世界图）</strong>和<strong>IVF（倒排文件索引）</strong>，在工作负载上呈现出显著的内存访问压力。</p>
-<ul>
-<li><strong>HNSW搜索</strong>：通过在多层图中进行贪心遍历，每一步都涉及大量随机内存访问来读取邻居节点。</li>
-<li><strong>IVF搜索</strong>：需要扫描多个候选簇（Cluster）中的所有向量进行距离计算，对内存带宽形成巨大压力。</li>
-</ul>
-<p><img alt="图2：HNSW和IVF的搜索过程" src="https://arxiv.org/html/2605.10090v1/x2.png" /><br />
-<em>图2展示了HNSW的多层图遍历过程（a）和IVF的簇扫描与距离计算过程（b）。两者都极易受到内存访问延迟的影响。</em></p>
-<h3>1.2 CCD架构的内在矛盾</h3>
-<p>如图3所示，现代CCD架构CPU（如AMD EPYC系列）将一个物理芯片划分为多个<strong>Core Complex Die（CCD）</strong>。每个CCD内的核心共享一个独立的末级缓存（L3 Cache），而非全局共享。这意味着，如果两个“热点”数据表或簇的任务被分发到同一个CCD，它们的缓存会互相“污染”，频繁的缓存驱逐会使得大量内存访问退化到慢速的DRAM上。</p>
-<p><img alt="图3：单芯片CPU与CCD多核CPU架构对比" src="https://arxiv.org/html/2605.10090v1/x4.png" /><br />
-<em>图3清晰对比了两种架构。在CCD架构中，L3缓存是每个CCD私有的，跨CCD的缓存访问延迟显著增加。</em></p>
-<h2>二、核心方法：CCD级别的线程编排</h2>
-<p>为解决上述问题，论文设计了一个统一的、即插即用的线程编排框架。该框架包含三个核心组件。</p>
-<h3>2.1 统一任务提交接口</h3>
-<p>论文首先为HNSW和IVF这两种不同的索引结构定义了一个统一的抽象接口<code>submit()</code>。该接口将HNSW的单表查询和IVF的单个簇扫描都封装为“任务”，并使用统一的<code>Mapping_ID</code>（表ID或簇ID）进行标识。这使得调度框架能以内核无关的方式管理所有搜索任务。</p>
-<h3>2.2 缓存友好的任务分发与动态适配</h3>
-<p>这是框架中最具技术含量的核心创新。为应对内存访问流量的极端倾斜（如图6所示），论文提出了一种<strong>负载感知的缓存友好映射策略</strong>。</p>
-<p>首先，为了量化不同任务的内存访问量，论文给出了近似估算公式：</p>
-<p>对于HNSW的一个查询，其内存访问流量估算为：<br />
-$$T_{\mathrm{HNSW}} \approx N \cdot (B_v + M \cdot s_{id}) + \delta_{\mathrm{meta}}$$<br />
-其中，$N$是访问节点数，$B_v$是单个向量字节数，$M$是节点出度，$s_{id}$是ID字节数。</p>
-<p>对于IVF的一个簇列表 $\mathcal{L}<em>i$，其访问流量为：<br />
-$$T</em>{\mathrm{IVF}}(\mathcal{L}_i) \approx S_i \cdot B_v$$<br />
-其中 $S_i$ 是该簇中扫描的向量数量。</p>
-<p>基于这些实时估算的流量，调度器执行一种巧妙的<strong>“热-冷配对”</strong>算法（如图11策略）：</p>
-<blockquote>
-<p><strong>核心规则</strong>：将内存流量最大的“热”任务与流量最小的“冷”任务配对，放置到同一个CCD上。这能避免两个“热”任务在同一个CCD的L3缓存中互相“打架”（热-热共置导致缓存污染），同时充分利用缓存的“热”数据。</p>
-</blockquote>
-<p><img alt="图11：热-热共置与热-冷共置的缓存效果对比" src="https://arxiv.org/html/2605.10090v1/x18.png" /><br />
-<em>图11左侧展示了热-热共置导致的缓存污染；右侧展示了热-冷共置方案，冷任务访问量小，不影响热任务在L3缓存中的驻留，从而显著提升缓存命中率。</em></p>
-<h3>2.3 CCD感知的任务窃取</h3>
-<p>即便有精细的任务分发，负载不均衡依然存在。传统的“工作窃取”（Work Stealing）算法会允许空闲线程随机窃取其他线程的任务，但这在CCD架构下可能导致灾难性后果：一个线程从另一个CCD窃取任务后，会发现该任务所需的“热”数据不在本地L3缓存中（如图13所示）。</p>
-<p><img alt="图13：跨CCD任务窃取导致缓存失效" src="https://arxiv.org/html/2605.10090v1/x20.png" /><br />
-<em>图13展示了跨CCD窃取的危害：Core X从另一个CCD窃取了查询Q1，但Q1相关的数据集（T|C 1）缓存在远程CCD的L3中，导致Core X产生大量缓存未命中。</em></p>
-<p>为此，论文提出了<strong>层级化、拓扑感知的任务窃取策略</strong>：<br />
-1.  <strong>本地优先</strong>：首先从自己的任务队列中取出任务。<br />
-2.  <strong>同CCD窃取</strong>：如果本地队列为空，优先从<strong>同一个CCD</strong>的其他核心窃取任务。这能最大限度地保证“热”数据依然在本地L3缓存中。<br />
-3.  <strong>跨CCD窃取</strong>：只有当同一个CCD内的所有核心都空闲时，才允许跨CCD窃取，作为最后的负载均衡手段。</p>
-<h2>三、实验效果：从数据中看真相</h2>
-<h3>3.1 吞吐量和延迟的惊人提升</h3>
-<p>在基于AMD 4代EPYC 96核处理器的真实生产负载测试中，该框架（论文中称为V2）取得了显著效果。</p>
-<ul>
-<li><strong>吞吐量</strong>：相比原始轮询调度（V0），V2的吞吐量提升了<strong>1.4倍至3.7倍</strong>。</li>
-<li><strong>延迟</strong>：P50（中位数）和P999（极端尾部）延迟分别降低了<strong>30%至90%</strong>。</li>
-</ul>
-<p><img alt="图14、15：HNSW和IVF在CCD扩展下的饱和吞吐量对比" src="https://arxiv.org/html/2605.10090v1/x21.png" /><br />
-<em>图14展示了HNSW搜索在96核CPU上，V2框架的吞吐量随核心数增长接近线性，远超V1和V0。</em></p>
-<h3>3.2 机制分析：缓存和CPU效率的改善</h3>
-<p>深入的机制分析揭示了性能提升的根本原因：</p>
-<ul>
-<li><strong>缓存命中率</strong>：得益于“热-冷”共置和同CCD窃取策略，L3缓存未命中率降低了<strong>6%至30%</strong>。</li>
-<li><strong>CPU停滞</strong>：由于减少了因等待内存数据而产生的CPU停滞周期（Stall），总CPU停滞时间降低了<strong>20%至80%</strong>。</li>
-<li><strong>跨CCD窃取</strong>：V2框架将跨CCD窃取的比例从V1的70-80%显著降低至<strong>5-10%</strong>，证明了拓扑感知窃取策略的有效性。</li>
-</ul>
-<p><img alt="图18、19：L3缓存未命中率和CPU停滞以及跨CCD窃取行为的对比" src="https://arxiv.org/html/2605.10090v1/x27.png" /><br />
-<em>图18显示了V2框架在不同CCD上均实现了最低的缓存未命中率；图19则量化了V2在降低CPU停滞和跨CCD窃取行为上的显著优势。</em></p>
-<h3>3.3 在线服务稳定性</h3>
-<p>在长达1000秒的在线压测中，V2框架还能提供更稳定、抖动更小的平均响应延迟，展现出了更优的服务质量（QoS）。</p>
-<h2>四、展望</h2>
-<p>这篇论文不仅为小红书（RedNote）带来了显著的性能提升，更为业界提供了一套<strong>可借鉴的、面向现代多芯片CPU架构的通用优化范式</strong>。它深刻揭示了“软件需要深刻理解硬件”这一永恒真理。在AI大模型和RAG应用越来越依赖向量搜索的未来，这类贴近硬件的极致优化将成为决定系统性能天花板的关键。</p>
-<p>随着L3缓存容量因CCD架构而持续增长，这种“任务与数据共置”的线程编排思想，有望在更多内存密集型计算场景中发挥巨大价值。未来的向量数据库和搜索系统，或许都将标配一个“芯片拓扑感知”的调度器。这对你的项目有什么启发？欢迎在评论区讨论。</p>
+            <h1>小红书向量检索吞吐提升3.7倍：CCD感知线程编排框架揭秘</h1>
+<h2>一、引言</h2>
+<p>在大模型时代，向量检索已成为搜索引擎、推荐系统和广告服务的核心技术基石。然而，当业务规模持续增长，单纯增加CPU核心数是否就能带来性能的线性提升？小红书的工程师们在实践中发现了一个令人意外的事实：在现代CCD（Core Complex Die）多核CPU架构上，简单增加核心不仅没有带来预期的性能提升，反而导致了不少于18%的效率损失。</p>
+<p>通过对百万级生产环境负载的深入分析，研究者们揭示了问题的根源：传统线程调度策略忽视了多芯片CPU独特的缓存层次结构，导致严重的跨芯片缓存污染和核心负载不均衡。针对这一发现，论文提出了一套CCD感知的负载感知线程编排框架，在实际生产负载中实现了最高3.7倍的吞吐量提升，并将P50和P999延迟降低了30%-90%。这一成果为现代多核CPU上的向量检索优化提供了全新的思路。</p>
+<h2>二、背景：CCD架构带来的机遇与挑战</h2>
+<h3>2.1 现代CPU的芯片化革命</h3>
+<p><img alt="图1：单芯片CPU vs CCD多核CPU" src="https://arxiv.org/html/2605.10090v1/x4.png" /></p>
+<p>随着工艺制程接近物理极限，传统单芯片CPU的扩展遇到了瓶颈。如图1所示，以AMD EPYC系列为代表的现代CPU转向了多芯片（Chiplet）设计。每个CCD包含一组核心，它们共享一个本地末级缓存（L3/LLC），但不同的CCD之间不再共享缓存。这种架构的特点意味着：<strong>缓存局部性被局限在CCD级别</strong>，跨CCD的访问会带来显著的内存延迟。</p>
+<h3>2.2 生产环境的真实瓶颈</h3>
+<p>研究者从小红书实际生产环境分析了60个HNSW表和15个IVF索引的工作负载特征，发现了三个关键的观察：</p>
+<ol>
+<li><strong>访问局部性</strong>：短时间窗口内，针对同一向量表的查询通常会访问重叠的向量子集，表现出明显的内存局部性</li>
+<li><strong>缓存污染</strong>：不当的任务分配到不同CCD会导致热点表的缓存频繁被其他请求污染，破坏了本该有的缓存亲和性</li>
+<li><strong>负载不均衡</strong>：不同向量表的搜索开销差异可达数个数量级，而传统的任务窃取策略会进一步加剧跨芯片缓存浪费</li>
+</ol>
+<h3>2.3 性能瓶颈的量化分析</h3>
+<p><img alt="图5：CCD多核CPU上的性能扩展趋势" src="https://arxiv.org/html/2605.10090v1/x7.png" /></p>
+<p>从图5可以直观看到，传统调度策略（V0）在核心数从16增加到96时，吞吐量扩展效率仅达到82%。更糟糕的是，当核心数超过32后，IVF表的增加带来的收益几乎可以忽略不计。这表明现代CCD架构上的向量检索，<strong>核心数增加与性能提升之间存在巨大的效率鸿沟</strong>。</p>
+<h2>三、核心方法：CCD感知的线程编排框架</h2>
+<p>针对上述问题，论文提出了一套三层架构的解决方案，包含统一任务提交接口、CCD感知的任务调度器和拓扑感知的任务窃取策略。</p>
+<h3>3.1 统一的任务提交接口</h3>
+<p>为了兼容HNSW和IVF两种主流索引，论文设计了统一的<code>submit(search_functor, query, Mapping_ID)</code>接口。其中<code>Mapping_ID</code>抽象地表示一个HNSW表或IVF的一个聚类列表，底层的调度逻辑对上层索引实现完全透明。</p>
+<h3>3.2 内存流量感知的热-冷协同调度</h3>
+<p>论文通过一个关键公式来近似估算每次搜索的内存流量：</p>
+<p>对于HNSW搜索：<br />
+$$T_{\mathrm{HNSW}} \approx N \cdot (B_v + M \cdot s_{\mathrm{id}})$$</p>
+<p>其中，$N$是访问的节点数，$B_v = D \cdot s_v$是每个向量的负载大小（$D$为维度，$s_v$为每个元素字节数），$M$是每个节点的出度。</p>
+<p>对于IVF列表扫描：<br />
+$$T_{\mathrm{IVF}}(\mathcal{L}_i) \approx S_i \cdot B_v$$</p>
+<p>其中，$S_i$是第$i$个列表中被扫描的向量数量。</p>
+<p>基于这些近似估算，任务调度器实现了一种<strong>热-冷协同配对算法</strong>：将内存流量大的“热”表与流量小的“冷”表配对分配到同一CCD，从而最大化缓存驻留率，同时平衡各CCD之间的内存流量负载。</p>
+<p><img alt="图11：热-热 vs 热-冷分配的缓存亲和性对比" src="https://arxiv.org/html/2605.10090v1/x18.png" /></p>
+<p>如图11所示，当两个热点表被分配到同一CCD时，它们会互相竞争有限的L3缓存空间，导致频繁的缓存驱逐（图左）。相反，将热点表与冷表配对（图右），冷表的低频访问基本不会影响热点表的工作集驻留，从而实现了最佳的缓存利用率。</p>
+<h3>3.3 拓扑感知的任务窃取</h3>
+<p>在负载均衡方面，传统的工作窃取策略会导致跨CCD的窃取高达75%以上，严重破坏了缓存亲和性。论文提出了分层优先级任务窃取算法：</p>
+<p><img alt="图13：CCD内 vs 跨CCD任务窃取的缓存亲和性" src="https://arxiv.org/html/2605.10090v1/x20.png" /></p>
+<p>如图13所示，核心的窃取策略遵循三级层级：首先尝试从本地队列获取任务，其次从同一CCD的其他核心窃取，最后才考虑跨CCD窃取。这种策略将跨CCD窃取比例从75%降低到不足10%，极大地减少了缓存浪费。</p>
+<h2>四、实验验证：3.7倍吞吐量提升的实证</h2>
+<h3>4.1 实验设置</h3>
+<p>研究者在两代AMD EPYC处理器上进行评估：<br />
+- <strong>4代Genoa 96核</strong>：12个CCD，每个CCD 8核心，32MB L3缓存<br />
+- <strong>2代Rome 48核</strong>：12个CCD，每个CCD 4核心，16MB L3缓存</p>
+<p>对比了三种方案：<br />
+- <strong>V0 (RR)</strong>：原始轮询调度框架<br />
+- <strong>V1 (bthread)</strong>：传统工作窃取调度框架<br />
+- <strong>V2 (CCD)</strong>：论文提出的CCD感知框架</p>
+<h3>4.2 整体性能对比</h3>
+<p><img alt="图14：不同核心数下HNSW的饱和吞吐量对比" src="https://arxiv.org/html/2605.10090v1/x21.png" /></p>
+<p>从图14可以清晰看到，V2方案在全部核心范围内都保持最高吞吐量。在96核配置下，HNSW吞吐量突破10万QPS，比V1提升约1.7倍，比V0提升超过2倍。对于IVF（图15），V2同样实现了显著提升，在96核达到约3.5万QPS，而V0仅有1万QPS。这意味着<strong>3.5倍的吞吐量提升</strong>，性能差距随核心数增加而扩大。</p>
+<h3>4.3 延迟性能</h3>
+<p>在延迟方面，V2在P50和P999延迟上都显著优于V1和V0。以P999延迟为例，V2相比V1降低了30-90%，这得益于改进的缓存亲和性减少了长延迟的内存访问。</p>
+<h3>4.4 缓存命中率与CPU停顿</h3>
+<p><img alt="图18：L3缓存未命中率对比" src="https://arxiv.org/html/2605.10090v1/x29.png" /></p>
+<p>图18显示了V2在L3缓存未命中率上的显著优势。对于HNSW，V2的跨所有CCD的缓存未命中率比V1降低6-30%。同时，CPU停顿时间减少了20-80%，这意味着核心的执行效率大幅提升。</p>
+<h2>五、总结与展望</h2>
+<p>在CCD多核CPU时代，向量检索的性能优化已经从简单的核心堆叠转向了对硬件拓扑的深度理解。小红书提出的这套CCD感知线程编排框架，通过创新的热-冷协同调度和拓扑感知任务窃取策略，成功将现代多核CPU的硬件潜力转化为可量化的性能收益——3.7倍吞吐量提升、30-90%延迟降低。</p>
+<p>这项工作的启示是：<strong>未来的高性能向量检索系统，必须将硬件架构特征纳入软件设计的核心考量</strong>。随着CPU芯片化趋势的持续深化，这种“硬件-软件协同设计”的思路，将成为所有追求极致性能系统的必修课。对于开发者而言，当遇到核心数增加但性能不再提升的困境时，不妨思考：是否忽略了CPU内部的缓存拓扑特征？</p>
 <p><strong>论文标题</strong>：CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.10090v1.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-14_CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+            </div>
+        </div>
+
     </div>
 </body>
 </html>
