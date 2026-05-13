@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #0f172a;
+            --bg-end: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-light: #64748b;
+            --card-bg: rgba(30, 41, 59, 0.95);
+            --card-bg-light: rgba(51, 65, 85, 0.5);
+            --border: rgba(148, 163, 184, 0.15);
+            --code-bg: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            color: var(--text-primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: white;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: white;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #c7d2fe;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #a5b4fc;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        .article-content pre {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 14px 20px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content a {
+            color: #818cf8;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #a5b4fc;
+            border-bottom-color: #a5b4fc;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .article-content strong {
+            color: #c7d2fe;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #f0abfc;
+        }
+        
+        .highlight {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border-radius: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">
+            返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-14</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>小红书向量搜索3.7倍性能突破：CCD架构下的负载感知线程编排</h1>
+<h2>一、引言</h2>
+<p>在搜索、推荐和广告等核心互联网服务中，向量近似最近邻搜索（ANNS）是不可或缺的基础技术。随着业务规模的增长，小红书（RedNote）部署了数百万级别的向量表，需要支撑数千万的每秒查询量（QPS），同时保证毫秒级的响应延迟。为了应对这一挑战，现代多核CPU通过Core-Complex-Dies（CCD）架构扩展核心数量，然而，仅仅增加核心并不能带来理想的性能线性提升。</p>
+<p>一项来自小红书工程团队的深入研究揭示了这一问题的本质：传统调度方式忽视了CCD架构的独特特性——每个CCD拥有独立的末级缓存（L3 cache），不恰当的任务分发会导致跨芯片的缓存污染和内存访问竞争。论文提出了一种CCD级别和负载感知的线程编排框架，在真实生产负载下实现了<strong>最高3.7倍的吞吐量提升</strong>，并将P50和P999延迟降低了<strong>30%至90%</strong>。</p>
+<h2>二、核心方法：CCD级负载感知的线程编排</h2>
+<p>论文针对当前最主流的两种向量索引——基于图的<strong>HNSW</strong>和基于聚类的<strong>IVF</strong>——设计了一套<strong>「即插即用」</strong>的统一线程编排框架。该框架由三大核心组件构成，深入解决了CCD架构下的性能瓶颈。</p>
+<h3>2.1 CCD级任务统一提交</h3>
+<p>论文首先定义了一个统一的接口 <code>submit(search_functor, query, Mapping_ID)</code> ，实现了对HNSW和IVF两种索引的<strong>零源码修改</strong>集成。</p>
+<p><img alt="图1：CCD级任务提交的工作流" src="https://arxiv.org/html/2605.10090v1/x17.png" /></p>
+<p>在该接口中，<code>Mapping_ID</code> 是一个关键抽象，它将HNSW的表ID和IVF的簇ID统一为同一个概念。调度器通过这个ID来决定任务应该被路由到哪个CCD，从而解耦了任务提交与硬件拓扑。</p>
+<ul>
+<li>对于HNSW：每个请求包装为一个独立任务，提交给指定CCD的单个核心执行。</li>
+<li>对于IVF：一个查询分解为多个<strong>簇扫描子任务</strong>，每个子任务对应一个 <code>table-cluster_id</code>，可以分布式地在多个CCD上的多个核心并行执行。</li>
+</ul>
+<h3>2.2 负载感知的任务分发与动态适配</h3>
+<p>CCD架构的核心挑战在于：每个CCD拥有独立的L3缓存（LLC），跨CCD的数据访问延迟远高于本地访问。论文通过分析真实流量发现，向量搜索存在<strong>高度访问局部性</strong>和<strong>极端的流量偏斜</strong>。</p>
+<p><img alt="图2：热-热 vs 热-冷调度的缓存亲和性" src="https://arxiv.org/html/2605.10090v1/x18.png" /></p>
+<p>如果两个<strong>热表</strong>（高流量表）被分配到同一个CCD，它们会相互争抢有限的L3缓存，发生<strong>互斥的缓存污染</strong>。如果将一个热表和一个冷表配对，则热表的频繁访问数据可以更稳定地驻留在L3缓存中。</p>
+<p>论文为此设计了一个<strong>贪心的热-冷配对算法</strong>：</p>
+<ol>
+<li>通过低开销的在线估计方法计算每个HNSW表（或IVF簇）的<strong>内存流量</strong>。</li>
+<li>按内存流量降序排列所有任务，采用<strong>双端扫描</strong>策略，将当前最热的任务与最冷的任务配对。</li>
+<li>将配对后的任务分配给当前负载最轻的CCD，确保每个CCD的总内存流量大致均衡。</li>
+</ol>
+<p>公式：内存流量近似估算<br />
+对于HNSW，每次查询的内存流量估算公式为：<br />
+$$ T_{\mathrm{HNSW}} \approx N\cdot\left(B_v + M\cdot s_{\mathrm{id}}\right) + \delta_{\mathrm{meta}} $$<br />
+其中，$N$ 为访问的节点数，$B_v$ 为向量数据大小，$M$ 为节点出度，$\delta_{\mathrm{meta}}$ 为拓扑维护的微小开销。</p>
+<p>为了适应动态变化的流量模式，论文引入了<strong>快照交换</strong>机制：以分钟级的时间窗口汇聚流量统计，在后台计算出新的CCD映射关系，等到新快照就绪后原子性地切换到生产环境，保证在重新配置期间的延迟稳定。</p>
+<h3>2.3 CCD感知的任务窃取</h3>
+<p>在分布式任务调度中，工作窃取（Work-Stealing）是解决负载不均的经典方案。但在CCD架构下，不加限制的窃取会导致灾难性的性能下降：当一个核心窃取另一个CCD上的任务时，后续执行的所有内存访问都会错过本地的L3缓存。</p>
+<p><img alt="图3：CCD内与跨CCD任务窃取的缓存亲和性" src="https://arxiv.org/html/2605.10090v1/x20.png" /></p>
+<p>论文提出<strong>层次化窃取策略</strong>：<br />
+1. <strong>优先同CCD窃取</strong>：闲置核心首先尝试从同CCD内其他核心的队列中窃取任务，保证数据依然驻留在本CCD的L3缓存中。<br />
+2. <strong>跨CCD兜底</strong>：只有当前CCD所有核心都空闲时，才尝试从其他CCD窃取任务。</p>
+<p>通过这一策略，论文将跨CCD的窃取比例从原有方案的<strong>75%以上（HNSW）/80%以上（IVF）</strong> 急剧降低至<strong>不到10%/5%</strong>，极大地提升了缓存命中率。</p>
+<h2>三、实验效果：跨越硬件代际的性能飞跃</h2>
+<p>论文在<strong>两代AMD EPYC处理器</strong>上进行了全面的评价，包括4th Gen 96核（12个CCD）和2nd Gen 48核平台，采用来自小红书生产环境的真实流量作为测试负载。</p>
+<h3>3.1 饱和吞吐量</h3>
+<p><img alt="图4：HNSW在96核CPU上的饱和吞吐量" src="https://arxiv.org/html/2605.10090v1/x21.png" /></p>
+<p>在96核处理器上，论文提出的V2（CCD）方案相比传统的轮询调度（V0）和未感知CCD的bthread方案（V1），展现出<strong>接近线性的性能扩展</strong>。随着CCD数量从1增加到12，HNSW的吞吐量从约10K QPS提升至<strong>超过100K QPS</strong>；IVF也从约5K QPS提升至<strong>超过35K QPS</strong>，分别是V1方案的约1.5倍和3.5倍。</p>
+<h3>3.2 延迟大幅下降</h3>
+<p><img alt="图5：P50和P999搜索时延对比" src="https://arxiv.org/html/2605.10090v1/x25.png" /></p>
+<p>论文对比了V2与V1的<strong>中位数（P50）</strong> 和<strong>尾延迟（P999）</strong>：<br />
+- <strong>P50延迟</strong>：对于HNSW，V2的P50延迟普遍低于V1约<strong>40%~60%</strong>；对于IVF，V2也稳定低于V1约<strong>30%</strong>。<br />
+- <strong>P999尾延迟</strong>：V2凭借更稳定的缓存亲和性和负载均衡，在HNSW上实现了进一步的延迟降低，减少了<strong>长期任务的抖动</strong>。</p>
+<h3>3.3 核心性能指标</h3>
+<p>论文还分析了L3缓存命中率和CPU停顿，量化证明了优化效果：<br />
+- <strong>缓存缺失率</strong>：V2在各CCD上的L3缓存缺失率相比V0和V1下降了<strong>6%~30%</strong>。<br />
+- <strong>CPU停顿</strong>：由于减少了慢速内存访问，CPU停顿时间减少了<strong>20%~80%</strong>，意味着核心的有效利用率大幅提升。</p>
+<h2>四、展望与应用</h2>
+<p>小红书提出的这项研究，<strong>首次</strong>在工业级大规模向量搜索场景中，将线程编排与CCD架构的硬件特性进行了深度协同设计。这不仅解决了当前搜索、推荐、广告等业务的性能瓶颈，也为未来更细粒度的任务-线程编排提供了新的思路。</p>
+<p>在量化压缩技术和向量搜索快速迭代的背景下，随着L3缓存的规模持续增长，这种方法论的潜力将进一步被放大。对于每一位追求极致的系统工程师而言，论文揭示了一个值得深思的问题：<strong>当「多芯」CPU成为主流，你的软件真的准备好「拥抱」每一片L3缓存了吗？</strong></p>
+<p><strong>论文标题</strong>：CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+    </div>
+</body>
+</html>
