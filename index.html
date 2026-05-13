@@ -79,7 +79,7 @@
         }
         
         .hero-badge::before {
-            content: '🤖';
+            content: '📚';
             font-size: 1.2rem;
         }
         
@@ -266,6 +266,17 @@
             font-weight: 600;
             color: var(--text-primary);
             line-height: 1.4;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .card-preview {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
             margin-bottom: 0;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -415,7 +426,7 @@
                 <span>每日精选 · 深度解读 · 推荐系统</span>
             </div>
             <h1>论文推荐 <span>RecSys Papers</span></h1>
-            <p>每日精选推荐系统领域最有价值的学术论文，用 AI 解读，用心呈现</p>
+            <p>每日精选推荐系统领域最有价值的学术论文，深度解读，用心呈现</p>
             <div class="hero-stats">
                 <div class="stat">
                     <div class="stat-value">1</div>
@@ -440,7 +451,8 @@
                                 <span class="card-date">2026-05-14</span>
                                 <span class="card-badge">推荐系统</span>
                             </div>
-                            <h3 class="card-title">CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs.html</h3>
+                            <h3 class="card-title">CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs</h3>
+                            <p class="card-preview">CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs :root { -...</p>
                         </div>
                         <div class="card-action">
                             <a href="gongzhonghao-html/2026-05-14_CCD-Level-and-Load-Aware-Thread-Orchestration-for-In-Memory-Vector-ANNS-on-Multi-Core-CPUs.html" class="card-link">
