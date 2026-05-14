@@ -7,6 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -446,61 +449,61 @@
         </header>
         
         <article class="article-content">
-            <h1>小红书3.7倍吞吐量突破：CCD感知的向量检索线程编排，让96核CPU性能最大化？</h1>
-<p>在大模型和搜索推荐系统蓬勃发展的今天，<strong>向量近似最近邻搜索（ANNS）</strong> 已经成为支撑搜索引擎、推荐系统和广告服务的核心基础设施。然而，随着业务规模的持续扩张，一个现实问题摆在工程师面前：<strong>为什么CPU核心数不断增加，向量检索的性能却无法线性提升？</strong></p>
-<p>近日，小红书（RedNote）的研究团队发表了一篇引人瞩目的论文，深入剖析了现代多核CPU架构下向量检索的性能瓶颈，并提出了一套<strong>CCD级别、负载感知的线程编排框架</strong>。在真实生产环境中，该方法带来了<strong>高达3.7倍的吞吐量提升</strong>，并将P50和P999延迟分别降低了<strong>30%和90%</strong>。本文将深度解析这项技术的核心原理与实现细节。</p>
-<h2>一、背景与痛点：现代CPU的“多核陷阱”</h2>
-<p>随着工艺极限的到来，传统单芯片CPU（Monolithic CPU）已难以大规模扩展核心数量。因此，现代服务器CPU（如AMD EPYC系列）普遍采用<strong>CCD（Core-Complex Die，核心复杂芯片）架构</strong>。</p>
-<p><img alt="图1：单芯片CPU与CCD多芯片CPU对比" src="https://arxiv.org/html/2605.10090v1/x4.png" /><br />
-<em>图注：CCD架构下，每个芯片拥有独立的L3缓存，这带来了新的局部性挑战。</em></p>
-<p>与传统单芯片设计不同，CCD架构将多个核心打包在一个芯片上，每个芯片拥有自己独立的<strong>末级缓存（LLC/L3）</strong>。这种设计带来了两个关键问题：<br />
-1.  <strong>无共享LLC</strong>：跨CCD访问数据将导致缓存缺失和远程内存访问延迟。<br />
-2.  <strong>任务调度与缓存局部性失配</strong>：若不加优化地调度向量搜索任务，极易造成CCD间的缓存污染和内存带宽争抢。</p>
-<p>研究人员对小红书线上的HNSW和IVF索引进行测试后发现，<strong>简单增加CPU核心数</strong>（从16核到96核），实际吞吐量仅达到理想值的82%，且IVF索引的缩放效率更差。</p>
-<h2>二、核心洞察：生产环境中向量请求的“热点”与“偏斜”</h2>
-<p>为了探寻效率低下的根源，研究者深入分析了实际生产环境的请求特征。</p>
-<p><strong>发现一：请求存在显著的访问局部性。</strong><br />
-在短时间内，连续查询往往会反复访问图中相同的节点或IVF中的相同聚类列表。如图2所示，无论是HNSW还是IVF，其访问频率分布都呈现出<strong>长尾效应</strong>：少量热点节点/列表承担了绝大部分的查询流量。</p>
-<p><img alt="图2：搜索访问频率分布" src="https://arxiv.org/html/2605.10090v1/x10.png" /><br />
-<em>图注：HNSW和IVF的访问都呈现出高度集中的热点分布。</em></p>
-<p><strong>发现二：内存流量高度不均衡。</strong><br />
-不同向量表、不同聚类的内存访问量差异巨大，有的表流量可达上千MB，而其他表则仅有几十MB。这种<strong>偏斜性</strong>在CCD架构下尤为致命：如果把多个“热”表映射到同一个CCD上，它们的频繁访问会互相竞争有限的L3缓存，导致缓存污染和频繁的缓存置换，严重影响性能。</p>
-<p>研究人员明确指出：“将多个热表放置在同一CCD上，会造成热–热共置，导致缓存污染；而热–冷共置则可以让热点的数据驻留在缓存中。”</p>
-<h2>三、突破性框架：CCD级别的线程编排优化</h2>
-<p>基于上述洞察，小红书提出了一套名为 <strong>“CCD-Aware Thread Orchestration”</strong> 的框架，核心思想是让<strong>任务调度与CPU的物理拓扑结构对齐</strong>，从而实现缓存局部性的最大化。</p>
-<p><img alt="图3：CCD级线程编排框架全景图" src="https://arxiv.org/html/2605.10090v1/x16.png" /><br />
-<em>图注：框架包含三大模块：CCD级任务提交、任务分发与工作负载监控、CCD感知的任务窃取。</em></p>
-<h3>1. 缓存友好的任务分发与动态适应</h3>
-<p>框架的核心组件是<strong>任务分发器</strong>和<strong>工作负载监控器</strong>。它的目标是：<strong>将一个热点表（或聚类）的请求尽可能调度到同一个CCD上，同时避免在同一CCD上堆积多个热点</strong>。</p>
-<p>为此，研究者提出了一个<strong>热–冷配对算法</strong>（Hot–Cold Pairing）。算法首先估算每个HNSW表或IVF聚类的“内存流量”，然后通过贪心策略，将最大的热项与最小的冷项配对，并分配到同一CCD，从而平衡各CCD间的负载，最大化缓存命中率。</p>
-<p>更精妙的是，系统会<strong>实时监控请求动态</strong>，并在一定时间窗口（如分钟级）后，通过“快照交换”机制平滑地更新CCD与任务之间的映射关系，以应对流量的波动。</p>
-<p><strong>公式解读：内存流量估算</strong></p>
-<p>论文中给出了内存流量的近似估算公式，这对理解调度策略至关重要：</p>
-<p>对于 <strong>HNSW</strong> 索引，一次查询的内存流量 $T_{\mathrm{HNSW}}$ 约为：<br />
-$$T_{\mathrm{HNSW}}\;\approx\;N\cdot\big(B_{v}\;+\;M\cdot s_{\mathrm{id}}\big)$$<br />
-其中，$N$ 是查询访问的节点数，$B_{v}$ 是向量数据大小，$M$ 是节点的出度，$s_{\mathrm{id}}$ 是节点ID的字节数。</p>
-<p>对于 <strong>IVF</strong> 索引，对于某个聚类列表 $\mathcal{L}<em>{i}$ 的流量 $T</em>{\mathrm{IVF}}(\mathcal{L}<em>{i})$ 为：<br />
-$$T</em>{\mathrm{IVF}}(\mathcal{L}<em>{i})\;\approx\;S</em>{i}\cdot B_{v}$$<br />
-其中，$S_{i}$ 是该聚类列表中的向量数量，$B_{v}$ 为单个向量的大小。</p>
-<p>这两个公式为调度器提供了量化每个任务“内存代价”的依据，从而做出更优的CCD分配决策。</p>
-<h3>2. CCD感知的拓扑优化任务窃取</h3>
-<p>即使是精心设计的初始调度，也难以避免核心间的负载不均衡。传统的“任务窃取”机制（Work Stealing）虽然能解决这一问题，但在CCD架构下会带来新问题：<strong>跨CCD窃取任务会导致线程访问远端CCD的L3缓存，造成巨大的缓存缺失</strong>。</p>
-<p>为了避免这种“赔了夫人又折兵”的情况，研究团队设计了<strong>CCD-Aware任务窃取</strong>策略。该策略核心思想非常简单但有效：<br />
-- <strong>优先从同一CCD内的核心窃取任务</strong>，以保留LLC命中。<br />
-- <strong>只有在同一CCD内所有核心空闲时，才考虑跨CCD窃取</strong>。</p>
-<p>实验数据显示，这一策略极其成功。对于HNSW，跨CCD窃取的比例从原始的75%降低到不足10%；对于IVF，比例更是从超过80%降至仅5%。</p>
-<h2>四、实战效果：3.7倍性能提升与90%延迟下降</h2>
-<p>论文在AMD的两种CCD架构CPU（第2代48核和第4代96核）上进行了详尽测试，使用的都是来自小红书的真实生产负载。</p>
-<p><img alt="图4：HNSW和IVF的饱和吞吐量对比" src="https://arxiv.org/html/2605.10090v1/x21.png" /><br />
-<em>图注：在小红书的真实生产负载下，新框架V2（CCD-aware）的吞吐量远超V0和V1。</em></p>
-<p>实验结果显示：<br />
-- <strong>吞吐量</strong>：在96核CPU上，HNSW索引的吞吐量超过100K QPS，IVF索引达到35K QPS，相比之前的V1（bthread）和V0（baseline）均有显著优势，性能提升高达 <strong>3.7倍</strong>。<br />
-- <strong>延迟</strong>：P50和P999延迟大幅降低。与V1相比，V2在多个HNSW表上实现了 <strong>30-90%的延迟降低</strong>，整体服务端到端延迟分布更加稳定，抖动更小。<br />
-- <strong>缓存与计算效率</strong>：L3缓存的缺失率降低了 <strong>6-30%</strong>，CPU因等待数据而停滞的周期减少了 <strong>20-80%</strong>，这意味着CPU资源被更充分地用于实际计算。</p>
-<h2>五、展望：硬件-软件协同设计的新范式</h2>
-<p>这项来自小红书的工程实践，不仅解决了向量检索在新型CPU架构下的性能瓶颈，更提供了一种<strong>硬件-软件协同设计的全新范式</strong>。</p>
-<p>未来的计算系统将越来越复杂，多芯片、非一致性内存访问（NUMA）将成为常态。小红书的研究向业界展示了，<strong>只有深刻理解硬件拓扑，并将这种认知融入上层调度系统，才能真正释放现代CPU的所有潜力</strong>。</p>
-<p>对于正在或即将部署大规模向量检索服务的团队而言，这篇文章无疑提供了一个极具价值的优化方向。在追求“堆核”的同时，是时候思考如何让这些核心“更聪明地”工作了。</p>
+            <h1>小红书向量搜索性能飙升3.7倍：CCD感知线程编排如何破解多核CPU缓存瓶颈？</h1>
+<p>在大模型与推荐系统深度融合的今天，向量近似最近邻搜索（ANNS）已成为搜索引擎、推荐系统和广告服务的核心基础设施。然而，当业务规模持续扩张，传统“堆核”策略在多核CPU上却遭遇了意想不到的性能天花板。</p>
+<p>近日，小红书（RedNote）的研究团队发布了一项突破性成果：通过设计<strong>CCD级负载感知线程编排框架</strong>，将在线向量搜索的吞吐量提升<strong>最高3.7倍</strong>，P50和P999延迟降低<strong>30-90%</strong>。这项发表于顶会的工作，深刻揭示了现代多芯片CPU架构下向量搜索的性能优化路径。</p>
+<p><img alt="图1：小红书近年来部署的CCD和非CCD多核CPU比例" src="https://arxiv.org/html/2605.10090v1/x1.png" /><br />
+<em>图1：小红书近年来部署的CCD和非CCD多核CPU比例。CCD架构CPU已几乎完全替代传统单芯片方案。</em></p>
+<h2>一、核心方法</h2>
+<h3>背景：缓存碎片化带来的性能鸿沟</h3>
+<p>随着摩尔定律放缓，CPU厂商已从“单芯片扩核”转向“多芯片组合”的CCD架构。以AMD EPYC为例，一个处理器包含多个CCD，每个CCD拥有独立末级缓存（L3 Cache），且仅被该CCD内的核心共享。</p>
+<p>论文首先揭示了传统向量搜索框架在此类CPU上的三大痛点：</p>
+<ol>
+<li><strong>访问局部性被忽视</strong>：真实请求在短时间窗口内，对HNSW表或IVF聚簇的访问呈现高度局部性（Zipf分布），但传统轮询调度跨CCD打散任务，导致缓存反复被冲垮。</li>
+<li><strong>芯片级缓存污染</strong>：不同CCD的L3缓存相互独立，错误地将高流量“热”表分布到不同CCD，会造成极端的内存争抢。</li>
+<li><strong>负载不均加剧缓存浪费</strong>：不同向量表的搜索开销差异可达数量级，而跨CCD的任务窃取虽然平衡了负载，却彻底破坏了缓存亲和性（一个CCD窃取另一个CCD的任务，导致目标数据在本地L3缓存中完全缺失）。</li>
+</ol>
+<p><img alt="图9：CCD级线程编排框架总览" src="https://arxiv.org/html/2605.10090v1/x16.png" /><br />
+<em>图9：论文提出的线程编排框架总览。包含统一任务提交、任务分发与工作负载监控、CCD亲和任务窃取三个核心模块。</em></p>
+<h3>创新一：统一的任务提交接口与CCD映射</h3>
+<p>论文设计了一个与索引类型（HNSW/IVF）无关的统一任务提交接口：<code>submit(search_functor, query, Mapping_ID)</code>。其中<code>Mapping_ID</code>抽象地将HNSW的表ID和IVF的聚簇ID统一管理，任务分发器根据该ID决定任务路由到哪个CCD。</p>
+<h3>创新二：负载感知的缓存友好分发</h3>
+<p>核心思想是“<strong>热-冷配对</strong>”。论文通过在线估计每个HNSW表或IVF聚簇的内存访问流量，使用贪心算法进行任务到CCD的映射：</p>
+<p>$$T_{\mathrm{HNSW}} \approx N \cdot (B_v + M \cdot s_{\mathrm{id}}) + \delta_{\mathrm{meta}}$$</p>
+<p>其中，$N$是搜索过程中访问的节点数，$B_v$是向量有效载荷大小，$M$是每个节点的出度。通过此公式估算内存流量后，算法确保：<br />
+- <strong>同一表/簇</strong>的任务始终路由到<strong>同一个CCD</strong>，保持缓存驻留。<br />
+- <strong>高流量</strong>的热表与<strong>低流量</strong>的冷表<strong>配对</strong>到同一个CCD，避免热-热争抢。<br />
+- 当流量动态变化时（如业务高峰切换），系统通过“快照交换”机制无感更新映射，保证服务稳定性。</p>
+<h3>创新三：CCD感知的任务窃取</h3>
+<p>传统工作窃取策略允许空闲线程从任何其他线程窃取任务，但在CCD架构下此策略会导致高达<strong>75-80%</strong>的跨CCD窃取，严重破坏缓存。</p>
+<p><img alt="图13：CCD内窃取 vs 跨CCD窃取" src="https://arxiv.org/html/2605.10090v1/x20.png" /><br />
+<em>图13：CCD内窃取（保留缓存亲和性，左）与跨CCD窃取（缓存未命中，右）的对比。</em></p>
+<p>论文提出的三层窃取策略：<br />
+1. <strong>优先本地弹出</strong>：从自身任务队列获取。<br />
+2. <strong>仅在同CCD内窃取</strong>：保留L3缓存命中率。<br />
+3. <strong>仅当整个CCD空闲时</strong>，才尝试跨CCD窃取。</p>
+<h3>公式：IVF聚簇扫描内存流量估算</h3>
+<p>对于IVF的聚簇扫描，每个探针列表$\mathcal{L}_i$的内存流量近似为：</p>
+<p>$$T_{\mathrm{IVF}}(\mathcal{L}_i) \approx S_i \cdot B_v$$</p>
+<p>其中$S_i = |\mathcal{L}_i|$是扫描的向量数量，$B_v$是向量大小。此估算指导任务分发器避免将高流量聚簇集中到同一CCD。</p>
+<h2>二、实验验证</h2>
+<p>论文在AMD Genoa 96核（4代）和Rome 48核（2代）两颗CCD架构CPU上，使用小红书真实生产流量（60个HNSW表、15个IVF表）进行严格评估。</p>
+<p><img alt="图14：HNSW在不同CCD数量下的饱和吞吐量" src="https://arxiv.org/html/2605.10090v1/x21.png" /><br />
+<em>图14：HNSW在不同CCD数量下的饱和吞吐量（4代96核CPU）。V2（论文方法）实现近线性扩展。</em></p>
+<p><strong>性能对比</strong>：<br />
+- <strong>HNSW搜索</strong>：论文方法（V2）在96核上实现<strong>100K QPS+</strong>，相比传统框架（V0）和bthread版本（V1）提升显著。<br />
+- <strong>IVF搜索</strong>：V2在96核上达到<strong>35K QPS</strong>，而FAISS基线仅为<strong>10K QPS</strong>。<br />
+- <strong>延迟</strong>：P50和P999延迟均降低<strong>30-90%</strong>，且时间序列上的响应抖动大幅减少。</p>
+<p><strong>深入分析</strong>：<br />
+- <strong>L3缓存命中率</strong>：V2与V1相比，L3缓存未命中率降低<strong>6-30%</strong>。<br />
+- <strong>CPU停滞</strong>：总CPU停滞时间减少<strong>20-80%</strong>，意味着减少因缓存未命中导致的等待。<br />
+- <strong>跨CCD窃取</strong>：从V1的75-80%显著降至<strong>5-10%</strong>，绝大多数任务在同CCD内完成。</p>
+<p><img alt="图18：L3缓存未命中率对比" src="https://arxiv.org/html/2605.10090v1/x29.png" /><br />
+<em>图18：V2框架显著降低了所有CCD上的L3缓存未命中率。</em></p>
+<h2>三、展望</h2>
+<p>这项研究的价值不仅在于峰值性能提升，更在于它揭示了<strong>“硬件拓扑感知软件设计”</strong>的重要性。随着AMD EPYC、Intel Sapphire Rapids等CCD架构CPU成为服务器主流，任何对内存访问敏感的数据密集型应用——从OLAP查询引擎、推荐模型推理到大语言模型部署——都将受益于这一设计哲学。</p>
+<p><strong>技术价值</strong>：论文提出的“任务-芯片级缓存亲和性”原则，为下一代分布式数据库和AI推理引擎提供了设计范式。未来，更细粒度的任务粒度（如按向量块分发）与量化压缩技术的结合，或将在CCD架构上释放更大潜力。</p>
+<p>读者不妨思考：当你的应用从“堆核”迁移到“堆芯片”时，你的线程编排框架准备好了吗？</p>
 <p><strong>论文标题</strong>：CCD-Level and Load-Aware Thread Orchestration for In-Memory Vector ANNS on Multi-Core CPUs</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
