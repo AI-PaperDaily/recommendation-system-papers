@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discrimination Is Generation: Unifying Ranking and Retrieval from a Tokenizer Perspective</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Discrimination Is Generation: Unifying Ranking and Retrieval from a Tokenizer Perspective</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-15</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>美团提出DIG范式：让判别模型也能做生成式检索，召回率提升高达220%</h1>
+<p>在推荐系统领域，一个长期存在的「分裂」现象一直困扰着业界：<strong>判别式排序模型</strong>（Ranker）拥有用户-物品交叉特征带来的精准个性化能力，而<strong>生成式检索模型</strong>（Retriever）则以其对数复杂度下的全库检索能力见长。两者各自为政，不仅导致系统架构臃肿，更造成核心的个性化信号在SID（语义ID）构建过程中严重缺失。</p>
+<p>美团技术团队最新发表的论文《Discrimination Is Generation》从一个颠覆性的视角重新审视了这一问题：<strong>排序和检索本质上是同一个最优化问题在不同粒度上的求解</strong>。基于这一洞察，研究者提出了DIG（Discrimination Is Generation）方法，通过将分词器嵌入判别式排序器内部进行端到端联合训练，确保同一个token集合既能服务于生成式检索，也能服务于判别式排序。在五个数据集上的实验显示，该方法在召回率指标上最高提升220%，同时在排序AUC上也有显著改善。</p>
+<hr />
+<h2>一、核心方法</h2>
+<h3>1. 重新定义SID的本质：特征分类驱动架构</h3>
+<p>DIG的核心洞察在于认识到，无论是排序还是检索，都在解决同一个优化问题。排序在物品空间中寻找$`\arg\max_{v\in\mathcal{V}}f(u,v)`$，而检索在token空间中寻找$`\arg\max_{(s_1,\ldots,s_L)}g(u,s_1,\ldots,s_L)`$。SID恰好位于两个空间的交汇点——它不仅是生成式推荐的预处理步骤，更是判别式和生成式推荐之间的桥梁。</p>
+<p><img alt="图1：现有生成式检索流程与DIG的对比" src="https://arxiv.org/html/2605.14853v1/x1.png" /></p>
+<p>图1清晰地展示了DIG与现有方法的根本区别：传统的分词器使用检索目标（重构损失或对比损失）进行训练，与判别式排序信号完全解耦；而DIG将分词器嵌入排序器内部进行端到端的联合训练，释放了判别式模型中已经蕴含的生成式检索能力。</p>
+<p>为了在架构层面实现这一桥接，论文提出了一套<strong>特征分配分类法</strong>作为核心设计主轴。该方法将所有特征分为三类：</p>
+<ul>
+<li><strong>I型（物品侧静态特征）</strong>：如类别、品牌、地域等，这些特征直接编码进SID</li>
+<li><strong>II型（请求级特征）</strong>：如用户画像、上下文信息，作为排序和检索的条件输入</li>
+<li><strong>III型（用户-物品交叉特征）</strong>：这才是关键——这些特征无法静态编码进SID，却是判别式排序的个性化核心优势</li>
+</ul>
+<p><img alt="图2：DIG的整体架构" src="https://arxiv.org/html/2605.14853v1/x2.png" /></p>
+<p>图2展示了DIG的整体架构，可以清晰地看到三个特征流在训练和推理中的处理路径。</p>
+<h3>2. SID-嵌入解耦：突破寻址与语义共享的固有矛盾</h3>
+<p>DIG的另一个创新在于提出了<strong>SID-嵌入解耦</strong>机制。现有方法将码本向量既用于寻址又用于语义表达，造成一个根本性矛盾：更细粒度的SID划分提升寻址精度但阻碍语义共享，更粗粒度的划分允许语义共享但降低可判别性。</p>
+<p>DIG将两种角色分离为两组不同的参数：<br />
+- <strong>码本向量</strong>：仅负责寻址，通过EMA更新<br />
+- <strong>SID嵌入</strong>：负责语义表达，通过判别式损失端到端更新</p>
+<p>这种设计的精髓在于，SID嵌入是标准可学习参数，独立于非可微的argmin量化过程，判别式梯度可以直接流过它们——不再需要STE或Gumbel-Softmax近似。</p>
+<h3>3. 端到端统一训练：五部分联合损失</h3>
+<p>DIG的关键公式体现在其统一的训练目标函数：</p>
+$$ \mathcal{L}=\mathcal{L}_{\mathrm{rank}}+\mathcal{L}_{\mathrm{recall}}+\lambda_{1}\mathcal{L}_{\mathrm{commit}}+\lambda_{2}\mathcal{L}_{\mathrm{sem}}+\lambda_{3}\mathcal{L}_{\mathrm{u2t}} $$
+
+<p>其中，前两部分是核心驱动：<br />
+- $\mathcal{L}_{\mathrm{rank}}$：标准排序BCE损失，驱动整个系统向推荐目标优化<br />
+- $\mathcal{L}_{\mathrm{recall}}$：分层监督损失，与束搜索扩展对齐<br />
+- $\mathcal{L}_{\mathrm{u2t}}$：MLP蒸馏损失，用于在推理时近似用户-物品交叉特征的token级聚合</p>
+<p>这一损失函数设计的关键在于，用户-物品交叉特征虽然无法静态编码进SID，但可以通过批次聚合间接驱动码本边界向推荐决策边界移动。具体地，当数据批次中的物品被分配到同一个token桶时，它们的用户-物品交叉特征被聚合为token级统计量，从而隐式地引导SID边界反映用户偏好而非内容相似度。</p>
+<h3>4. 统一推理：束搜索与共享Mixer</h3>
+<p>在推理阶段，U2t MLP生成的预估用户-物品交叉特征直接替代真实的交叉特征，使排名模型可以直接执行束搜索进行检索。检索和排名路径共享同一个Mixer（包含评分MLP、Target-Attention和MoE），唯一的不同是物品侧表示粒度（检索时使用SID前缀，排名时使用完整物品嵌入）。</p>
+<p>这种对称性从根本上消除了传统双系统管线的语义鸿沟——检索的搜索目标与排名的优化目标完全对齐。</p>
+<hr />
+<h2>二、实验</h2>
+<h3>召回率性能评估</h3>
+<p>研究者在五个数据集上进行了全面的实验评测，包括两个公开数据集（KuaiRec-Small和KuaiRec-Big）、一个公开广告数据集（Taobao Ad）和两个工业数据集（Meituan-Large和Meituan-Small）。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Taobao R@10</th>
+<th style="text-align: center;">KuaiRec-S R@10</th>
+<th style="text-align: center;">KuaiRec-B R@10</th>
+<th style="text-align: center;">MT-Large R@10</th>
+<th style="text-align: center;">MT-Small R@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TIGER</td>
+<td style="text-align: center;">0.0001</td>
+<td style="text-align: center;">0.0052</td>
+<td style="text-align: center;">0.0030</td>
+<td style="text-align: center;">0.0018</td>
+<td style="text-align: center;">0.0015</td>
+</tr>
+<tr>
+<td>LETTER</td>
+<td style="text-align: center;">0.0001</td>
+<td style="text-align: center;">0.0063</td>
+<td style="text-align: center;">0.0059</td>
+<td style="text-align: center;">0.0023</td>
+<td style="text-align: center;">0.0018</td>
+</tr>
+<tr>
+<td>DAS</td>
+<td style="text-align: center;">0.0003</td>
+<td style="text-align: center;">0.0116</td>
+<td style="text-align: center;">0.0102</td>
+<td style="text-align: center;">0.0029</td>
+<td style="text-align: center;">0.0021</td>
+</tr>
+<tr>
+<td>DOS</td>
+<td style="text-align: center;">0.0005</td>
+<td style="text-align: center;">0.0213</td>
+<td style="text-align: center;">0.0121</td>
+<td style="text-align: center;">0.0037</td>
+<td style="text-align: center;">0.0031</td>
+</tr>
+<tr>
+<td>ETEGRec</td>
+<td style="text-align: center;">0.0007</td>
+<td style="text-align: center;">0.0275</td>
+<td style="text-align: center;">0.0153</td>
+<td style="text-align: center;">0.0041</td>
+<td style="text-align: center;">0.0035</td>
+</tr>
+<tr>
+<td><strong>DIG</strong></td>
+<td style="text-align: center;"><strong>0.0019</strong></td>
+<td style="text-align: center;"><strong>0.0418</strong></td>
+<td style="text-align: center;"><strong>0.0254</strong></td>
+<td style="text-align: center;"><strong>0.0097</strong></td>
+<td style="text-align: center;"><strong>0.0112</strong></td>
+</tr>
+<tr>
+<td>改进</td>
+<td style="text-align: center;">+171%</td>
+<td style="text-align: center;">+52.0%</td>
+<td style="text-align: center;">+66.0%</td>
+<td style="text-align: center;">+136.6%</td>
+<td style="text-align: center;">+220%</td>
+</tr>
+</tbody>
+</table></div>
+<p>如上表所示，DIG在所有数据集和所有指标上均达到最佳检索质量。尤其在稀疏且富含用户-物品交叉特征的工业数据集上，DIG的增益最为显著——Meituan-Small的召回率提升达到220%。</p>
+<h3>排序性能</h3>
+<p>一个关键问题是：端到端联合训练是否会损害排序质量？实验结果表明不仅不会，反而有显著提升。</p>
+<p>在五个数据集上的排名AUC对比中，DIG一致性地优于基线（仅排序模型）。增益从KuaiRec-Big的+0.0064到Meituan-Small的+0.0205。这表明用户-物品交叉特征驱动的码本边界不仅提升了检索质量，还通过SID嵌入的参数共享机制为排序提供了协作正则化。</p>
+<h3>消融研究</h3>
+<p>研究进一步通过消融实验验证了每个组件的必要性：<br />
+- <strong>端到端训练</strong>：固定分词器导致KuaiRec-S的召回率下降52%，而排序成本几乎为零<br />
+- <strong>训练侧用户-物品交叉特征</strong>：移除该组件导致召回率下降26.3%<br />
+- <strong>推理侧MLP</strong>：移除该组件导致召回率下降15.8%<br />
+- <strong>两者同时移除</strong>：召回率下降47.4%，超过各自下降之和（42.1%），证实了互补增强效应</p>
+<hr />
+<h2>展望</h2>
+<p>DIG的技术价值不仅体现在性能数字的提升上，更在于它从根本上重新定义了检索与排序的关系。这一范式将传统工业推荐系统中两条独立的技术管线合并为一条，实现了架构精简与性能提升的双赢。对于电商、社交媒体、内容推荐等依赖大规模推荐系统的场景，DIG提供了一条直接用判别式优势来增强生成式能力的路径，意味着未来推荐系统可以在保持精准个性化的同时，拥有生成式检索的高效能力。</p>
+<p>这项研究引发了一个更深层次的思考：当「判别」和「生成」在推荐系统的目标下被统一时，我们是否还需要为每个任务分别训练一个模型？</p>
+<p><strong>论文标题</strong>：Discrimination Is Generation: Unifying Ranking and Retrieval from a Tokenizer Perspective</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.14853v1.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-14_Discrimination-Is-Generation-Unifying-Ranking-and-Retrieval-from-a-Tokenizer-Perspective.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-14_Discrimination-Is-Generation-Unifying-Ranking-and-Retrieval-from-a-Tokenizer-Perspective.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
