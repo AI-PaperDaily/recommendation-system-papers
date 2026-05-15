@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLPs are Efficient Distilled Generative Recommenders</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">MLPs are Efficient Distilled Generative Recommenders</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-15</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>UC San Diego与Snap提出SID-MLP：MLP蒸馏框架加速生成式推荐8.74倍，精度无损</h1>
+<h2>引言</h2>
+<p>推荐系统正经历从“匹配”到“生成”的范式转变。与传统基于Embedding查询的推荐不同，生成式推荐（Generative Recommendation, GR）通过将每个物品编码为语义ID（Semantic ID, SID）序列，将推荐任务转化为自回归序列生成。这种方法在跨域泛化和稀疏物品处理上展现出巨大潜力。</p>
+<p>然而，一个致命问题正阻碍其工业落地：<strong>推理延迟</strong>。以TIGER为代表的GR模型，为生成一个4-token SID，需进行4次自回归模型前向传播；若使用Beam Search（常用束宽B=50），总前向次数高达4×B=200次。在延迟敏感的推荐场景中，这种计算开销往往难以承受。</p>
+<p>传统LLM加速方法如推测解码、非自回归生成，在GR领域面临适配难题：要么需要复杂验证机制，要么需要对原模型进行联合微调，丧失了通用性和即插即用能力。</p>
+<p>针对这一困境，加州大学圣地亚哥分校与Snap团队发表论文《MLPs are Efficient Distilled Generative Recommenders》，提出<strong>SID-MLP</strong>框架——一个以MLP为核心的轻量级蒸馏方案。该方案以惊人的效率颠覆了GR的传统解码范式，实现<strong>8.74倍推理加速，同时保持精度无损</strong>。</p>
+<h2>一、核心洞察：SID搜索空间的结构性坍塌</h2>
+<p>要理解SID-MLP的优雅设计，首先需要认识到SID生成任务与LLM文本生成的本质区别。</p>
+<p><img alt="图1：SID搜索空间收缩现象。在Instruments数据集上，平均有效下一个token选择数与top-1准确率的变化。" src="https://arxiv.org/html/2605.12617/2605.12617v1/x1.png" /></p>
+<p>如图所示，SID的搜索空间呈现<strong>急剧坍塌</strong>特征。在Instruments数据集上，第一个token的候选空间为256个码字，平均有效分支因子约38；到第二个token骤降至2.2；第三、四个token分别降至1.2和接近1.2。这意味着，一旦确定了前几个token，后续预测的不确定性极低。</p>
+<p>研究者通过实验进一步量化了这一现象：当用教师模型生成前m个token，再用一个1层解码器预测剩余4-m个token时，即使m=0（全部由1层解码器预测），模型性能仅下降1.5% NDCG@10。这表明，Transformer解码器的深层堆叠对于SID生成而言存在严重的结构冗余。</p>
+<h2>二、SID-MLP框架：解耦上下文提取与序列生成</h2>
+<p>基于上述洞察，SID-MLP提出一个核心思想：<strong>将全局用户上下文提取与自回归token预测完全解耦</strong>。</p>
+<h3>2.1 一次性的多头注意力上下文提取</h3>
+<p>传统Transformer解码器在每个token生成步骤都执行交叉注意力（Cross-Attention），导致计算量随束宽和步长线性增长。SID-MLP颠覆了这一模式：</p>
+<p><img alt="图2：SID-MLP架构。黄色区域为SID-MLP核心结构，蓝色区域为扩展到编码器端的SID-MLP++。" src="https://arxiv.org/html/2605.12617/2605.12617v1/x2.png" /></p>
+<p>该方法仅需<strong>一次</strong>多头注意力计算，从编码器隐状态中提取全局用户上下文向量：</p>
+$$
+\mathbf{q}=\mathrm{MeanPool}(\mathbf{H}_{u})\,W_{q},\quad\tilde{\mathbf{z}}=\mathrm{LN}\big(\mathbf{q}+\mathrm{MHA}(\mathbf{q},\mathbf{H}_{u},\mathbf{H}_{u})\big),\quad\mathbf{z}=\mathrm{LN}\big(\tilde{\mathbf{z}}+\mathrm{FFN}(\tilde{\mathbf{z}})\big).
+$$
+
+<p>这一上下文向量在整个Beam Search过程中被缓存并复用，彻底消除了解码阶段的交叉注意力开销。</p>
+<h3>2.2 位置专用的MLP头</h3>
+<p>由于SID不同位置的token分布差异显著（搜索空间收缩特性），SID-MLP为每个位置分配<strong>独立的MLP头</strong>。每个MLP头接收拼接的全局上下文与已生成前缀的嵌入向量，直接预测当前token：</p>
+$$
+\mathbf{p}_{t}=\big[\,\mathbf{z}\,;\,e(c_{1})\,;\dots;\,e(c_{t-1})\,\big]\in\mathbb{R}^{d_{h}+(t-1)d_{e}},\quad\boldsymbol{\ell}_{t}=f_{t}(\mathbf{p}_{t})\in\mathbb{R}^{C}.
+$$
+
+<p>这种设计完全避免了自注意力（Self-Attention）和KV缓存的重复计算。Beam扩展转变为简单的批量矩阵乘法，极大降低了计算复杂度和内存占用。</p>
+<h3>2.3 知识蒸馏的训练范式</h3>
+<p>SID-MLP通过离线知识蒸馏训练。损失函数结合了教师logits的KL散度与真实标签的交叉熵：</p>
+$$
+\mathcal{L}_{t}=\alpha\tau^{2}D_{\mathrm{KL}}\Big(\sigma(\tilde{\boldsymbol{\ell}}_{t}/\tau)\,\|\,\sigma(\boldsymbol{\ell}_{t}/\tau)\Big)+(1-\alpha)\mathrm{CE}(\boldsymbol{\ell}_{t},c_{t}^{\star})
+$$
+
+<p>这一设计确保了学生模型既能从教师模型的软标签中学习泛化知识，又能通过硬标签保持任务精度。</p>
+<h2>三、实验结果：8.74倍加速与无损精度</h2>
+<p>论文在Amazon Reviews 2023的三个类别上进行了全面评估，结果令人瞩目。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">吞吐量(samples/s)</th>
+<th style="text-align: center;">加速比</th>
+<th style="text-align: center;">Instruments N@10</th>
+<th style="text-align: center;">Scientific N@10</th>
+<th style="text-align: center;">Games N@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TIGER-kv</td>
+<td style="text-align: center;">424</td>
+<td style="text-align: center;">1.00×</td>
+<td style="text-align: center;">0.0323</td>
+<td style="text-align: center;">0.0243</td>
+<td style="text-align: center;">0.0512</td>
+</tr>
+<tr>
+<td>Mamba2</td>
+<td style="text-align: center;">517</td>
+<td style="text-align: center;">1.22×</td>
+<td style="text-align: center;">0.0326</td>
+<td style="text-align: center;">0.0247</td>
+<td style="text-align: center;">0.0496</td>
+</tr>
+<tr>
+<td>NEZHA</td>
+<td style="text-align: center;">3,082</td>
+<td style="text-align: center;">7.27×</td>
+<td style="text-align: center;">0.0308</td>
+<td style="text-align: center;">0.0212</td>
+<td style="text-align: center;">0.0467</td>
+</tr>
+<tr>
+<td><strong>SID-MLP</strong></td>
+<td style="text-align: center;"><strong>3,706</strong></td>
+<td style="text-align: center;"><strong>8.74×</strong></td>
+<td style="text-align: center;"><strong>0.0332</strong></td>
+<td style="text-align: center;"><strong>0.0250</strong></td>
+<td style="text-align: center;"><strong>0.0512</strong></td>
+</tr>
+<tr>
+<td><strong>SID-MLP++</strong></td>
+<td style="text-align: center;"><strong>4,347</strong></td>
+<td style="text-align: center;"><strong>10.25×</strong></td>
+<td style="text-align: center;">0.0327</td>
+<td style="text-align: center;">0.0244</td>
+<td style="text-align: center;">0.0486</td>
+</tr>
+</tbody>
+</table></div>
+<h3>关键发现</h3>
+<p><strong>1. SID-MLP实现无损加速</strong>：在三个数据集上，SID-MLP的NDCG@10均达到或超过教师模型TIGER-kv，其中在Instruments上甚至提升了2.8%。这证明了MLP蒸馏在SID任务中的有效性。</p>
+<p><strong>2. SID-MLP显著优于现有加速方案</strong>：<br />
+- 推测解码方案AtSpeed在GR场景下反而更慢（0.22×-0.68×），因为小模型作为草稿模型时验证开销相对过大<br />
+- 状态空间模型Mamba2和GatedDeltaNet仅实现约1.2倍加速，受到状态更新的瓶颈限制<br />
+- 自草稿方案NEZHA在提升速度(7.27×)的同时，精度损失高达15%</p>
+<p><strong>3. 扩展到编码器端（SID-MLP++）</strong>：进一步将编码器蒸馏为MLP，速度提升至10.25倍，精度仅小幅下降。</p>
+<p><img alt="图3：SID-MLP在不同设置下的鲁棒性。(a)不同tokenizer策略下的性能恢复率；(b)不同batch size下的吞吐量与显存对比；(c)不同beam size下的性能与吞吐量。" src="https://arxiv.org/html/2605.12617/2605.12617v1/x3.png" /></p>
+<p>实验进一步验证了SID-MLP的鲁棒性：<br />
+- <strong>跨Tokenizer稳定性</strong>：在RQ-KMeans、RQ-VAE、PSID三种tokenizer下，性能恢复率保持在99.6%-102.9%<br />
+- <strong>显存效率</strong>：在batch size为512时，SID-MLP峰值显存仅1.5GB，而TIGER-kv高达30GB，显存减少95.7%<br />
+- <strong>Beam Size鲁棒性</strong>：随着beam size从10增至50，TIGER-kv吞吐量下降37%，而SID-MLP几乎保持稳定</p>
+<h2>展望</h2>
+<p>SID-MLP为生成式推荐的工业落地开辟了一条全新路径。其核心价值在于：<strong>通过对任务特性的深度理解，用最简化的架构实现最高效的推理</strong>。8.74倍的加速和95.7%的显存节省，意味着GR模型有机会部署到资源受限的移动端和边缘设备。</p>
+<p>未来，将SID-MLP应用于百万级物品的工业系统，探索更大规模搜索空间下的效率增益，将是极具价值的研究方向。当生成式推荐不再被延迟所困，下一个智能推荐时代或许才真正开始。</p>
+<p><strong>论文标题</strong>：MLPs are Efficient Distilled Generative Recommenders</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.12617.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-15_MLPs-are-Efficient-Distilled-Generative-Recommenders.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-15_MLPs-are-Efficient-Distilled-Generative-Recommenders.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
