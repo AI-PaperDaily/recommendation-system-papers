@@ -463,92 +463,122 @@
             </div>
             <h1 class="article-title">Generative Long-term User Interest Modeling for Click-Through Rate Prediction</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-05-18</span>
+                <span class="meta-item">📅 2026-05-19</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h2>美团发布GenLI模型：生成式长期用户兴趣建模，CTR预测精度提升1.56% RPM！</h2>
-<p>在广告推荐和CTR（点击率）预测领域，如何从海量历史行为中提取用户长期兴趣，一直是困扰业界的核心难题。传统的两阶段方法（GSU+ESU）虽然被广泛采用，但存在两大缺陷：<strong>基于目标物品的检索模式会忽视用户的潜在兴趣</strong>，导致兴趣建模不完整；<strong>逐对计算相似度的检索过程随着行为序列增长，计算成本急剧升高</strong>。</p>
-<p>美团技术团队发表于ACM的论文《Generative Long-term User Interest Modeling for Click-Through Rate Prediction》提出了一种革命性的生成式框架——<strong>GenLI</strong>。该方法不再被动检索与目标相关的行为，而是主动“生成”用户的多维兴趣分布，并通过简单的<strong>$O(1)$</strong> 查找操作完成行为检索。在离线实验中，GenLI在Amazon和Taobao数据集上AUC分别提升0.61%和1.03%；在线上A/B测试中，更是实现了<strong>CTR提升0.776%，RPM（千次展示收入）提升1.567%</strong> 的显著效果。</p>
-<h3>一、核心方法：生成式用户兴趣建模</h3>
-<p>GenLI由三个核心模块组成：兴趣生成模块（IGM）、行为检索模块（BRM）和兴趣融合模块（IFM）。该框架完全颠覆了以目标物品为中心的检索范式，实现了<strong>目标无关、全面且高效</strong>的长期兴趣建模。</p>
-<h4>1. 兴趣生成模块（IGM）：主动生成多维兴趣分布</h4>
-<p>传统方法仅关注与目标物品直接相关的兴趣。GenLI的IGM则利用用户的<strong>短期行为序列</strong>（如最近浏览的10-100个物品），通过多头注意力机制（MHA）提取隐含兴趣特征，并生成多个离散的概率分布，分别代表<strong>显式兴趣</strong>、<strong>隐式兴趣</strong>和<strong>相对兴趣</strong>。</p>
+            <h2>美团破解万亿级CTR预测难题：生成式长序建模GenLI，RPM提升1.567%</h2>
+<p>点击率（CTR）预测是广告和推荐系统的核心任务，其准确性直接影响平台的用户体验和商业收入。为了精准刻画用户偏好，业界普遍采用“<strong>长短期用户兴趣建模</strong>”策略。然而，面对用户动辄成千上万的历史行为数据，如何高效、完整地捕捉其长期兴趣，尤其是那些与当前推荐目标无关的“潜在兴趣”，一直是悬而未决的难题。</p>
+<p>传统方法通常采用“检索-精排”的两阶段框架，但存在两大硬伤：<strong>一是检索过程以目标为中心，忽略了用户多元化的兴趣，导致特征不完整；二是基于匹配的检索机制随着行为序列增长，计算量激增，成为在线服务的性能瓶颈。</strong></p>
+<p>为此，美团技术团队提出了一种名为 <strong>GenLI（Generative Long-term User Interest）</strong> 的生成式长期用户兴趣建模方法。该方法通过“<strong>生成</strong>”而非“<strong>检索</strong>”的方式，直接产生用户兴趣分布，并在美图配送广告系统上线。实验数据显示，GenLI在离线测试中AUC大幅领先，在线A/B测试中带来了 <strong>CTR提升0.776%</strong> 和 <strong>RPM提升1.567%</strong> 的显著商业收益。这篇论文揭示了生成式方法在CTR预测领域的巨大潜力。</p>
+<h2>一、核心方法：从“检索”到“生成”的范式转变</h2>
+<p>GenLI的核心思想是<strong>颠覆传统的“目标中心检索”范式</strong>，将长序列用户兴趣建模视为一个<strong>生成式任务</strong>。它不再让模型去海量行为中“寻找”与当前推荐目标相关的碎片，而是让模型“思考”用户当下最可能具有的多元化兴趣是什么，并据此生成兴趣分布，进而高效定位关键行为。</p>
+<p>GenLI框架由三个精心设计的模块组成：<strong>兴趣生成模块（IGM）</strong>、<strong>行为检索模块（BRM）</strong> 和<strong>兴趣融合模块（IFM）</strong>。</p>
+<h3>1. 兴趣生成模块（IGM）：生成多元化用户兴趣分布</h3>
+<p>这是GenLI最具革命性的部分。IGM完全摆脱了对目标商品的依赖，它仅依赖用户的<strong>短期行为序列</strong>（通常是最近的若干行为），通过一个简单的多头注意力网络和多层感知器，直接生成多个描述用户实时兴趣的<strong>离散概率分布</strong>。</p>
+<p>开发者认为，一个时间点上的用户兴趣是多维度的。因此，GenLI定义了三种核心兴趣：</p>
 <ul>
-<li><strong>显式兴趣 ($p^E$)</strong>：直接反映用户对点击物品的偏好。</li>
-<li><strong>隐式兴趣 ($p^I$)</strong>：反映平台基于历史日志推送的、但用户未直接反馈的物品所代表的稳定偏好。</li>
-<li><strong>相对兴趣 ($p^R$)</strong>：通过$p^E - p^I$计算得出，捕捉用户决策过程的动态变化，更具实时性。</li>
+<li><strong>显式兴趣分布 ($p^E$)</strong>：通过用户对历史商品是否“点击”来学习，直接反映用户当下的明确偏好。</li>
+<li><strong>隐式兴趣分布 ($p^I$)</strong>：通过历史上的“曝光”商品来学习，曝光行为由平台历史策略决定，代表了平台对用户兴趣的长期稳定推断。</li>
+<li><strong>相对兴趣分布 ($p^R$)</strong>：由显式与隐式兴趣分布的差值计算得来($p^R = \text{softmax}(p^E - p^I)$)，衡量用户在众多候选商品中做出“点击”选择的决策趋势。</li>
 </ul>
-<h4>2. 行为检索模块（BRM)：$O(1)$ 复杂度的查找操作</h4>
-<p>这是GenLI效率提升的关键。给定一个已生成的兴趣分布$\textbf{p}$，任何一个历史行为的得分可通过简单的<strong>查找操作</strong>获得，无需与目标物品进行复杂比对。</p>
-$$s(b_i, \textbf{p}) = \textsf{LOOKUP}(b_i, \textbf{p}) = \textbf{p}_{\texttt{ID}(b_i)\%N}$$
+<p><strong>公式：生成离散兴趣分布</strong><br />
+兴趣生成的过程可以简洁地表示为：</p>
+$$ \boldsymbol{p} = \text{softmax}(MLP(\text{MHA}(\boldsymbol{Q}_G, \boldsymbol{K}_G, \boldsymbol{V}_G))) $$
 
-<p>其中，$\texttt{ID}(b_i)$是行为的唯一ID，通过取模运算映射到分布$\textbf{p}$的对应位置。这使得<strong>对每条历史行为的打分复杂度降为$O(1)$</strong>，彻底摆脱了对目标物品的依赖。</p>
-<h4>3. 兴趣融合模块（IFM）</h4>
-<p>BRM从不同分布中检索出三个行为子集。IFM采用分层聚合策略：先分别通过多头注意力机制聚合每个子集，生成独立的兴趣嵌入$\textbf{z}^I$、$\textbf{z}^E$、$\textbf{z}^R$，再通过门控机制融合，生成最终的长期用户兴趣特征。</p>
-$$ \textbf{g} = \sigma(MLP(\textbf{z}^F)), \quad \textbf{x}_l = (\textbf{g} \otimes \textbf{z}^F)\textbf{W}^g $$
+<p>其中，MHA是<strong>多头注意力</strong>，用于从短期行为序列中提取交互信息；MLP则是进一步映射生成一个N维的离散概率向量 $\boldsymbol{p}$，这个向量就是用户兴趣的“指纹”。</p>
+<p><img alt="图1：GenLI的整体框架" src="https://arxiv.org/html/2605.15905v1/pic/model_pic.png" /></p>
+<h3>2. 行为检索模块（BRM）：O(1)时间复杂度的极致效率</h3>
+<p>传统的检索方法，如SIM，需要将目标商品与历史库中的每一个行为计算相似度，复杂度为$O(L)$。而GenLI的BRM模块将复杂度降低到了 <strong>$O(1)$</strong>。</p>
+<p>它的运作方式极为巧妙：当IGM生成一个分布向量 $\boldsymbol{p}$ 后，BRM直接通过一个<strong>查表操作</strong>（LOOKUP）获取每个历史行为的分数。</p>
+$$ s(b_i, \boldsymbol{p}) = \text{LOOKUP}(b_i, \boldsymbol{p}) = \boldsymbol{p}_{\texttt{ID}(b_i)\%N} $$
 
-<p>整个模型通过多任务损失函数进行端到端优化，其中$\mathcal{L}_{explicit}$和$\mathcal{L}_{implicit}$分别监督显式和隐式兴趣分布的生成。</p>
-$$\mathcal{L} = \mathcal{L}_{ctr} + \alpha\mathcal{L}_{implicit} + \beta\mathcal{L}_{explicit}$$
+<p>公式很直观：将历史行为的唯一ID经过一个简单的<strong>取模运算</strong>，映射到分布向量 $\boldsymbol{p}$ 的对应索引上，该索引的值就是这个行为的分数。这个操作的时间复杂度是O(1)。接下来，只需在三种兴趣分布下，分别挑选出分数最高的Top-k个行为，即可完成检索。</p>
+<p>下图清晰地展示了GenLI在处理不同长度用户行为序列时，推理时间的巨大优势：</p>
+<p><img alt="图2：不同序列长度下的推理时间对比" src="https://arxiv.org/html/2605.15905v1/pic/time.png" /></p>
+<h3>3. 兴趣融合模块（IFM）：精细化的兴趣特征融合</h3>
+<p>检索到的行为被分为三组（分别对应显式、隐式、相对兴趣）。IFM模块针对每一组，再次使用多头注意力机制，以<strong>目标商品</strong>为查询，<strong>检索到的历史行为</strong>为键和值，分别聚合出三个独立的兴趣表征。最终，通过一个<strong>门控机制</strong>将三个兴趣表征动态融合，生成最终的长期兴趣向量，用于CTR预测。</p>
+<p><strong>公式：整体损失函数</strong><br />
+整个模型的优化目标由三部分组成：</p>
+$$ \mathcal{L} = \mathcal{L}_{ctr} + \alpha\mathcal{L}_{implicit} + \beta\mathcal{L}_{explicit} $$
 
-<p><img alt="图1：GenLI模型框架图。包含兴趣生成模块（IGM）、行为检索模块（BRM）和兴趣融合模块（IFM）" src="https://arxiv.org/html/2605.15905v1/pic/model_pic.png" /></p>
-<h3>二、实验：全面超越SOTA，线上收益显著</h3>
-<p>论文在Amazon（书籍）、Taobao和美团工业数据集上进行了严格评估。</p>
-<h4>1. 离线性能对比</h4>
-<p>GenLI在所有数据集上均取得了最优的AUC成绩，远超SIM、ETA、SDIM、TWIN等主流模型。</p>
+<p>其中，$\mathcal{L}_{ctr}$ 是传统的CTR预测损失，而 $\mathcal{L}_{implicit}$ 和 $\mathcal{L}_{explicit}$ 分别是对隐式和显式兴趣分布生成过程的监督信号，确保了生成的分布具有实际意义。</p>
+<h2>二、实验效果：离线优势显著，线上收益惊人</h2>
+<p>为了全面评估GenLI的性能，研究者在Amazon Book、Taobao以及美团的工业级数据集上进行了大量实验。</p>
+<h3>1. 离线性能对比</h3>
+<p>在公开数据集上，GenLI的AUC（曲线下面积）全面超越了包括DIN、DIEN、SIM、ETA、SDIM以及当时最先进的TWIN在内的所有基线模型。</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
 <th style="text-align: left;">模型</th>
-<th style="text-align: left;">Amazon (AUC)</th>
-<th style="text-align: left;">Taobao (AUC)</th>
+<th style="text-align: left;">Amazon</th>
+<th style="text-align: left;">TaoBao</th>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td style="text-align: left;"><strong>GenLI (Ours)</strong></td>
+<td style="text-align: left;"><strong>0.7564</strong></td>
+<td style="text-align: left;"><strong>0.9552</strong></td>
+</tr>
 <tr>
 <td style="text-align: left;">TWIN</td>
 <td style="text-align: left;">0.7503</td>
 <td style="text-align: left;">0.9449</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>GenLI (Ours)</strong></td>
-<td style="text-align: left;"><strong>0.7564</strong></td>
-<td style="text-align: left;"><strong>0.9552</strong></td>
+<td style="text-align: left;">SIM-soft</td>
+<td style="text-align: left;">0.7487</td>
+<td style="text-align: left;">0.9418</td>
+</tr>
+<tr>
+<td style="text-align: left;">ETA</td>
+<td style="text-align: left;">0.7492</td>
+<td style="text-align: left;">0.9438</td>
 </tr>
 </tbody>
 </table></div>
-<h4>2. 推理效率优势</h4>
-<p>GenLI在工业数据集上，不仅AUC优于SOTA模型TWIN（0.7463 vs 0.7441），其<strong>推理时间也降低近40%</strong>。</p>
-<p><img alt="图2：不同行为序列长度下的推理时间对比。GenLI的效率优势随序列增长而更加明显" src="https://arxiv.org/html/2605.15905v1/pic/time.png" /></p>
-<h4>3. 检索模块优势分析</h4>
-<p>实验进一步展示了GenLI的鲁棒性。当检索数量较少时（如K=15），GenLI相比TWIN提升更大（Amazon上提升1.65%）。这证明了其生成式检索模块在<strong>有限资源下对行为抓取的准确性和全面性</strong>。</p>
-<p><img alt="图3：不同检索数量（K）下的性能对比。GenLI在低检索数量时优势尤为显著" src="https://arxiv.org/html/2605.15905v1/pic/topk.png" /></p>
-<h4>4. 线上A/B测试</h4>
-<p>在美团外卖的真实流量环境中，GenLI取得了令人瞩目的商业价值。</p>
+<p>在美团工业数据集上，GenLI不仅将AUC提升了0.22%（从0.7441到0.7463），其推理时间也仅为4.6ms，远低于TWIN的7.9ms，与简单池化方法相比也仅有少量增加，实现了<strong>精度与效率的最佳平衡</strong>。</p>
+<h3>2. 组件与超参数分析</h3>
+<p>消融实验证明，三种兴趣分布缺一不可，移除其中任何一个都会导致性能显著下降，其中显式兴趣的影响最大。</p>
+<p>下图显示了在不同检索数量（K）下的性能趋势，GenLI在极低检索量下（K=15）的领先优势最为明显，这充分证明了其<strong>生成式检索的精准性</strong>远胜于传统方法。</p>
+<p><img alt="图4：不同检索数量K下的性能对比" src="https://arxiv.org/html/2605.15905v1/pic/topk.png" /></p>
+<h3>3. 线上A/B测试</h3>
+<p>在美团配送平台的30%线上真实流量上进行为期6天的测试，结果如下：</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
 <th style="text-align: left;">指标</th>
-<th style="text-align: left;">提升幅度</th>
+<th style="text-align: left;">基准模型</th>
+<th style="text-align: left;">GenLI</th>
+<th style="text-align: left;">提升</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td style="text-align: left;">CTR</td>
+<td style="text-align: left;">0% (基准)</td>
 <td style="text-align: left;">+0.776%</td>
+<td style="text-align: left;"><strong>显著提升</strong></td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>RPM (Revenue Per Mille)</strong></td>
-<td style="text-align: left;"><strong>+1.567%</strong></td>
+<td style="text-align: left;">RPM</td>
+<td style="text-align: left;">0% (基准)</td>
+<td style="text-align: left;">+1.567%</td>
+<td style="text-align: left;"><strong>显著提升</strong></td>
 </tr>
 </tbody>
 </table></div>
-<h3>三、展望</h3>
-<p>GenLI的发布标志着CTR预测领域从“被动检索”向“主动生成”的范式转变。其核心价值在于：<br />
-1.  <strong>兴趣全面性</strong>：通过生成多维兴趣分布，解决了传统方法“一叶障目”的问题。<br />
-2.  <strong>计算高效性</strong>：$O(1)$的查找操作，使得处理百万级用户行为序列成为可能。</p>
-<p>对于推荐系统而言，如何更主动、更全面地理解用户，远比仅仅是响应一个查询更有价值。GenLI提供了一个极具启发性的答案。未来，这种生成式兴趣建模思路或许还能与多模态、图神经网络等方向结合，挖掘更深层次的用户动机。</p>
+<p>这意味着GenLI不仅在技术上取得了突破，更直接为平台带来了<strong>实际商业价值的巨大增长</strong>。</p>
+<h2>三、总结与展望</h2>
+<p>GenLI通过将生成式方法引入长期用户兴趣建模，完美地解决了传统检索范式在<strong>兴趣多样性和计算效率</strong>上的双重困境。其核心贡献在于：</p>
+<ol>
+<li><strong>生成式兴趣建模</strong>：实现了对用户多元化、潜在兴趣的完整建模，避免了目标中心化带来的偏差。</li>
+<li><strong>O(1)的极致检索效率</strong>：通过分布式查表操作，将行为检索的时间复杂度降到了理论极限，为处理超长用户行为序列提供了可能。</li>
+<li><strong>显著的商业价值</strong>：在美团平台的成功部署，证明了该方法的巨大应用潜力和强大的鲁棒性。</li>
+</ol>
+<p>GenLI的成功，预示着一个新的方向：<strong>“思考”并“生成”用户的兴趣，远比“检索”和“拼凑”更高效、更准确。</strong> 未来，这种生成式范式能否拓展到其他推荐、搜索甚至是即时通讯领域，为用户创造出更惊喜的个性化体验？这无疑是一个值得持续关注和探索的方向。</p>
 <p><strong>论文标题</strong>：Generative Long-term User Interest Modeling for Click-Through Rate Prediction</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
