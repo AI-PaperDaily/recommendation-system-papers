@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRAG on Consumer Hardware: Benchmarking Local LLMs for Healthcare EHR Schema Retrieval</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">GraphRAG on Consumer Hardware: Benchmarking Local LLMs for Healthcare EHR Schema Retrieval</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-22</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>医疗数据隐私难题告破！GraphRAG本地化部署：仅用7B小模型8分钟完成索引，推理成本降至零</h2>
+<h3>引言：当医疗数据遇上大模型，隐私与性能如何兼得？</h3>
+<p>电子健康记录（EHR）系统是现代医疗的基石，但其背后复杂的数据库模式（Schema）结构庞大、关系错综复杂。传统的检索增强生成（RAG）方法在面对需要多跳推理和全局理解的查询时，往往力不从心。GraphRAG技术通过构建知识图谱，有效解决了这一问题，但其依赖云端大语言模型（LLM）的部署方式，带来了高昂成本、数据隐私泄露风险以及合规难题。</p>
+<p>一篇来自加州理工州立大学的论文《GraphRAG on Consumer Hardware: Benchmarking Local LLMs for Healthcare EHR Schema Retrieval》直击这一痛点。该研究系统评估了在消费级硬件上本地部署GraphRAG的可行性，通过对比四款主流开源LLM，揭示了在这一受限场景下，模型选择、检索策略与系统性能之间的复杂关系，为医疗等敏感领域的私有化部署提供了关键指引。</p>
+<h3>二、核心方法：本地消费级硬件上的GraphRAG全流程解析</h3>
+<p>该研究的核心在于构建一个完全本地化、去中心化的GraphRAG管道。整个流程被清晰地划分为<strong>离线索引</strong>和<strong>在线查询</strong>两个阶段，所有计算均在搭载8GB显存GPU的消费级工作站上完成。</p>
+<h4>2.1 离线索引：从结构化文档到知识图谱</h4>
+<p>索引阶段是整个流程的基础，旨在将非结构化的EHR模式文档转化为机器可理解的知识图谱。过程包括：</p>
+<ol>
+<li><strong>文档分块</strong>：将HTML格式的EHR模式文件（如Epic Clarity数据模型）分割成512个token的文本块，并保留256个token的重叠，以保持上下文连贯性。</li>
+<li><strong>实体与关系提取</strong>：利用大语言模型（LLM）从每个文本块中提取实体（如表、列、数据类型）和关系（如外键链接）。这一步骤要求模型能生成结构化的JSON输出。</li>
+<li><strong>图构建与社区划分</strong>：将提取的“实体-关系-实体”三元组组装成知识图谱，并使用<strong>Leiden算法</strong>将图划分为层次化的社区。</li>
+<li><strong>摘要与嵌入</strong>：为每个社区生成自然语言摘要，并将文本块和实体描述通过<code>nomic-embed-text</code>模型进行向量化，用于后续的向量检索。</li>
+</ol>
+<p><img alt="图1：GraphRAG系统架构，展示了离线索引和在线查询两个阶段的完整流程。" src="https://arxiv.org/html/2605.20815v1/x1.png" /></p>
+<h4>2.2 公式解析：结构化输出的关键约束</h4>
+<p>在实体提取阶段，LLM需要严格遵守特定的输出格式。该论文的核心约束可以形式化为一个结构化生成问题。模型 $M$ 在给定文本块 $T$ 时需要生成一个包含实体列表 $E$ 和关系列表 $R$ 的JSON对象。这个生成过程可以用以下形式表示：</p>
+$$Output = \text{ParseJSON}(\text{Generate}_M(\text{Instruction} \oplus T \oplus \text{Schema_Hint}))$$
+
+<p>其中，$\text{Instruction}$是引导模型提取实体和关系的提示词，$\text{Schema_Hint}$是要求输出必须符合特定JSON模式的约束。模型必须准确解析这个约束并生成合法的结构化数据，否则管道将在后续步骤中失败。Phi-4-mini模型正是因为无法稳定满足这个约束而崩溃。</p>
+<h4>2.3 在线查询：全局检索与局部检索的博弈</h4>
+<p>在线查询阶段，根据用户的不同需求，可以采用两种检索策略：</p>
+<ul>
+<li><strong>全局搜索（Global Search）</strong>：利用Leiden算法划分的社区摘要，进行聚合式的“Map-Reduce”操作，适用于需要从整个语料库层面进行综合理解的广域问题。</li>
+<li><strong>局部搜索（Local Search）</strong>：直接检索与查询最相关的实体邻域（通常通过向量相似度），适用于寻找特定细节和关联关系的精准问题。</li>
+</ul>
+<p>该论文巧妙地将这两种策略进行了对比，揭示了在不同场景下的性能差异。</p>
+<p><strong>论文中共评估了三类查询：</strong><br />
+- <strong>Q1（广域发现）</strong>：“哪些表存储了患者的人口统计信息？”<br />
+- <strong>Q2（关系理解）</strong>：“描述与账户相关的表之间的关系。”<br />
+- <strong>Q3（精确细节）</strong>：“哪些列用于连接ABN表？”</p>
+<h3>三、实验：四款模型同台竞技，性能差异鲜明</h3>
+<p>为了验证在消费级硬件上部署GraphRAG的可行性，论文精心设计了一系列实验，对四款主流的开源LLM进行了全方位评测。</p>
+<h4>3.1 评估模型与硬件环境</h4>
+<p>实验采用以下四款开源模型，全部通过Ollama在8GB显存的NVIDIA GTX 1070 Ti显卡上进行量化推理。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">参数规模</th>
+<th style="text-align: left;">上下文长度</th>
+<th style="text-align: left;">量化大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Llama 3.1</td>
+<td style="text-align: left;">8B</td>
+<td style="text-align: left;">128K</td>
+<td style="text-align: left;">4.9 GB</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mistral</td>
+<td style="text-align: left;">7B</td>
+<td style="text-align: left;">32K</td>
+<td style="text-align: left;">4.4 GB</td>
+</tr>
+<tr>
+<td style="text-align: left;">Qwen 2.5</td>
+<td style="text-align: left;">7B</td>
+<td style="text-align: left;">128K</td>
+<td style="text-align: left;">4.7 GB</td>
+</tr>
+<tr>
+<td style="text-align: left;">Phi-4-mini</td>
+<td style="text-align: left;">3.8B</td>
+<td style="text-align: left;">128K</td>
+<td style="text-align: left;">2.5 GB</td>
+</tr>
+</tbody>
+</table></div>
+<h4>3.2 索引阶段：模型能力的分水岭</h4>
+<p>索引阶段的结果显示了模型能力与参数规模之间的强相关性。<strong>Llama 3.1</strong> 以巨大的优势拔得头筹，提取了最多的实体和关系，但耗时也最长。<strong>Qwen 2.5</strong> 则以惊人的效率完成索引，耗时仅为Llama的1/3，但其提取的实体数量却最少。<strong>Phi-4-mini</strong> 的失败成为一条重要的经验教训。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">索引时间（分）</th>
+<th style="text-align: left;">实体数量</th>
+<th style="text-align: left;">关系数量</th>
+<th style="text-align: left;">社区数量</th>
+<th style="text-align: left;">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Llama 3.1 (8B)</td>
+<td style="text-align: left;">211.5</td>
+<td style="text-align: left;">1,172</td>
+<td style="text-align: left;">696</td>
+<td style="text-align: left;">113</td>
+<td style="text-align: left;">成功</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mistral (7B)</td>
+<td style="text-align: left;">204.0</td>
+<td style="text-align: left;">649</td>
+<td style="text-align: left;">926</td>
+<td style="text-align: left;">123</td>
+<td style="text-align: left;">成功</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Qwen 2.5 (7B)</strong></td>
+<td style="text-align: left;"><strong>88.0</strong></td>
+<td style="text-align: left;">330</td>
+<td style="text-align: left;">333</td>
+<td style="text-align: left;">30</td>
+<td style="text-align: left;">成功</td>
+</tr>
+<tr>
+<td style="text-align: left;">Phi-4-mini (3.8B)</td>
+<td style="text-align: left;">~12</td>
+<td style="text-align: left;">16</td>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><strong>失败</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>关键发现</strong>：索引质量（实体/关系数量）与问答质量并非线性相关。Qwen虽然提取的实体最少，却取得了最佳的问答效果。</p>
+<h4>3.3 查询阶段：局部检索的优势尽显</h4>
+<p>在问答环节，论文测试了全局和局部两种检索模式。结果清晰地表明，<strong>局部搜索在答案质量和延迟方面均显著优于全局搜索</strong>。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">全局搜索均分</th>
+<th style="text-align: left;">局部搜索均分</th>
+<th style="text-align: left;">关键失败模式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Qwen 2.5 (7B)</td>
+<td style="text-align: left;"><strong>3.0</strong></td>
+<td style="text-align: left;"><strong>3.3</strong></td>
+<td style="text-align: left;">无</td>
+</tr>
+<tr>
+<td style="text-align: left;">Llama 3.1 (8B)</td>
+<td style="text-align: left;">2.3</td>
+<td style="text-align: left;">2.7</td>
+<td style="text-align: left;">产生幻觉表名</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mistral (7B)</td>
+<td style="text-align: left;">2.0</td>
+<td style="text-align: left;">1.0</td>
+<td style="text-align: left;">Q2局部搜索出现<strong>退化重复</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Phi-4-mini (3.8B)</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">管道崩溃</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>关键发现</strong>：<br />
+*   <strong>7B参数量是实用门槛</strong>：低于该规模（如3.8B的Phi-4-mini），模型无法可靠地生成结构化JSON，导致管道崩溃。<br />
+*   <strong>局部检索可靠性更高</strong>：局部搜索的答案更贴合源文档，几乎没有幻觉，而全局搜索则容易引发模型的“知识偏见”，编造出如<code>PATIENT</code>、<code>INSURANCE</code>等训练数据中的常见表名。<br />
+*   <strong>配置不当引发崩溃</strong>：Mistral模型在特定查询下出现无限重复输出的“退化循环”问题，这表明推理时的参数设置（如重复惩罚）至关重要，提示部署者需要关注除模型本身之外的系统配置。<br />
+*   <strong>成本效益巨大</strong>：本地部署一次完整索引仅需电费，而云端部署（如OpenAI API）的成本高达0.5至2美元，并且每月还需支付30至150美元的查询费用。更重要的是，本地部署从根本上解决了数据出境的隐私合规问题（如HIPAA）。</p>
+<h3>四、展望：医疗AI的私有化未来已来</h3>
+<p>这项研究不仅验证了GraphRAG在<strong>消费级硬件</strong>上部署的技术可行性，更揭示了在资源受限、隐私至上的医疗领域，<strong>模型选择、检索策略和系统配置</strong>同样至关重要。它指明了未来医疗AI应用的一个重要方向：通过灵活组合不同模型（如用Llama进行索引，用Qwen进行问答），并优先采用信息更可靠的局部检索策略，构建更强大、更安全、更经济的本地化智能系统。这不仅是一次技术迭代，更是对医疗数据主权和患者隐私的有力捍卫。想象一下，如果未来每家医院都能在本地服务器上运行一个端到端的私有知识库，那将如何改变临床决策和医疗效率？</p>
+<p><strong>论文标题</strong>：GraphRAG on Consumer Hardware: Benchmarking Local LLMs for Healthcare EHR Schema Retrieval</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.20815.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-20_GraphRAG-on-Consumer-Hardware-Benchmarking-Local-LLMs-for-Healthcare-EHR-Schema-Retrieval.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-20_GraphRAG-on-Consumer-Hardware-Benchmarking-Local-LLMs-for-Healthcare-EHR-Schema-Retrieval.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
