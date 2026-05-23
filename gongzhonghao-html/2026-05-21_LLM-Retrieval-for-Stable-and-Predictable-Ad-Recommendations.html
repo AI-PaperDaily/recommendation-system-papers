@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Retrieval for Stable and Predictable Ad Recommendations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">LLM Retrieval for Stable and Predictable Ad Recommendations</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-23</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Meta发布新广告推荐系统：LLM语义检索让A/A’差异降低8.62%</h1>
+<h2>引言：广告推荐系统的“稳定性”困局</h2>
+<p>在生成式AI驱动的广告库存爆发式增长时代，传统的广告推荐系统正面临一个前所未有的挑战：<strong>预测稳定性</strong>。 当一个广告主提交了语义相同但创意略有变体的广告时，系统是否能够给出保持一致、可解释的投放结果？现实往往令人沮丧——广告创意的微小改动（如更换一张图片、调整一句文案）可能导致投放效果大幅波动，冷启动阶段的广告难以获取充分探索机会，甚至出现重复投放的“玄学”现象。</p>
+<p>传统推荐系统长期以来只关注点击率、转化率等预测准确性指标，如Recall和NDCG，却忽视了系统对输入扰动的鲁棒性。正如这篇来自Meta的研究论文所揭示的，没有稳定性支撑的高准确率，就像沙滩上的城堡——看起来宏伟，实则不堪一击。</p>
+<p>为此，Meta的研究团队（Vinodh Kumar Sunkara等）提出了一套全新的评估框架来量化广告推荐系统的稳定性和可预测性，并基于<strong>Fine-tuned大语言模型（LLM）</strong> 构建了语义候选生成系统。在大型工业级广告推荐系统中，该方法展现了<strong>8.62%的A/A’差异降低</strong>和<strong>45%的MAD改善</strong>，同时提升了传统性能指标。</p>
+<h2>一、核心方法：用LLM构建语义稳定的候选生成系统</h2>
+<h3>1.1 新度量：从“准不准”到“稳不稳”</h3>
+<p>论文首先提出了一套全新的评估体系，核心是定义<strong>系统可预测性</strong>。一个可预测的广告系统，其输出应随输入、数据或参数的变化而呈现出<strong>鲁棒、可解释、因果一致</strong>的变化，与广告主的预期保持一致。</p>
+<p>为了量化这种可预测性，研究者引入了“A/A’差异”度量。所谓“A/A’”，是指在原始广告A的基础上，生成一个带有新广告ID且关键特征被扰动的“影子广告”A’。通过对比真实广告与影子广告在投放效果上的差异，来评估系统对非语义变化的敏感性。</p>
+<p>核心公式如下：</p>
+$$
+\text{StatSigDiff}(ad^{p},ad^{s})=\max\Big(0,\Delta-1.65*\sqrt{\frac{2}{conv(ad^{p})+conv(ad^{s})}}\Big)
+$$
+
+<p>其中，$\Delta$表示原始广告与影子广告的相对转化差异。系统级的StatSigDiff则对所有这样的广告对进行加权求和：</p>
+$$
+\text{StatSigDiff}=\sum_{i=1}^{N}\frac{\text{StatSigDiff}(ad_{i}^{p},ad_{i}^{s})*\sqrt{rev(ad_{i}^{p})+rev(ad_{i}^{s})}}{\sum_{i=1}^{N}\sqrt{rev(ad_{i}^{p})+rev(ad_{i}^{s})}}
+$$
+
+<p><strong>一个低的StatSigDiff值意味着系统具有强大的语义感知能力，而高值则表明系统过度依赖非语义特征。</strong> 这一度量不仅是一个新指标，更成为模型开发的“安全护栏”。</p>
+<h3>1.2 LLM驱动的语义表示与图结构扩展</h3>
+<p>传统的候选生成阶段依赖的是纯粹的ID特征或稀疏特征编码，这导致系统在面对细微的语义变化时难以保持稳定。研究者发现，真正的用户交互驱动力是<strong>语义概念</strong>——用户购买的是商品所代表的语义，而非广告ID。</p>
+<p>为此，论文设计了一套基于Fine-tuned大语言模型的四层架构：</p>
+<ul>
+<li><strong>LLM驱动的广告表示学习</strong>：使用Instruct LLM将广告创意和产品描述转化为高维语义向量，并编码为检索专用的离散Token，构建语义图。</li>
+<li><strong>可扩展的LLM处理基础设施</strong>：采用分布式处理框架，在GPU上高效完成大规模广告元数据生成和相关性评分。</li>
+<li><strong>语义导航-图遍历算法</strong>：基于LLM提取的分类和属性构建语义图，通过图遍历算法找到语义相似的广告簇。</li>
+<li><strong>实时候选检索与服务</strong>：构建高吞吐量的在线检索服务层，与下游排序模块无缝衔接。</li>
+</ul>
+<p><img alt="图1：LLM广告到广告生成器" src="https://arxiv.org/html/2605.21969v1/images/ad_to_ad_pipeline_2.png" /></p>
+<h3>1.3 层级式语义属性提取</h3>
+<p>该方法的精妙之处在于，LLM不仅为广告生成单一表示，而是提取<strong>分层的语义属性</strong>，包括类别、属性和上下文描述。这些层次化的语义线索构成了图遍历的基础：</p>
+<ul>
+<li><strong>阶段1：类别、属性和上下文描述生成</strong></li>
+<li><strong>阶段2：相似广告检索</strong></li>
+</ul>
+<p>两个阶段都使用模糊集合匹配（Jaccard相似度），从短语匹配退回到Token匹配，确保覆盖所有相关的语义变体：</p>
+$$
+S_{\text{R}}(Ad1,Ad2)=\begin{cases}S(P_{Ad1},P_{Ad2})&\text{if }S(P_{Ad1},P_{Ad2})\geq\theta\\
+S(T_{Ad1},T_{Ad2})&\text{otherwise}\end{cases}
+$$
+
+<p>基于语义属性的相似度计算，系统得以精确检索出属于同一“语义等价类”的广告，从根本上保障了系统对小扰动的鲁棒性。</p>
+<p><img alt="图2：LLM上下文类别图" src="https://arxiv.org/html/2605.21969v1/images/contextual_graph_2.png" /></p>
+<h3>1.4 检索函数的数学定义</h3>
+<p>在最终的相似广告检索阶段，研究者定义了一个基于类别得分的检索函数：</p>
+$$
+S_{R}(Ad1,Ad2)=\sum(S_{Ad1(c)}\times S_{Ad2(c)}),\ \text{for}\ c\in C_{Ad1}\cap C_{Ad2}
+$$
+
+<p>该函数精确量化了两个广告在共享类别上的语义关联程度，使得候选检索不再是模糊的“猜你想看”，而是可解释的“语义相似”。</p>
+<h2>二、实验结果：稳定性与性能的双重提升</h2>
+<h3>2.1 实验设置与基础设施</h3>
+<p>实验中，研究者采用了开源的<strong>LLama3-8B Instruct模型</strong>，利用其零样本推理能力，在约数千万条广告数据上进行处理。在线A/B测试设置如下：</p>
+<ul>
+<li><strong>测试组</strong>：在广告检索阶段引入LLM候选生成器，其余环节保持不变。</li>
+<li><strong>对照组</strong>：使用包括双塔模型、嵌入模型和图生成器在内的多种候选生成器集成。</li>
+</ul>
+<p><img alt="图3：测试组与对照组每日曝光相对差异" src="https://arxiv.org/html/2605.21969v1/images/mad_metric3.png" /></p>
+<h3>2.2 性能提升的核心数据</h3>
+<p>在传统广告性能指标上，实验展现了<strong>0.45%的顶部线指标统计显著提升</strong>，以及<strong>1.2%的最终阶段召回率改善</strong>。更值得关注的是，检索表现呈现“质量感知型”排序特征：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Top-K</th>
+<th>召回对齐比率</th>
+<th>增量召回潜力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>0.51X</td>
+<td>1.00Y (baseline)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>0.44X</td>
+<td>1.15Y</td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.21X</td>
+<td>1.62Y</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.13X</td>
+<td>1.77Y</td>
+</tr>
+<tr>
+<td>200</td>
+<td>0.07X</td>
+<td>1.89Y</td>
+</tr>
+</tbody>
+</table></div>
+<p>召回对齐比率从Top-5的0.51X下降到Top-200的0.07X，表明LLM在Top-K较小时高度集中地挑选高质量候选广告，并未稀释头部结果。与此同时，增量召回潜力在Top-200时达到1.89Y，说明系统能够为已有检索系统补充大量多样化的相关候选。</p>
+<h3>2.3 可预测性指标的显著改善</h3>
+<p>在系统可预测性方面，实验展示了<strong>8.62%的A/A’差异相对降低</strong>（测试组对比对照组）。此外，每日曝光相对差异的<strong>中位数绝对偏差（MAD）</strong> 改善了<strong>45%</strong>，意味着系统在面对创意变体时输出的波动性大幅降低，实现了更一致的广告投放效果。</p>
+<h2>三、展望：从广告到通用推荐系统</h2>
+<p>虽然该论文以广告推荐为实验场景，但其所提出的<strong>LLM驱动的语义候选生成框架</strong>是一个通用的方法论，可以广泛应用于任何面临规模化和可预测性挑战的大型推荐和检索系统。</p>
+<p>从零样本的LLama模型，到Fine-tuned的广告领域模型，再到未来的<strong>多模态、实时自适应学习</strong>路线，这篇论文的方向性工作为整个推荐系统领域打开了一扇新的大门。当系统从“记住ID”进化到“理解语义”，预测的稳定性不再是奢侈品，而是下一代推荐基础设施的标配。</p>
+<p>对于推荐系统的开发者而言，一个问题值得深思：<strong>当AI能够生成无数个创意变体时，推荐系统如何确保“万变不离其宗”？</strong> 或许，答案就在于让系统从“识别表象”转向“理解本质”的语义革命。</p>
+<p><strong>论文标题</strong>：LLM Retrieval for Stable and Predictable Ad Recommendations</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.21969.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-21_LLM-Retrieval-for-Stable-and-Predictable-Ad-Recommendations.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-21_LLM-Retrieval-for-Stable-and-Predictable-Ad-Recommendations.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
