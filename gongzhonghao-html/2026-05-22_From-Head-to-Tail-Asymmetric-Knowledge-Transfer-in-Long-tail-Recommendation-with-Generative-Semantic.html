@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Head to Tail: Asymmetric Knowledge Transfer in Long-tail Recommendation with Generative Semantic IDs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">From Head to Tail: Asymmetric Knowledge Transfer in Long-tail Recommendation with Generative Semantic IDs</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-26</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里发布AKT-Rec：用语义ID实现长尾推荐CTR提升2.76%，GMV增长3.47%的奥秘</h1>
+<h2>引言</h2>
+<p>在电商推荐系统中，一个常被忽视但至关重要的现实问题长期困扰着业界：<strong>长尾效应</strong>。数据显示，仅约4.2%的商品频繁曝光，而上千万的尾部商品长期处于“冷宫”；同样，约85.58%的用户活跃度极低，其个性化需求难以捕捉。传统推荐系统过度依赖交互信号，“头部”用户和商品的丰富数据掩盖了“尾部”的稀疏困境，导致推荐偏差不断扩大。</p>
+<p>长期以来，业界尝试过多种方法应对这一问题——图神经网络传播、样本增强、多模态特征引入等，但效果始终不尽如人意。近日，来自阿里巴巴与北京大学的研究团队在长尾推荐领域取得突破性进展，提出了一种基于<strong>生成式语义ID</strong>的非对称知识迁移框架<strong>AKT-Rec</strong>。该方法在淘宝在线A/B测试中实现了CTR提升2.76%、GMV增长3.47%的显著效果。</p>
+<h2>一、核心方法</h2>
+<p>AKT-Rec的核心洞察在于：传统方法往往忽视了头部与尾部ID之间知识迁移的<strong>非对称性</strong>——尾部ID中的噪声信号可能反过来损害头部ID的表示学习。论文设计了一套巧妙的两阶段架构来解决这一难题。</p>
+<h3>1. 语义集群生成：从多模态表示到离散ID</h3>
+<p>AKT-Rec的第一步是利用<strong>多模态大语言模型</strong>（MLLM）提取商品和用户的语义表示。论文以商品图片、文本描述和统计特征（如CTR、CVR、加购率）为输入，通过对比学习对齐共现商品的表示。随后，另一种LLM从用户交互历史和画像生成用户语义表示。</p>
+<p>这些连续语义表示通过<strong>残差量化变分自编码器</strong>（RQ-VAE）映射为离散的语义ID，形成从粗到细的层次化结构。关键设计在于，论文故意提高碰撞率，使得多个相似的商品或用户共享同一个语义ID，自然形成语义集群。</p>
+<p><img alt="图1：AKT-Rec整体架构" src="https://arxiv.org/html/2605.23310v1/x1.png" /></p>
+<h3>2. 集群引导的自适应嵌入（CGAE）</h3>
+<p>这是AKT-Rec最核心的创新点。论文将每个ID的表示解耦为两个部分：<strong>集群嵌入</strong>和<strong>个体嵌入</strong>。集群嵌入捕捉集群内共享的语义信息，个体嵌入保留ID特有的细节。</p>
+<p>为了控制知识迁移的方向和强度，论文设计了一个关键机制——<strong>非对称InfoNCE损失</strong>：</p>
+$$ \mathcal{L}_{\text{trans}}=\lambda_{1}\mathcal{L}_{\text{info}}(\mathbf{c}_{i}^{\text{head}},sg(\mathbf{c}_{i}^{\text{tail}}))+\lambda_{2}\mathcal{L}_{\text{info}}(\mathbf{c}_{i}^{\text{tail}},sg(\mathbf{c}_{i}^{\text{head}})) $$
+
+<p>其中，$sg(\cdot)$表示停止梯度操作。通过设置 $\lambda_{1}<\lambda_{2}$，该损失确保知识主要从头部流向尾部，而避免尾部噪声反向污染头部表示。</p>
+<p>此外，为防止两个嵌入间信息冗余导致优化崩溃，论文引入了<strong>软正交正则化</strong>：</p>
+$$ \mathcal{L}_{\text{ortho}}=\left(\frac{\mathbf{c}_{i}^{\top}\mathbf{d}_{i}}{\|\mathbf{c}_{i}\|_{2}\cdot\|\mathbf{d}_{i}\|_{2}}\right)^{2} $$
+
+<p>最终表示通过一个基于<strong>活动特征</strong>的门控网络动态融合集群嵌入和个体嵌入，实现自适应调整。</p>
+<h3>3. 层次化特征聚合（HFA）</h3>
+<p>为进一步利用语义集群的层次结构，AKT-Rec构建了两个并行的特征视图：<strong>实例级别</strong>和<strong>集群级别</strong>。</p>
+<ul>
+<li>实例级别聚焦于单个用户/商品的细粒度上下文，通过目标感知注意力编码用户行为序列，确保预测精度</li>
+<li>集群级别聚合同集群内所有实例的平均特征，并通过硬检索策略获取集群级别的行为序列</li>
+</ul>
+<p>最终，一个基于用户-商品联合活动特征的门控网络自适应融合两个视图的贡献，形成最终的预测输入。</p>
+<h2>二、实验验证</h2>
+<h3>离线实验</h3>
+<p>研究团队在阿里电商平台（淘宝）的真实数据集上进行了大规模实验，涵盖3600万用户和约3亿商品。论文定义了尾部用户（交互&lt;5次，占85.58%）和尾部商品（曝光&lt;10次，占95.8%）。</p>
+<p><img alt="图2：实验结果对比" src="https://arxiv.org/html/2605.23310v1/x2.png" /></p>
+<p>AKT-Rec在离线评估中表现优异，AUC提升0.346%，GAUC提升1.53%。值得关注的是，在头部样本上AKT-Rec同样保持了优势，验证了该方法在不牺牲头部性能的情况下有效改善长尾建模。</p>
+<h3>消融实验</h3>
+<p>论文进行了详尽的消融分析：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>总体验影响（AUC/GAUC）</th>
+<th>头部影响</th>
+<th>尾部影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>删除个体嵌入</td>
+<td>-0.46% / -0.92%</td>
+<td>-0.67% / -0.93%</td>
+<td>-0.42% / -0.44%</td>
+</tr>
+<tr>
+<td>删除集群嵌入</td>
+<td>-0.19% / -0.82%</td>
+<td>-0.03% / -0.17%</td>
+<td>-0.44% / -1.20%</td>
+</tr>
+<tr>
+<td>删除实例级特征</td>
+<td>-1.14% / -1.55%</td>
+<td>-1.38% / -1.81%</td>
+<td>-0.83% / -1.21%</td>
+</tr>
+<tr>
+<td>删除集群级特征</td>
+<td>-0.17% / -0.34%</td>
+<td>-0.12% / -0.21%</td>
+<td>-0.26% / -0.63%</td>
+</tr>
+</tbody>
+</table></div>
+<p>消融实验清晰表明：集群嵌入对尾部样本的增益尤为显著（尾部GAUC下降1.20%），而实例级特征对头部样本至关重要（头部GAUC下降1.81%）。<strong>这正是AKT-Rec设计的精妙之处——不同粒度的信息服务于不同活跃度的ID</strong>。</p>
+<h3>在线A/B测试</h3>
+<p>在淘宝主站的在线A/B测试中，AKT-Rec取得了令人瞩目的提升：</p>
+<ul>
+<li>点击数：+2.73%</li>
+<li><strong>CTR提升：+2.76%</strong></li>
+<li>CTCVR提升：+1.7%</li>
+<li><strong>GMV增长：+3.47%</strong></li>
+</ul>
+<p>这些数据充分证明了AKT-Rec在工业级生产环境中的实际价值。</p>
+<h2>三、展望</h2>
+<p>AKT-Rec的成功，揭示了长尾推荐的一个关键洞察：<strong>解决尾部问题不应以牺牲头部为代价</strong>。通过语义ID实现非对称知识迁移，该方法找到了一个优雅的平衡点。未来，这种“从头部到尾部”的迁移范式或可推广到更多数据分布不均的场景——短视频推荐、个性化搜索、甚至广告投放领域。当推荐系统不仅服务头部“高价值”用户，也能精准理解沉默的尾部用户时，平台生态的健康度才能真正实现质的飞跃。</p>
+<p>你所在的产品中，</p>
+<p><strong>论文标题</strong>：From Head to Tail: Asymmetric Knowledge Transfer in Long-tail Recommendation with Generative Semantic IDs</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.23310.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-22_From-Head-to-Tail-Asymmetric-Knowledge-Transfer-in-Long-tail-Recommendation-with-Generative-Semantic.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-22_From-Head-to-Tail-Asymmetric-Knowledge-Transfer-in-Long-tail-Recommendation-with-Generative-Semantic.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
