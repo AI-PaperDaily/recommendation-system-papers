@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L2Rec: Towards Dual-View Understanding of LLMs for Personalized Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">L2Rec: Towards Dual-View Understanding of LLMs for Personalized Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-05-28</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>网易云音乐突破推荐性能瓶颈：参数级LLM统一双视图理解，在线CTR提升9.24%</h2>
+<h3>一、引言</h3>
+<p>大语言模型（LLM）的通用知识为推荐系统注入了强大的语义理解能力，但如何让LLM真正“懂”用户的个性化偏好，始终是学术界和工业界的核心难题。当前主流方法存在一个共性误区：它们试图在<strong>表示空间</strong>中弥合用户行为模式与物品语义之间的鸿沟，无论是通过输出级的两阶段解耦，还是输入级的向量拼接，都无法避免两种异构信号在分布上的天然错位。这种错位不仅限制了模型对用户意图的准确捕捉，也阻碍了LLM在推荐任务中的端到端优化。针对这一挑战，网易云音乐团队联合提出 <strong>L2Rec</strong>，该方案首次将行为与语义信号的融合点从表示空间转移至LLM的<strong>参数空间</strong>，通过一种新颖的双视图参数级调节机制，在工业级数据集上实现了显著且一致的效果提升。</p>
+<h3>二、核心方法</h3>
+<p>L2Rec的核心创新在于，与其费力对齐两个分布不同的表示空间，不如让同一个LLM的Transformer参数作为“共享介质”，为每个用户、每个视图生成互补且低秩的个性化调整，从而自然弥合视图差异。</p>
+<h4>2.1 痛点诊断：从表示层到参数层的范式转换</h4>
+<p>现有LLM推荐方法大致分为两类：</p>
+<ul>
+<li><strong>输出级方法</strong>：将LLM作为冻结的特征提取器，产生语义向量后，再交给下游模型。这种两阶段设计切断了推荐目标对LLM的梯度回流，形成了信息瓶颈。</li>
+<li><strong>输入级方法</strong>：将预训练的ID嵌入投影到LLM的token嵌入空间进行联合处理。这迫使Transformer的单组参数同时应对稀疏交互矩阵和稠密文本语料两种异构表示，极易引发优化冲突。</li>
+</ul>
+<p>L2Rec提出了一个截然不同的思路：在LLM的参数空间内，通过两种不同的低秩调整（$\Delta \mathbf{W}^{S}$ 和 $\Delta \mathbf{W}^{B}$）来分别适配语义视图和行为视图。由于两种调整都作用于同一个预训练参数矩阵 $\mathbf{W}$ 之上，它们天然共享一个“表示邻域”，大大降低了跨视图的对齐难度。</p>
+<p><img alt="图1：L2Rec整体架构图，展示了双视图输入、DPMoE专家路由及自适应融合模块" src="https://arxiv.org/html/2605.26717v1/x1.png" /></p>
+<h4>2.2 双视图个性化混合专家（DPMoE）</h4>
+<p>L2Rec构建了两个并行的低秩适配通路：<strong>SPMoE</strong>（语义理解）和<strong>BPMoE</strong>（行为建模）。其核心是DPMoE模块，它维护了一个专家池，并通过个性化的路由网络为每个用户动态组合所需的专家。</p>
+<p>DPMoE专家池被划分为两部分：<strong>共享专家</strong>和<strong>视图专用专家</strong>。共享专家总是被激活，负责提取跨视图的共性知识（如“科幻”属性的通用认知）；视图专用专家则通过稀疏选通，捕捉用户特有的、与视图相关的偏好信号（如某用户频繁点击“硬科幻”而非“太空歌剧”）。</p>
+<p>对于一个Transformer块中的第 $j$ 个参数矩阵 $\mathbf{W}_j$，调整量 $\Delta \mathbf{W}_j$ 的计算公式为：</p>
+$$
+\Delta \mathbf{W}_j = \sum_{i \in \mathcal{E}_{sh}} \mathbf{B}_{j,i} \mathbf{A}_{j,i} + \sum_{i \in \mathcal{E}_{v}} g_{j,i} \, \mathbf{B}_{j,i} \mathbf{A}_{j,i}
+$$
+
+<p>其中，第一项聚合了始终激活的共享专家，第二项则通过路由权重 $g_{j,i}$ 加权组合视图专用专家。值得关注的是，DPMoE的路由器不仅仅依赖当前输入的上下文，还纳入了<strong>用户表征</strong>以及<strong>用户与上下文的交互</strong>信号，确保相同文本输入能为不同用户激活不同的专家，实现真正的个性化。</p>
+<h4>2.3 自适应跨视图融合（ACF）</h4>
+<p>经过SPMoE和BPMoE处理后，LLM分别输出了语义视图表征 $\mathbf{h}^S_u$ 和行为视图表征 $\mathbf{h}^B_u$。由于两者已位于共享的参数空间，仅需轻量级的融合。ACF模块通过一个动态门控网络，自适应地为每个用户的两部分输出分配权重，生成最终的统一用户偏好表征 $\mathbf{h}^F_u$，公式如下：</p>
+$$
+\delta = \sigma(W_g[\tilde{\mathbf{h}}^{B}_u; \tilde{\mathbf{h}}^{S}_u] + b_g), \quad \mathbf{h}^{F}_u = \delta \, \tilde{\mathbf{h}}^{B}_u + (1-\delta) \, \tilde{\mathbf{h}}^{S}_u
+$$
+
+<p>这一设计使得模型能够智能地推断，对于当下的目标用户，是行为模式还是语义内容更能预示其未来偏好。</p>
+<h3>三、实验与效果</h3>
+<p>研究团队在<strong>工业级数据集</strong>和三个Amazon Review公开子集上对L2Rec进行了全面评估，并将不同规模的LLM作为主干的性能进行了对比。</p>
+<p><img alt="图2：不同训练数据比例下的性能对比，L2Rec在数据稀疏场景下优势显著" src="https://arxiv.org/html/2605.26717v1/x2.png" /></p>
+<h4>3.1 整体性能对比</h4>
+<p>L2Rec在四个数据集上的NDCG@10和Recall@10指标均全面超越了包括SASRec、BERT4Rec、UniSRec、RecFormer、LLaRA在内的七种基线模型。在工业级数据集上，L2Rec相较于最好的LLM基线（LEARN）实现了<strong>5.74%</strong> 的相对提升（NDCG@10）。在公共测试集上，提升幅度更为显著，如在Art数据集上，Recall@10从0.1630提升至0.1782，提升幅度达9.3%。</p>
+<p><img alt="图3：L2Rec关键超参数（LoRA rank与激活专家数）对性能的影响分析" src="https://arxiv.org/html/2605.26717v1/x3.png" /></p>
+<h4>3.2 消融分析</h4>
+<p>消融实验揭示了各组件的关键作用：<br />
+*   <strong>语义与行为视图不可替代</strong>：移除任一视图都会导致性能大幅下降（NDCG@10下降6-18%），证实了双视图信息的互补性。<br />
+*   <strong>跨视图一致性至关重要</strong>：移除双向偏好对比（BPC）损失，性能显著下滑，验证了稳定双视图适应过程的重要性。<br />
+*   <strong>个性化路由是核心驱动力</strong>：将个性化路由器替换为与用户无关的标准路由器，导致性能下降约2-3%，确认了用户感知专家激活的有效性。<br />
+*   <strong>架构设计优于模型规模</strong>：在相同大模型基座（7B）下，L2Rec的DPMoE架构显著优于LLaRA和LEARN的传统适配方式，证明性能提升主要源于方法创新，而非模型规模。</p>
+<h4>3.3 在线A/B测试与数据稀疏场景</h4>
+<p>在一个日活约150万的社交平台首页Feed流中进行的为期一月的在线A/B测试，验证了L2Rec的工业级实战效果：<br />
+*   <strong>点击率（CTR）</strong>：相对提升 <strong>+9.24%</strong><br />
+*   <strong>回复率</strong>：相对提升 <strong>+3.15%</strong></p>
+<p>两项指标均通过了统计显著性检验（p&lt;0.01）。此外，在仅使用10%训练数据的场景下，L2Rec的表现已经超越了其他基线模型使用全部数据的成绩，展现出极强的数据利用效率，这对于冷启动和长尾场景具有重要价值。</p>
+<h3>四、展望</h3>
+<p>L2Rec的成功论证了一条通向个性化LLM推荐的清晰路径：与其在表示层费力调和，不如在参数层优雅统一。这种参数级双视图适应范式，不仅有效解决了行为与语义信号的融合难题，更以极低的成本（仅新增5%参数）释放了基础模型的全部潜力。未来，如何将该范式扩展到多模态场景（如视频、音频），并进一步压缩专家规模的推理成本，将是极具价值的研究方向。对于开发者而言，或许下一个该思考的问题是：除了推荐，我们还能在LLM的哪些应用场景中，为每个用户“定制”一组专属的模型参数？</p>
+<p><strong>论文标题</strong>：L2Rec: Towards Dual-View Understanding of LLMs for Personalized Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2605.26717.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-05-26_L2Rec-Towards-Dual-View-Understanding-of-LLMs-for-Personalized-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-05-26_L2Rec-Towards-Dual-View-Understanding-of-LLMs-for-Personalized-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
