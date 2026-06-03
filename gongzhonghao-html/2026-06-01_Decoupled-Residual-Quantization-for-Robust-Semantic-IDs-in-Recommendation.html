@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decoupled Residual Quantization for Robust Semantic IDs in Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Decoupled Residual Quantization for Robust Semantic IDs in Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-03</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Shopee突破推荐系统瓶颈：DRQ框架实现Recall@200达100%，语义ID生成迎来范式变革</h1>
+<h2>引言</h2>
+<p>在推荐系统中，如何将海量商品或视频表示为高效、可泛化的离散标识符，一直是工业界面临的核心挑战。传统的哈希ID存在严重的长尾问题，而新兴的语义ID虽然将连续embedding转化为离散token序列，但其质量始终难以诊断和保证——为什么同一个分词器在某些场景下表现优异，在另一些场景下却彻底失效？这个问题困扰着众多推荐系统工程师。近期，来自Shopee的研究团队在发表于Conference '26的论文中，提出了一个全新的量化诊断框架，并基于该框架设计了解耦残差量化方法，在15亿规模的工业数据集上实现了Recall@200达到100%的惊人效果。</p>
+<h2>一、核心方法</h2>
+<h3>1.1 语义ID退化的根因诊断</h3>
+<p>论文首先揭示了传统向量量化方法在语义ID生成中的两个核心问题：</p>
+<p><strong>索引塌陷与分布不匹配</strong>：传统VQ方法倾向于平衡使用码字，但真实世界的物品交互呈高度长尾分布。当长尾分布被强制映射到均匀分配的码本时，稀有物品会被少量热门码字吸收，大量码字因更新不足而失效。</p>
+<p><strong>维度塌陷与几何不匹配</strong>：许多量化器使用欧几里得平面划分连续空间。在神经RQ模型中，多层码本的Minkowski求和叠加创建出与原始空间截然不同的几何结构，导致大量码字组合落在无实际物品的区域。</p>
+<h3>1.2 理论量化框架</h3>
+<p>为了统一诊断这些问题，研究者定义了两个关键量化指标：</p>
+$$O_{\pi}\approx\sum_{i=1}^{K}\sum_{j=1}^{K}\pi_{i}\pi_{j}\exp\left(-\frac{\|c_{i}-c_{j}\|^{2}}{4\sigma^{2}}\right)$$
+
+<p>该公式衡量的是在检索扰动下，码字密度分布的期望重叠率。通过将Oπ分解为分布项和几何项，论文清晰地分离了退化根源：</p>
+$$O_{\pi}=\underbrace{\sum_{i}\pi_{i}^{2}}_{\text{分布下限}}+\underbrace{\sum_{i\neq j}\pi_{i}\pi_{j}\exp\left(-\frac{\|c_{i}-c_{j}\|^{2}}{4\sigma^{2}}\right)}_{\text{几何敏感交叉重叠}}$$
+
+<p>进一步，研究者定义了有效码本容量K_eff = 1/O_π，它将混淆程度转化为等效的、可用的、良好分离的码字数量。</p>
+<p><img alt="图1：DRQ架构示意图" src="https://arxiv.org/html/2401.00001v1/x1.png" /></p>
+<h3>1.3 解耦残差量化（DRQ）</h3>
+<p>基于上述诊断框架，论文提出了解耦残差量化方法，核心思想是将连续几何重建与离散分布匹配解耦为两个独立阶段：</p>
+<p><strong>阶段一：连续重塑</strong>：使用VAE学习无离散约束的连续潜表示，消除传统VQ中STE梯度对潜空间的扭曲。通过可选的对比学习损失，可以注入用户行为监督。</p>
+$$L=\mathbb{E}_{x\sim\mathcal{D}}\left[\|x-D_{\theta}(E_{\phi}(x))\|_{2}^{2}\right]+\lambda L_{\text{contrastive}}$$
+
+<p><strong>阶段二：离散匹配</strong>：在冻结的连续向量上应用分层K-Means，通过数据级别的分配和质心重新计算，避免了联合训练中码字更新饥饿的问题。</p>
+<p><img alt="图2：DRQ架构原理图" src="https://arxiv.org/html/2401.00001v1/x2.png" /></p>
+<h2>二、实验验证</h2>
+<p>论文在包含超过1500万物品的工业级短视频数据集上进行了全面评估。实验设置使用码本大小K=4096，3层层次结构，理论容量为36位。</p>
+<h3>2.1 几何质量分析</h3>
+<p>表1展示了不同方法对潜空间几何结构的影响：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>参与比</th>
+<th>熵有效秩</th>
+<th>λ_max</th>
+<th>平均余弦</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原始输入</td>
+<td>106.05</td>
+<td>131.17</td>
+<td>0.0307</td>
+<td>0.0795</td>
+</tr>
+<tr>
+<td>RQ-VAE</td>
+<td>73.08</td>
+<td>116.77</td>
+<td>0.0456</td>
+<td>0.0865</td>
+</tr>
+<tr>
+<td>RQP-VAE</td>
+<td>104.91</td>
+<td>137.77</td>
+<td>0.0313</td>
+<td>0.0720</td>
+</tr>
+<tr>
+<td>DRQ-VAE</td>
+<td>71.79</td>
+<td>103.01</td>
+<td>0.0400</td>
+<td>0.0894</td>
+</tr>
+<tr>
+<td>DRQ-VAE+CL</td>
+<td><strong>149.19</strong></td>
+<td><strong>189.54</strong></td>
+<td><strong>0.0159</strong></td>
+<td>0.4622</td>
+</tr>
+</tbody>
+</table></div>
+<p>DRQ-VAE+CL在参与比和有效秩上取得最优，表明对比学习有效分散了方差。</p>
+<h3>2.2 鲁棒性与容量分析</h3>
+<p><img alt="图3：有效码本容量对比" src="https://arxiv.org/html/2401.00001v1/x3.png" /></p>
+<p>在检索扰动测试中，RQP-VAE在符号鲁棒性上表现最佳，其Level 0的K_eff达到3667.92，远超RQ-VAE的455.46。DRQ-VAE+CL虽然在下游匹配中表现优异，但其深层码本的K_eff下降至509.73，提示了符号鲁棒性与行为感知匹配之间存在根本性权衡。</p>
+<h3>2.3 物品检索性能</h3>
+<p>在端到端物品检索任务中，DRQ-VAE展现出惊人的重建保真度：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>HR@20</th>
+<th>HR@50</th>
+<th>HR@100</th>
+<th>HR@200</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RQ-VAE</td>
+<td>0.5561</td>
+<td>0.6472</td>
+<td>0.7162</td>
+<td>0.7707</td>
+</tr>
+<tr>
+<td>RQP-VAE</td>
+<td>0.6625</td>
+<td>0.7365</td>
+<td>0.7984</td>
+<td>0.8551</td>
+</tr>
+<tr>
+<td>RQ-KMeans</td>
+<td>0.5589</td>
+<td>0.6297</td>
+<td>0.6985</td>
+<td>0.7765</td>
+</tr>
+<tr>
+<td>DRQ-VAE</td>
+<td><strong>0.9999</strong></td>
+<td><strong>0.9998</strong></td>
+<td><strong>0.9999</strong></td>
+<td><strong>0.9997</strong></td>
+</tr>
+<tr>
+<td>DRQ-VAE+CL</td>
+<td>0.9976</td>
+<td>0.9991</td>
+<td>1.0016</td>
+<td><strong>1.0045</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>DRQ-VAE在HR@200上实现近乎100%的保留率，这得益于其几乎无损的重建质量（MSE仅0.000432，余弦相似度0.999784）。</p>
+<h2>三、展望</h2>
+<p>这项研究不仅提供了一个强大的语义ID生成方法，更重要的是建立了统一的诊断框架。通过分离分布惩罚和几何惩罚，工程师可以有针对性地优化tokenizer。未来，该框架有望应用于更多公共数据集和完整的推荐流水线（候选项生成+排序），为推荐系统的语义理解带来范式级突破。</p>
+<p>思考：当语义ID的生成质量可以用K_eff这样的量化指标来衡量时，推荐系统的可解释性是否也将迎来新的发展机遇？</p>
+<p><strong>论文标题</strong>：Decoupled Residual Quantization for Robust Semantic IDs in Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.01844.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-01_Decoupled-Residual-Quantization-for-Robust-Semantic-IDs-in-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-01_Decoupled-Residual-Quantization-for-Robust-Semantic-IDs-in-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
