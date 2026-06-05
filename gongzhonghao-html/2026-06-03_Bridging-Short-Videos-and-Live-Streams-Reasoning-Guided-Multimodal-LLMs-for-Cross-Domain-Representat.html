@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridging Short Videos and Live Streams: Reasoning-Guided Multimodal LLMs for Cross-Domain Representation Learning</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Bridging Short Videos and Live Streams: Reasoning-Guided Multimodal LLMs for Cross-Domain Representation Learning</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-05</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手每日服务4亿用户的推荐系统：如何用MLLM推理打破短视频与直播的壁垒？</h1>
+<p>在移动互联网时代，短视频与直播已成为内容平台的两大核心场景。然而，这两者之间存在一道看不见的“数据鸿沟”：短视频承载着海量流量和丰富的用户行为信号，而直播作为核心的转化场景，其行为数据却极其稀疏，冷启动问题尤为严重。如何将用户在短视频上的浓厚兴趣，精准迁移到直播推荐中，成为了业界长期探索的技术难题。</p>
+<p>近期，快手技术团队发表了一项突破性研究，提出了<strong>RGCD-Rep</strong>（Reasoning-Guided Cross-Domain Representation Learning）框架。该框架首次将多模态大语言模型（MLLM）的推理能力引入跨域推荐，通过两阶段训练学习可迁移的物品表示，在离线实验中性能提升超30%，并已全面部署于快手及快手极速版，每日服务超过<strong>4亿</strong>用户。本文将深度解析这一技术方案的核心创新与实验效果。</p>
+<h2>一、核心方法：从推理到蒸馏的跨域表示学习</h2>
+<p>RGCD-Rep框架的核心思想在于：让一个轻量级的MLLM学生模型，通过推理感知的蒸馏过程，从冻结的大规模教师MLLM中继承跨域推理能力，并最终学习到可部署于工业场景的跨域可迁移物品表示。整个框架分为两个阶段。</p>
+<h3>1.1 结构化推理监督：行为协同与语义对齐</h3>
+<p>要解决跨域推荐中“为什么两个域的物品可以行为迁移”这一核心问题，论文设计了行为协同对构造机制。基于用户在同一时间窗口内对短视频和直播的正向交互，构建了行为协同对数据集：</p>
+$$\mathcal{D} = \{(s_i, l_i, b_i)\}_{i=1}^{N_D}$$
+
+<p>其中 $b_i$ 表示该对的迁移性强度，由行为共现频率和行为强度（如观看时长、点赞、送礼等）共同计算。</p>
+<p>随后，一个冻结的35B教师MLLM对每个协同对进行结构化推理，输出两个层面的知识：<br />
+- <strong>物品级理解</strong>：从垂直领域、关键主体、内容主题三个语义维度分解物品内容<br />
+- <strong>对级推理</strong>：判断两个物品在三个维度上是否匹配，并给出语义转移性得分 $r_i = \frac{1}{|\mathcal{K}|} \sum_{k \in \mathcal{K}} m_i^k$</p>
+<p>这一结构化设计，避免了自由文本推理带来的任务无关或错误信息，为后续蒸馏提供了高质量的监督信号。</p>
+<p><img alt="图1：RGCD-Rep框架整体架构" src="https://arxiv.org/html/2606.04448v1/x1.png" /></p>
+<h3>1.2 Stage 1：推理感知蒸馏——让轻量模型学会推理</h3>
+<p>直接部署35B级别的MLLM到工业推荐系统，计算成本是不可接受的。因此，论文设计了推理感知蒸馏策略，将教师模型的推理能力迁移至一个2B的轻量级学生MLLM（基于Qwen2-VL）。</p>
+<p>创新点在于<strong>Pair-to-Item分解</strong>：将对级的推理知识解构为独立的物品级监督样本。每个物品包含三个语义维度的标签及证据描述，学生模型通过标准的下一个词预测目标进行优化：</p>
+$$\mathcal{L}_{\mathrm{NTP}} = -\sum_{x \in \mathcal{D}_{\mathrm{item}}} \sum_{t=1}^{A_x} \log P_\theta(y_t \mid q_x, C, y_{<t})$$
+
+<p>其中 $C$ 为<strong>可学习的Chorus Tokens</strong>——一组插入到多模态输入中的紧凑令牌，能聚合视觉、音频、文本信号为少量表示向量，为后续的嵌入任务提供了灵活接口。</p>
+<p>通过Stage 1训练，学生模型无需依赖教师，就能独立对任意短视频或直播进行结构化多模态理解。</p>
+<h3>1.3 Stage 2：转移性引导的跨域表示学习</h3>
+<p>Stage 2是框架性能提升的关键。训练后的学生MLLM作为共享编码器，同时编码短视屏和直播。但Chorus Tokens的表示仍可能纠缠了可迁移和域特定的因素。因此，论文设计了<strong>转移性-残差查询感知聚合模块</strong>。</p>
+<p>对于每个物品的Chorus Tokens表示 $H_x$，两个独立的可学习查询向量分别进行加权聚合，得到转移性视图和残差视图：</p>
+$$z_x^T = \mathrm{Norm}\left(\sum_{c=1}^{N_C} \alpha_{x,c}^T h_x^c\right), \quad \alpha_x^T = \mathrm{softmax}\left(\frac{H_x q^T}{\sqrt{d}}\right)$$
+
+<p>转移性表示 $z_x^T$ 旨在捕获跨域共享的兴趣因子，残差表示 $z_x^R$ 则吸收域特定信息或行为噪声。</p>
+<p>为了优化转移性嵌入，论文采用<strong>跨域对比学习</strong>，将行为协同对作为正样本，同一批次中的其他域物品作为负样本。同时引入<strong>转移性路由机制</strong>，通过路由损失函数控制不同协同对在转移性空间或残差空间中的表示：</p>
+$$\mathcal{L}_{\mathrm{route}} = -\frac{1}{|\mathcal{B}_{\mathrm{route}}|}\sum_{i \in \mathcal{B}_{\mathrm{route}}} \left[\pi_i \log P_T(s_i, l_i) + (1-\pi_i)\log(1-P_T(s_i, l_i))\right]$$
+
+<p>该机制有效防止了低迁移性对（如偶然共现但语义不相关的物品）带来的负迁移问题。</p>
+<h2>二、实验：离线提升30%，在线核心指标全面上涨</h2>
+<h3>2.1 离线实验：全面领先现有方法</h3>
+<p>在快手真实数据集（109,523用户、98,190个直播、378万短视频）上，RGCD-Rep与三类基线方法进行了对比。结果表明，该框架在<strong>HR@10</strong>和<strong>NDCG@10</strong>两个指标上均显著超越最强的基线UniEmbedding，分别提升了<strong>17.59%</strong> 和<strong>30.93%</strong>。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>HR@10</th>
+<th>NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UniEmbedding（最强基线）</td>
+<td>0.0216</td>
+<td>0.0097</td>
+</tr>
+<tr>
+<td><strong>RGCD-Rep</strong></td>
+<td><strong>0.0254</strong></td>
+<td><strong>0.0127</strong></td>
+</tr>
+<tr>
+<td>提升幅度</td>
+<td>+17.59%</td>
+<td>+30.93%</td>
+</tr>
+</tbody>
+</table></div>
+<p>消融实验进一步验证了各模块的贡献：移除Stage 2训练后性能大幅下降，说明对级跨域表示学习是性能提升的关键来源。</p>
+<p><img alt="图2：长尾物品上的性能对比" src="https://arxiv.org/html/2606.04448v1/figure/tail_head_items_comparison.png" /></p>
+<h3>2.2 长尾与冷启动：真正解决稀疏性问题</h3>
+<p>论文针对长尾物品和冷启动用户进行了专项分析。交互频率最低的50%物品（尾物品）仅占总交互的10.90%，但RGCD-Rep在尾物品上的优势最为明显——这得益于其利用多模态语义和协同信号的双重建模能力。</p>
+<p><img alt="图3：冷启动用户与活跃用户的性能对比" src="https://arxiv.org/html/2606.04448v1/figure/cold_warm_user_comparison.png" /></p>
+<p>对于完全无直播行为的冷启动用户，RGCD-Rep的表现同样优于所有基线，且提升幅度更大，证明了其能有效从短视频域补充用户偏好信号，缓解直播域的用户冷启动问题。</p>
+<h3>2.3 在线A/B测试：全量部署，服务4亿用户</h3>
+<p>RGCD-Rep已在快手及快手极速版的直播推荐检索阶段完成部署。在线A/B测试一周的结果显示，核心业务指标全面正向增长，其中<strong>关注（Follow）</strong> 指标提升最为显著，分别达到+0.83%和+0.93%。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>应用</th>
+<th>曝光</th>
+<th>点击</th>
+<th>有效进房</th>
+<th>关注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>快手</td>
+<td>+0.37%</td>
+<td>+0.34%</td>
+<td>+0.28%</td>
+<td><strong>+0.83%</strong></td>
+</tr>
+<tr>
+<td>快手极速版</td>
+<td>+0.38%</td>
+<td>+0.13%</td>
+<td>+0.22%</td>
+<td><strong>+0.93%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>这一成果表明，引入MLLM的跨域推理能力，能够精准捕获从短视频兴趣到直播主播的迁移关系，尤其提升了用户对新主播的关注意愿，实现了更高效的直播内容分发。</p>
+<h2>三、技术价值与未来展望</h2>
+<p>RGCD-Rep的成功，不仅在于其在推荐性能上的显著提升，更在于它解决了MLLM在工业推荐系统中落地的三大核心挑战：<strong>计算成本</strong>（通过蒸馏与离线部署）、<strong>任务相关性</strong>（通过行为协同与结构化推理）、<strong>负迁移风险</strong>（通过转移性路由）。</p>
+<p>这一工作为跨域推荐提供了全新的范式：将MLLM的复杂推理能力，转化为工业界可部署的离线嵌入，同时保留了语义理解的优势。对于任何面临数据稀疏、冷启动问题的推荐场景，这一思路都具有极高的参考价值。</p>
+<p>你认为，MLLM的推理能力未来还可以在推荐系统的哪些环节中发挥作用？欢迎在评论区留言讨论。</p>
+<p><strong>论文标题</strong>：Bridging Short Videos and Live Streams: Reasoning-Guided Multimodal LLMs for Cross-Domain Representation Learning</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.04448.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-03_Bridging-Short-Videos-and-Live-Streams-Reasoning-Guided-Multimodal-LLMs-for-Cross-Domain-Representat.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-03_Bridging-Short-Videos-and-Live-Streams-Reasoning-Guided-Multimodal-LLMs-for-Cross-Domain-Representat.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
