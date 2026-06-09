@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSRLive: Live Streaming Recommendation with Dynamic Semantic ID</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SSRLive: Live Streaming Recommendation with Dynamic Semantic ID</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-09</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里达摩院破解直播推荐难题：动态语义ID+混合架构，观看时长提升3.38%的秘密</h1>
+<h2>引言</h2>
+<p>直播电商已成为数字经济的核心增长极，但推荐系统面对直播场景时却面临独特挑战：直播间内容实时变化、用户与主播的互动信号极其关键，而传统的推荐模型往往陷入计算资源利用率瓶颈。</p>
+<p>当推荐算法遇到“瞬息万变”的直播流，静态的物品ID和传统的特征工程方法显然力不从心。近日，阿里巴巴淘天集团发表了一项重磅研究成果——SSRLive（动态语义ID引导的直播流推荐系统），通过创新的混合生成-判别架构，在真实工业场景中实现了观看时长+3.38%、GMV+0.72%、粉丝增长+3.12%的显著提升，目前该方案已全面部署服务于数亿活跃用户。</p>
+<h2>一、核心方法</h2>
+<h3>创新点1：开创性的动态语义ID设计</h3>
+<p>直播推荐的核心矛盾在于：现有的语义ID（Semantic IDs）在短视频场景中取得了成功，但它们是静态不变的，无法反映直播间内容的实时变化。论文提出将每个直播间赋予两种互补的标识符：</p>
+<ul>
+<li><strong>静态语义ID（Static SID）</strong>：基于主播过去N天的历史多模态片段（视频、音频、文本）生成，编码主播相对稳定的特征</li>
+<li><strong>动态语义ID（Dynamic SID）</strong>：基于直播间的实时特征（当前在线人数、瞬时片段内容）生成，反映每时每刻的内容变化</li>
+</ul>
+<p>具体实现上，静态语义ID采用Transformer编码器处理主播历史片段嵌入，并通过Swing算法进行主播级对比学习来增强协同信号；动态语义ID则通过实时直播间编码器获取，并采用指数移动平均（EMA）机制持续更新码本。这一设计的精妙之处在于，两种SID在解码器中被“交错生成”，能够在同一解码过程中同步完成。</p>
+<p><img alt="图1：直播场景示例，展示实时动态和用户-主播交互两大关键特性" src="https://arxiv.org/html/2606.06970v1/x1.png" /></p>
+<h3>创新点2：混合生成-判别架构</h3>
+<p>与现有生成式推荐方法直接生成SID用于检索不同，SSRLive采用<strong>混合架构</strong>：生成模块负责产生静态和动态SID，判别模块则利用这些SID作为辅助信息来强化下游任务。</p>
+<p>核心架构分为三部分：<br />
+1. <strong>用户编码器</strong>：处理用户画像特征和交互历史序列<br />
+2. <strong>语义ID解码器</strong>：采用Transformer解码器，通过交错排列同时生成静态和动态SID的每个层级<br />
+3. <strong>多任务预测模块</strong>：为每个任务设置独立的可学习查询向量，从SID中提取任务特定信息，再与交叉特征融合进行最终预测</p>
+<p><img alt="图2：SSRLive整体架构，包含用户端SID生成模块和判别模块" src="https://arxiv.org/html/2606.06970v1/x2.png" /></p>
+<p>模型用户端采用编码器-解码器架构，编码器负责处理用户特征，解码器负责生成SID并进行多任务预测。直播间端则处理实时特征，其编码器参数从预训练的直播推荐模型中暖启动，以利用先验的协同和内容知识。</p>
+<h3>公式：动态语义ID的量化过程</h3>
+<p>动态SID由实时直播间向量通过RQ-KMeans量化得到：</p>
+$$ \mathcal{C}_{d}=[c_{1}^{d},c_{2}^{d},\ldots,c_{L}^{d}] $$
+
+<p>其中 $c_{\ell}^{d}$ 表示从第$\ell$个码书中选中的码字索引。这一量化过程将高维连续表示压缩为离散的码本序列，使得模型能够像处理自然语言一样“预测”下一个SID token。</p>
+<h3>创新点3：光束融合推理策略</h3>
+<p>在推理环节，SSRLive采用创新的光束搜索策略。与传统方法不同，该方法维护两个独立的光束集分别生成静态和动态SID，并通过加权融合的方式将多个候选SID对应的隐藏状态聚合：</p>
+$$ \mathbf{H}_{u}^{\mathrm{Fuse}}=\sum_{b=1}^{B}(\hat{p}_{b}^{s}+\hat{p}_{b}^{d})/2\cdot\mathbf{H}_{u,b} $$
+
+<p>这种设计避免了单一候选可能带来的信息损失，同时保证了推理效率。</p>
+<h2>二、实验</h2>
+<h3>离线实验：工业级数据集上的全面胜出</h3>
+<p>研究人员在淘宝直播的真实工业数据集上进行了大规模离线实验，数据集包含约10亿条用户-主播交互记录。与DLRM（淘宝在线baseline）、SASRec、ReaRec、HSTU等代表性方法相比，SSRLive在Watch30、Watch200、Order三个任务上的AUC和GAUC指标上均取得了最优或次优结果。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Watch30 AUC</th>
+<th>Watch200 AUC</th>
+<th>Order AUC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DLRM</td>
+<td>0.7610</td>
+<td>0.8229</td>
+<td>0.8312</td>
+</tr>
+<tr>
+<td>SASRec</td>
+<td>0.7581</td>
+<td>0.8154</td>
+<td>0.8205</td>
+</tr>
+<tr>
+<td>ReaRec</td>
+<td>0.7594</td>
+<td>0.8167</td>
+<td>0.8216</td>
+</tr>
+<tr>
+<td>HSTU</td>
+<td>0.7613</td>
+<td>0.8192</td>
+<td>0.8249</td>
+</tr>
+<tr>
+<td><strong>SSRLive</strong></td>
+<td><strong>0.7692</strong></td>
+<td><strong>0.8255</strong></td>
+<td><strong>0.8358</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3>在线A/B测试：真实业务的显著提升</h3>
+<p>在淘宝直播平台的在线A/B测试中，SSRLive相比强基线DLRM实现了全方位提升：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>提升幅度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>观看时长</td>
+<td>+3.38%</td>
+</tr>
+<tr>
+<td>观看次数</td>
+<td>+1.89%</td>
+</tr>
+<tr>
+<td>GMV</td>
+<td>+0.72%</td>
+</tr>
+<tr>
+<td>订单数</td>
+<td>+2.36%</td>
+</tr>
+<tr>
+<td>粉丝增长</td>
+<td>+3.12%</td>
+</tr>
+<tr>
+<td>互动数</td>
+<td>+2.92%</td>
+</tr>
+</tbody>
+</table></div>
+<p>值得注意的是，尽管SSRLive的密集参数达到0.04B、FLOPs达到15T（远高于DLRM的3M参数和0.9T FLOPs），通过工程优化（部分预运行），实际延迟仅增加1.33%，证明该方法的高计算资源利用率。</p>
+<p><img alt="图3：任务查询向量的t-SNE可视化，不同任务形成清晰聚类" src="https://arxiv.org/html/2606.06970v1/x3.png" /></p>
+<h3>性能缩放分析：更大模型需要更多数据</h3>
+<p><img alt="图4：不同参数规模模型在不同数据量下的AUC差异" src="https://arxiv.org/html/2606.06970v1/x4.png" /></p>
+<p>研究人员发现，当训练数据有限时，0.2B参数的模型表现不如0.04B参数的模型；但随数据量增加，更大模型逐渐超越小模型，说明SSRLive具备更好的性能天花板。</p>
+<h2>三、展望</h2>
+<p>SSRLive的技术价值在于为直播推荐提供了两条清晰的进化路径：一方面通过动态语义ID解决内容实时性问题，另一方面通过混合架构弥合生成式模型与判别任务之间的鸿沟。这一思路不仅适用于直播电商，对实时新闻推荐、游戏直播、在线教育等需要动态内容理解的场景同样具有参考意义。</p>
+<p>这项研究的一个有趣延伸方向是：能否将动态语义ID的思想推广到其他需要实时理解的推荐场景？或者说，当模型规模进一步扩大到百亿级别时，SSRLive框架的性能天花板在哪里？这些问题的答案，值得持续关注。</p>
+<p><strong>论文标题</strong>：SSRLive: Live Streaming Recommendation with Dynamic Semantic ID</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.06970.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-05_SSRLive-Live-Streaming-Recommendation-with-Dynamic-Semantic-ID.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-05_SSRLive-Live-Streaming-Recommendation-with-Dynamic-Semantic-ID.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
