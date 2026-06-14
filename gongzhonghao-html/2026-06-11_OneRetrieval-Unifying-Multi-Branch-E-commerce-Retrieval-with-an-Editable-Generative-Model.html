@@ -463,39 +463,93 @@
             </div>
             <h1 class="article-title">OneRetrieval: Unifying Multi-Branch E-commerce Retrieval with an Editable Generative Model</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-06-13</span>
+                <span class="meta-item">📅 2026-06-14</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>快手破局电商检索：OneRetrieval统一多分支召回，保留倒排索引实时干预能力</h1>
-<h2>引言：倒排索引为何“又菜又爱用”？</h2>
-<p>在工业级电商搜索系统中，每天需要将数亿商品路由给数亿用户。当前主流方案几乎是清一色的多分支架构：倒排索引负责字面匹配，稠密向量分支负责语义召回，协同过滤分支负责行为推荐。三者通过人工调参合并后进入精排。</p>
-<p>这套架构看似稳健，却暗藏矛盾：内部数据显示，倒排索引分支占据了大量曝光份额，但其转化率远低于平台平均水平。即便如此，想要移除它却几乎不可能。原因在于，倒排索引是运营团队唯一能在数小时内注入新词、热点品牌或营销话术的途径，且无需更新模型。</p>
-<p>这种“编辑能力”正是生成式检索（GR）所欠缺的。现有GR方法无论是基于量化ID的闭式码本，还是基于自然语言片段的开放词表，都难以在不重训模型的情况下，将新出现的属性词路由到指定的商品集合。快手技术团队发表的论文OneRetrieval，首次提出了一个可编辑的生成式检索框架，在保留实时干预能力的同时，达到与最强生成式基线相当的召回质量。</p>
-<h2>一、核心方法：关键词对齐编码与可扩展码本</h2>
-<p>OneRetrieval的核心创新在于将检索问题重新定义为对结构化语义标识符（SID）的自回归生成。同传统方法不同，该框架没有使用量化嵌入，而是构建了一个与生产属性词表对齐的关键词编码（KAE）体系。</p>
-<p><img alt="图1：OneRetrieval框架概述" src="https://arxiv.org/html/2606.13533v1/x1.png" /></p>
-<p>如上图所示，KAE将每个商品和查询映射到一个六令牌的语义标识符。这六个令牌分别对应六个属性组，每个属性组的码本容量依据属性词的密度进行非均匀分配。例如，最密集的三个组使用2048个槽位，其余三个组使用1024个槽位。这种设计确保了高频率属性词有充足的编码空间，减少了碰撞概率。</p>
-<p>研究者提出了一个信息熵驱动的属性组归并策略。将18个细粒度属性类别归并为6个组。归并过程基于条件熵度量：</p>
-$$
-\mathrm{IL}(X,Y) = \tfrac{1}{2}\big(H(X\mid Y)+H(Y\mid X)\big) = \tfrac{1}{2}\big(H(X)+H(Y)\big)-\mathrm{MI}(X,Y)
-$$
+            <h2>快手发布OneRetrieval：首个可编辑生成式检索模型，Recall超越SOTA 60%，新词注入无需重训</h2>
+<p>电商搜索系统每天要处理数亿级别的商品和用户请求。传统方案依赖多分支检索架构——倒排索引分支负责精确匹配，稠密向量分支处理语义相似度，协同过滤分支捕捉用户行为模式。这种设计虽然稳健，但存在结构性缺陷：每个分支各自为政，通过手工规则融合候选结果，优化空间极其有限。</p>
+<p>生成式检索（Generative Retrieval, GR）的出现为统一多分支架构带来了希望。然而，一个长期被忽略的核心问题阻碍了GR在工业界的全面落地：实时可编辑性。论文指出，倒排索引分支虽然转化率低于平台平均水平，却是运营团队能够在线注入新兴热词（如“LABUBU”、“POP MART”）的唯一途径。现有GR方法要么依赖训练时固定的量化码本，要么依赖模型的泛化能力，都无法满足这种“零模型更新、当日生效”的编辑需求。</p>
+<p>针对这一困境，论文提出了 <strong>OneRetrieval</strong>——据称是首个具备实时可编辑能力的生成式检索框架，并在快手站外搜索场景中落地，每日服务千万级用户、产生数亿PV。</p>
+<h3>架构拆解：Keyword-Aligned Encoding的关键三步</h3>
+<p>OneRetrieval的核心创新在于构建了一套名为 <strong>Keyword-Aligned Encoding (KAE)</strong> 的标识符生成机制。与将标识符绑定到固定向量的传统方法不同，KAE将每个标识符位置与一个可解释的关键属性词（key attribute word）对齐。</p>
+<p><img alt="图1：OneRetrieval整体架构。(a) KAE通过共享属性字典将商品和查询映射为六Token语义标识符；(b) 四阶段微调锚定SID字母表；(c) 在线服务通过束搜索解码Top-K SID。" src="https://arxiv.org/html/2606.13533v1/x1.png" /></p>
+<p><strong>第一步：信息论属性合并</strong></p>
+<p>一个电商平台通常包含多达18种关键属性类别（实体、品牌、人群、颜色等）。如果将每种属性都映射到一个独立位置，标识符长度会达到18，严重影响推理效率。论文提出基于<strong>互信息</strong>的属性合并策略，将信息损失曲线中二阶差分拐点处的组数——6——作为最优目标。来自论文公式：</p>
+$$ \mathrm{IL}(X,Y) = \frac{1}{2}\big(H(X \mid Y)+H(Y \mid X)\big) $$
 
-<p>该公式衡量将两个属性类别合并到一个位置后造成的信息损失。通过层次聚合聚类，当目标组数为6时，累积信息损失的二阶导数达到峰值，表明这是信息损失与模型复杂度之间的最佳平衡点。</p>
-<h2>二、可扩展码本：实时干预的秘密武器</h2>
-<p>OneRetrieval的码本设计中最为精妙的部分是其四块布局结构。每个码本包含四个连续区块：空位、簇块、独热块和保留块。其中，保留块在训练时不绑定任何属性词，仅在部署后才与新出现的词绑定。</p>
-<p><img alt="图3：属性统计与码本布局" src="https://arxiv.org/html/2606.13533v1/x2.png" /></p>
-<p>这种设计的优雅之处在于，编辑能力完全驻留在上游字典中，而非经过学习的策略中。当一个新词（如“LABUBU”）在训练结束后出现时，运营人员只需将该词添加到属性字典中，并绑定到一个未使用的保留槽位。由于解码器可以发射码本中的任何令牌，且保留槽位在第三阶段训练中被训练为恒等路由，因此无需更新模型即可实现精准召回。</p>
-<p>整个码本的核心令牌数为9216个，加上60个保留令牌，总计9276个令牌。在这个生态系统中，每个标识符位置都对应一个可解释的关键属性词，而非一个黑盒的量化嵌入。</p>
-<h2>三、实验验证：离线和在线的双重胜利</h2>
-<p>研究团队在拥有500万真实用户请求的工业基准上进行了全面实验。离线结果展示了OneRetrieval在深度召回上的强大表现。</p>
-<p><img alt="图4：代码本长度轴" src="https://arxiv.org/html/2606.13533v1/figure/fig_codebook_length_axis.png" /></p>
-<p>从表格数据可以看出，在订单场景中，OneRetrieval在HR@350上达到0.5482，紧随最强基线OneSearch（0.5550），但显著超越其余所有生成式基线和传统方法。更重要的是，在干预命中率（IHR）这一关键指标上，OneRetrieval达到0.0806，而基于量化编码的方法仅在0.0021到0.0030之间，相差超过一个数量级。</p>
-<p>在线A/B测试更加令人振奋。当使用OneRetrieval单独替换倒排索引分支时，订单量提升0.710%，且具有统计显著性。当进一步替换稠密分支后，订单量和买家数无显著变化，但点击率提升0.821%，且效果广泛分布于20个主要行业。</p>
-<h2>展望：从多分支到单模型</h2>
-<p>OneRetrieval证明了一个关键的工业真理：对于电商搜索召回阶段来说，检索质量并非唯一的衡量标准。能够在不更新模型的情况下响应运营需求的能力，才是倒排索引长期存在的根基。该工作首次将这种能力赋予了生成式检索模型，使得统一的多分支召回成为可能。</p>
-<p>未来，将多模态信号融入SID字母表、利用强化学习优化头部查询、以及自动化趋势响应等方向，将进一步推动这一范式的发展。对于从业者而言，OneRetrieval提供了一条值得借鉴的路径：在追求极致性能的同时，不要忽视工业系统真实运作中的“软需求”。</p>
+<p>其中，$X$和$Y$分别代表两个属性类别的伯努利激活变量，$H$为二元熵。公式度量了将一个属性标签的信息压缩到另一个标签时产生的对称条件熵损失。最终，17个非实体类别被合并为5个组，与“实体”组共同构成 <strong>ECOM6</strong> 属性分区。</p>
+<p><strong>第二步：可扩展码本设计</strong></p>
+<p>每个属性组对应一个位置特定的码本，码本容量与组内属性词密度成正比（建议配置为3个密集位置2048槽、3个稀疏位置1024槽）。码本内部划分为四个连续区块：<strong>空槽</strong>、<strong>簇槽</strong>（存储聚类中心）、<strong>独立槽</strong>（存储高频头词）以及<strong>预留槽</strong>。</p>
+<p><img alt="图3：属性统计与码本布局。(a) ECOM6属性组的词密度分布；(b) 每个码本的四个区块布局。" src="https://arxiv.org/html/2606.13533v1/x2.png" /></p>
+<p>其中，<strong>预留槽是实时可编辑性的核心</strong>。在训练阶段，这些槽位不绑定任何属性词；在部署后，运营团队只需将新兴热词通过字典映射到预留槽，模型便能在零重训的情况下准确处理这些新词。论文通过三条设计原则（<strong>语法可达性、词无关路由、编码器端确定性</strong>）保证了这一机制的可靠性。</p>
+<p><strong>第三步：四阶段微调策略</strong></p>
+<p>为了让模型同时掌握检索质量和编辑能力，论文设计了一套专用的四阶段监督微调流程：</p>
+<ul>
+<li><strong>Stage 0</strong>：属性-SID对齐，让模型理解每个码本槽位对应的属性词</li>
+<li><strong>Stage 1</strong>：内容对齐，建立查询和商品与SID的映射关系（主要贡献检索质量）</li>
+<li><strong>Stage 2</strong>：协同共现，引入用户行为信号，建立查询SID到商品SID的路由（贡献编辑能力）</li>
+<li><strong>Stage 3</strong>：个性化检索，加入用户上下文，训练最终部署策略</li>
+</ul>
+<p>消融实验结果清晰表明，检索质量主要由Stage 1承载，而编辑能力则以Stage 2为主、Stage 0为辅，两个目标由<strong>几乎独立的阶段子集</strong>驱动。</p>
+<h3>离线实验：召回率达60%背后，编辑能力横跨数量级</h3>
+<p>为了全面评估OneRetrieval，论文构建了基于500万真实用户请求的离线测试集，并与多个基线方法进行了对比。</p>
+<p><img alt="表2：离线检索结果（点击和订单测试集）。OneRetrieval（L6-D3，已部署）在深度召回（HR@350）上与最强基线OneSearch持平。" src="https://arxiv.org/html/2606.13533v1/table_cut.png" /></p>
+<p>在检索质量方面，OneRetrieval的Order HR@350达到0.5482，Click HR@350达到0.6055，与目前最强基线OneSearch持平，并显著超越其他稠密和生成式基线。论文指出，两者的关键区别在于可编辑性。</p>
+<p>在编辑能力验证环节，论文设计了一套<strong>干预探针（intervention probe）</strong>：利用大模型生成2000个未出现在属性字典中的新词，构造查询-商品对并注入预留槽。结果显示：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">编码范式</th>
+<th style="text-align: left;">Order HR@350</th>
+<th style="text-align: left;">Click HR@350</th>
+<th style="text-align: left;">Total IHR@350</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>KAE</strong></td>
+<td style="text-align: left;"><strong>0.5452</strong></td>
+<td style="text-align: left;"><strong>0.6033</strong></td>
+<td style="text-align: left;"><strong>0.0806</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">RQ-VAE</td>
+<td style="text-align: left;">0.5075</td>
+<td style="text-align: left;">0.5516</td>
+<td style="text-align: left;">0.0025</td>
+</tr>
+<tr>
+<td style="text-align: left;">RQ-kmeans</td>
+<td style="text-align: left;">0.5355</td>
+<td style="text-align: left;">0.5837</td>
+<td style="text-align: left;">0.0030</td>
+</tr>
+<tr>
+<td style="text-align: left;">RQ-OPQ</td>
+<td style="text-align: left;">0.5376</td>
+<td style="text-align: left;">0.5848</td>
+<td style="text-align: left;">0.0021</td>
+</tr>
+</tbody>
+</table></div>
+<p>KAE在干预命中率上相比量化方法实现了<strong>超过一个数量级</strong>的提升。论文认为，量化码本无法同时满足KAE的三条设计原则，导致其编辑能力趋近于零。</p>
+<h3>A/B测试：几乎替换整个检索阶段，点击率显著提升</h3>
+<p>论文在快手站外搜索场景部署了OneRetrieval，并进行了两次不同范围的A/B实验。</p>
+<p><strong>测试1：仅替换倒排索引分支。</strong> 实验结果如下：<br />
+- 订单量：<strong>显著提升+0.71%</strong><br />
+- 买家数：提升+0.45%<br />
+- 商品点击率：提升+0.074%</p>
+<p><strong>测试2：进一步替换稠密（向量）分支。</strong> 实验结果显示：<br />
+- 商品点击率：<strong>显著提升+0.821%</strong><br />
+- 订单量：提升+0.255%（不显著）<br />
+- 买家数：-0.028%（无显著变化）</p>
+<p><img alt="图5：Top 20行业的在线CTR相对增益。虚线为1.00%的平均值。" src="https://arxiv.org/html/2606.13533v1/figure/ctr_relative_gains.png" /></p>
+<p>行业细分显示，增益最显著的领域集中在<strong>服饰、鞋类、个护</strong>等属性丰富的垂直类目，关键词对齐编码在这些场景中准确捕捉了用户的深层意图。论文总结认为，这一结果表明单一生成式模型已经能够基本取代多分支检索架构。</p>
+<h3>统一检索时代的关键一步</h3>
+<p>OneRetrieval的技术价值在于，它成功弥合了生成式检索与现实工业部署之间的关键差距——实时可编辑性。不再是只能在固定词表中工作的封闭系统，而是进化成了能与运营团队协同配合的开放架构。尽管在浅层排名指标上有所妥协，但在面向电商实际业务的深度召回和转化能力上，OneRetrieval展现出了清晰优势。</p>
+<p>未来，研究团队计划将多模态信号融入SID字母表以覆盖视觉特征型商品，并探索利用强化学习从流量中自动激活预留槽，进一步提升系统对市场趋势的响应速度。当你看到下一个潮流词汇在电商平台上“即时生效”时，其背后或许就站着一个这样的可编辑检索模型。</p>
 <p><strong>论文标题</strong>：OneRetrieval: Unifying Multi-Branch E-commerce Retrieval with an Editable Generative Model</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
