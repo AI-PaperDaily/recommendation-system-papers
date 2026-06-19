@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAERec: Constructing Fine-grained Interpretable Intents Priors via Sparse Autoencoders for Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SAERec: Constructing Fine-grained Interpretable Intents Priors via Sparse Autoencoders for Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-19</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>推荐系统新范式：SAERec用稀疏自编码器构建可解释意图空间，准确率提升11.6%</h2>
+<h3>一、引言：意图推荐之困</h3>
+<p>在传统推荐系统中，用户行为被建模为序列中的点击或购买记录，但隐藏在行为背后的用户意图（如“敏感肌护理”或“追求性价比”）却往往被忽视。近年来，基于意图的推荐系统通过建模用户行为的潜在动机，显著提升了推荐的准确性和可解释性。</p>
+<p>然而，现有方法面临三大困境：<strong>意图质量高度依赖交互序列质量</strong>，稀疏或噪声数据会导致意图表征不可靠；<strong>需要预设意图数量</strong>，参数设置不当会严重影响性能；<strong>缺乏明确的语义基础</strong>，学习到的意图向量难以被人类理解。</p>
+<p>研究者从用户评论文本中找到了突破口——评论文本天然包含丰富的语义线索，但如何从海量文本中自动构建细粒度、可解释的意图集合，并将其有效注入序列推荐模型中，仍是一个极具挑战的问题。</p>
+<h3>二、核心方法：SAERec的三阶段创新</h3>
+<p>论文提出的<strong>SAERec</strong>框架（Sparse Autoencoder for intent-based Recommendation）开创性地将稀疏自编码器引入意图推荐领域，通过三个核心模块完成从文本到意图再到推荐的全流程。</p>
+<p><img alt="图1：SAERec整体架构" src="https://arxiv.org/html/2606.18897v1/x2.png" /></p>
+<h4>阶段一：基于稀疏自编码器的意图自动构建</h4>
+<p>这是SAERec最关键的创新点。研究者利用预训练语言模型（P5）将评论文本编码为稠密向量，然后引入一个<strong>Top-K稀疏自编码器</strong>（SAE）对这些向量进行解耦。</p>
+$$ \hat{\mathbf{e}}_{i}^{l}=\mathbf{W}_{\text{dec}}\cdot\text{TopK}(\mathbf{W}_{\text{enc}}\mathbf{e}_{i}^{l}+\mathbf{b}_{\text{enc}})+\mathbf{b}_{\text{dec}} $$
+$$ \mathcal{L}_{\text{SAE}}=\|\hat{\mathbf{e}}_{i}^{l}-\mathbf{e}_{i}^{l}\|_{2}^{2} $$
+
+<p>SAE的独特之处在于：它通过强制稀疏性（仅保留Top-K个激活特征），将原本纠缠在稠密向量中的多义语义分解到高维稀疏空间的各个维度上。每个维度对应一个潜在的语义因子，其中部分维度恰好反映了用户的购物意图。</p>
+<p>随后，研究者设计了一套基于互信息的目标函数，为每个潜在向量关联一组最具有鉴别性的关键词：</p>
+$$ \max_{|\mathcal{I}_{m}|=Z}\sum_{w\in\mathcal{I}_{m}}p(w|\mathbf{c}_{m})\log p(\mathbf{c}_{m}|w) $$
+
+<p>最后，利用大语言模型（如Mistral-7B）自动评估每个向量的语义主题是否为有意义的推荐意图，过滤掉噪声向量，保留纯净的意图集合。</p>
+<p><img alt="图2：性能对比结果" src="https://arxiv.org/html/2606.18897v1/x4.png" /></p>
+<h4>阶段二：双层级意图检索策略</h4>
+<p>得到全局意图集合后，SAERec为每个用户设计了<strong>双层级检索</strong>机制：<br />
+- <strong>个人意图</strong>：基于用户历史行为序列，通过余弦相似度匹配与用户当前兴趣最相关的意图，确保个性化<br />
+- <strong>公共意图</strong>：利用指数移动平均（EMA）方法，跨批次统计每个意图的激活频率，选取在用户群中普遍共享的意图（如“品质”、“价格”），增强泛化能力</p>
+<h4>阶段三：多分支注意力融合机制</h4>
+<p>如何将检索到的意图注入序列建模？研究者设计了<strong>三分支注意力机制</strong>：</p>
+<ol>
+<li><strong>个人意图分支</strong>：将序列表征与个人意图进行交叉注意力计算</li>
+<li><strong>公共意图分支</strong>：将序列表征与公共意图进行交叉注意力计算</li>
+<li><strong>自注意力分支</strong>：建模序列内部的时间依赖关系</li>
+</ol>
+<p>最后通过<strong>自适应融合层</strong>动态平衡三个分支的权重，生成最终的推荐表征。</p>
+<h3>三、实验效果：全面超越SOTA</h3>
+<p>在Beauty、Toys、Sports和Yelp四个公开数据集上，SAERec展现了惊人的性能提升：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: center;">指标</th>
+<th style="text-align: center;">Beauty</th>
+<th style="text-align: center;">Toys</th>
+<th style="text-align: center;">Sports</th>
+<th style="text-align: center;">Yelp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">HR@10提升</td>
+<td style="text-align: center;">10.70%</td>
+<td style="text-align: center;">9.97%</td>
+<td style="text-align: center;">9.11%</td>
+<td style="text-align: center;">5.85%</td>
+</tr>
+<tr>
+<td style="text-align: center;">NDCG@10提升</td>
+<td style="text-align: center;">11.63%</td>
+<td style="text-align: center;">10.89%</td>
+<td style="text-align: center;">5.69%</td>
+<td style="text-align: center;">8.06%</td>
+</tr>
+</tbody>
+</table></div>
+<p>在消融实验中，去除任何组件都会导致性能下降，其中<strong>意图过滤模块</strong>（noIde）的去除影响最大，验证了关键意图筛选的重要性。</p>
+<p><img alt="图3：消融实验结果" src="https://arxiv.org/html/2606.18897v1/x3.png" /></p>
+<p><strong>鲁棒性分析</strong>显示，即使随机删除30%的评论文本，SAERec的性能几乎不变（波动小于2%），证明其意图学习机制对数据稀疏性具有良好的容忍性。</p>
+<p><strong>可解释性分析</strong>展现了惊人的语义一致性：在Beauty数据集中，自动提取的意图包括“护肤品与防晒”、“香氛偏好”、“护发造型”等；在Sports数据集中，则涵盖“骑行训练优化”、“户外徒步”、“游泳耐力”等。反事实实验进一步证实，人为增强某个意图的权重，可以定向改变推荐商品的类别分布。</p>
+<p><strong>效率分析</strong>表明，SAE训练时间和序列模型训练时间均随数据量线性增长，且GPU内存消耗保持在3GB以下，表明SAERec在大规模场景下具有良好的可扩展性。</p>
+<h3>四、展望</h3>
+<p>SAERec为推荐系统的可解释性和泛化能力提供了全新思路。通过将文本语义解耦为可操作的意图先验，该方法不仅显著提升了推荐准确率，更让“机器为何推荐这个”变得可理解、可干预。未来，这种“先构建语义空间，再检索、然后注入推理”的范式，有望在电子商务、内容推荐、广告系统等领域释放更大价值。</p>
+<p><strong>论文标题</strong>：SAERec: Constructing Fine-grained Interpretable Intents Priors via Sparse Autoencoders for Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.18897.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-17_SAERec-Constructing-Fine-grained-Interpretable-Intents-Priors-via-Sparse-Autoencoders-for-Recommenda.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-17_SAERec-Constructing-Fine-grained-Interpretable-Intents-Priors-via-Sparse-Autoencoders-for-Recommenda.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
