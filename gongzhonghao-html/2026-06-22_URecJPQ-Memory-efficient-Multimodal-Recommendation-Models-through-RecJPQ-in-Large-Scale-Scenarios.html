@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URecJPQ: Memory-efficient Multimodal Recommendation Models through RecJPQ in Large-Scale Scenarios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">URecJPQ: Memory-efficient Multimodal Recommendation Models through RecJPQ in Large-Scale Scenarios</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-24</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Spotify与巴里大学发布URecJPQ：98%参数压缩，多模态推荐性能反升85%！</h1>
+<h2>引言</h2>
+<p>在大规模推荐系统场景中，存储数十亿的用户和物品ID嵌入向量已成为制约模型部署的关键瓶颈。以Amazon Reviews '23数据集为例，5400万用户和4800万物品的完整嵌入向量需要超过130亿个参数，这对GPU内存构成了巨大挑战。更糟糕的是，多模态推荐系统还需要处理图像、文本等额外特征，进一步加剧了内存压力。</p>
+<p>针对这一难题，来自意大利巴里大学、英国格拉斯哥大学和Spotify的研究团队提出了一种名为<strong>URecJPQ</strong>的创新方法——一种专门面向大规模多模态推荐场景的联合产品量化技术。实验结果显示，该方法可将模型参数压缩<strong>98%-99%</strong>，checkpoint大小缩减<strong>86%-98%</strong>，而在某些场景下推荐性能甚至提升了<strong>85%</strong>。</p>
+<h2>一、核心方法</h2>
+<h3>1.1 从RecJPQ到URecJPQ的演进</h3>
+<p>URecJPQ建立在RecJPQ（Joint Product Quantization）基础之上。传统的产品量化（PQ）方法需要先学习完整的嵌入向量再进行压缩，且由于量化操作不可微，无法实现端到端训练。RecJPQ通过引入联合产品量化（JPQ）解决了这一问题——在模型训练开始前就分配好子ID，使得整个流程可以端到端进行。</p>
+<p>URecJPQ的核心创新在于：<strong>不仅量化物品嵌入，还量化用户嵌入</strong>。在顺序推荐中，用户通常由交互序列表示，不需要显式的ID嵌入；但在传统的top-k推荐中，系统需要同时计算用户和物品的向量表示来进行相似度评分。</p>
+<h3>1.2 联合产品量化机制</h3>
+<p>URecJPQ的工作机制如下：将每个用户/物品的$k$维嵌入向量拆分为$m$个等长的子空间，每个子空间学习一个包含$l$个子嵌入的码本。完整嵌入向量通过连接各子空间的子嵌入来近似重建。</p>
+<p><img alt="图1：URecJPQ方法在多模态推荐中的总览" src="https://arxiv.org/html/2606.23291v1/images/overview.png" /></p>
+<p>具体地，假设原始嵌入维度为$k$，子空间数量为$m$，则每个子嵌入的维度为$d = k/m$。对于$l=256$的码本长度，每个子空间仅需存储256个$d$维子嵌入。</p>
+<p><img alt="图2：RecJPQ中的嵌入量化示意" src="https://arxiv.org/html/2606.23291v1/images/recjpq.png" /></p>
+<h3>1.3 码本分配策略</h3>
+<p>URecJPQ支持两种码本分配策略：</p>
+<p><strong>随机分配</strong>：为每个用户和物品随机分配子ID（0-255之间的整数），每个子空间一个。</p>
+<p><strong>截断SVD分配</strong>：通过对用户-物品交互矩阵$Y$进行因子分解来保留语义模式。设$Y \approx U \cdot \Sigma \cdot I^T$，其中$U$和$I$分别是用户和物品的潜在因子。每个潜在维度对应一个子空间，通过分位数离散化将连续值映射到离散子ID。</p>
+<p>为防止交互历史完全相同的实体产生冲突，在离散化前会添加$\epsilon \approx 10^{-5}$的随机噪声。</p>
+<h3>1.4 参数压缩效果</h3>
+<p><img alt="图3：BPR模型参数量对比" src="https://arxiv.org/html/2606.23291v1/images/comparison_jpq-bpr.png" /></p>
+<p>以Baby23数据集上的BPR模型为例：原始版本需要$(143K + 44K) \times 64 = 12M$个可训练参数；而URecJPQ版本的参数量仅为$256 \times 16 \times 4 = 16K$（用户）+ $16K$（物品），总计<strong>32K</strong>，压缩率达<strong>99.7%</strong>。</p>
+<p>对于多模态模型VBPR，参数量从21M降至170K，同样实现了显著压缩。</p>
+<h2>二、实验评估</h2>
+<h3>2.1 实验设置</h3>
+<p>研究团队在三个公开数据集上进行了评估：MovieLens-1M（ML1M）、Baby23和Sports23（来自Amazon Reviews 2023）。这些数据集涵盖了电影、婴儿用品和体育用品等多个领域。评估模型包括BPR、VBPR、SLMRec和MMGCL，使用Recall@20和NDCG@20作为评价指标。</p>
+<h3>2.2 参数压缩与性能权衡</h3>
+<p><img alt="图4：各数据集上的模型性能对比" src="https://arxiv.org/html/2606.23291v1/images/rq1_baby23_recall.png" /></p>
+<p>实验结果表明：<br />
+- <strong>参数压缩</strong>：在Sports23和Baby23上，参数量从$10^8$降至$10^5$，减少了三个数量级<br />
+- <strong>Checkpoint大小</strong>：VBPR的checkpoint从325MB降至14MB（压缩95.7%）；MMGCL从500MB降至15MB（压缩97%）<br />
+- <strong>性能影响</strong>：在最佳情况下（Baby23），量化模型甚至优于原始版本；最差情况下（Sports23），Recall平均下降8.5%，NDCG平均下降16%</p>
+<h3>2.3 子空间数量与码本策略的影响</h3>
+<p><img alt="图5：子空间数量对Recall的影响" src="https://arxiv.org/html/2606.23291v1/images/rq2_sports23_space_recall.png" /></p>
+<p>研究发现：<br />
+- <strong>小数据集</strong>（ML1M）：$m=32$个子空间效果最佳<br />
+- <strong>大规模稀疏数据集</strong>（Baby23、Sports23）：$m=64$个子空间达到最优<br />
+- <strong>码本策略</strong>：随机分配更适合简单模型（BPR、VBPR），SVD分配更适合复杂多模态模型（SLMRec、MMGCL）</p>
+<h3>2.4 定性分析</h3>
+<p><img alt="图6：PCA降维后的用户和物品嵌入可视化" src="https://arxiv.org/html/2606.23291v1/images/qualitative_jpq_bpr.png" /></p>
+<p>PCA可视化分析揭示：UREcJPQ量化后的嵌入向量更加紧凑，用户嵌入尤为集中，说明该方法起到了有效的正则化作用，防止过拟合的同时保持了推荐准确性。</p>
+<h2>三、展望</h2>
+<p>URecJPQ为大规*模多模态推荐系统的实际部署提供了可行的内存优化方案。该方法不仅能大幅降低GPU内存需求，还在某些场景下提升了推荐性能。未来，研究团队计划将其扩展到更多推荐模型（如LATTICE等图神经网络模型），并探索对多模态嵌入本身的量化压缩。</p>
+<p>对于面临大规模推荐系统部署挑战的从业者来说，URecJPQ提供了一个值得深入研究的参考方向——在保持服务质量的同时，能否通过类似的量化思路，将你的推荐模型压缩100倍以上？</p>
+<p><strong>论文标题</strong>：URecJPQ: Memory-efficient Multimodal Recommendation Models through RecJPQ in Large-Scale Scenarios</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.23291.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-22_URecJPQ-Memory-efficient-Multimodal-Recommendation-Models-through-RecJPQ-in-Large-Scale-Scenarios.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-22_URecJPQ-Memory-efficient-Multimodal-Recommendation-Models-through-RecJPQ-in-Large-Scale-Scenarios.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
