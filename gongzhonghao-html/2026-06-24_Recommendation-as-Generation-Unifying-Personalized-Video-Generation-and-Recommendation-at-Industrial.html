@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation as Generation: Unifying Personalized Video Generation and Recommendation at Industrial Scale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Recommendation as Generation: Unifying Personalized Video Generation and Recommendation at Industrial Scale</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-26</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手发布推荐即生成RaG：解耦语义ID打通推荐与生成，广告收入提升1.87%</h1>
+<h2>一、引言</h2>
+<p>在短视频平台日活超过4亿的今天，推荐系统面临着前所未有的挑战：用户的注意力极度分散，兴趣偏好动态多变，而传统的推荐系统只能从固定的视频库中匹配内容。当用户的兴趣超出已有视频池的范围时，即使最先进的深度学习推荐模型（DLRM）也难以给出满意的推荐结果。</p>
+<p>这种“固定池”限制成为了推荐系统进一步突破的瓶颈。如果推荐系统不再局限于“检索”现有视频，而是能够实时“生成”符合用户兴趣的个性化视频，会带来怎样的变革？</p>
+<p>来自快手科技的研究团队，联合北京航空航天大学，在发表于ACM的论文《Recommendation as Generation: Unifying Personalized Video Generation and Recommendation at Industrial Scale》中，给出了他们的答案——<strong>推荐即生成（RaG）</strong> 范式。该方法在广告场景的在线A/B测试中，相较于强基线的生成式推荐模型，广告收入提升了 <strong>1.87%</strong>，相较于传统DLRM基线更是提升了 <strong>5.462%</strong>。</p>
+<h2>二、核心方法：从“检索”到“生成”的范式跃迁</h2>
+<p>RaG的核心思想颠覆了传统推荐系统的设计逻辑。如图1所示，传统范式（a）受限于固定内容池，而RaG范式（b）直接从推断出的用户兴趣出发，生成个性化的视频。</p>
+<p><img alt="图1：推荐范式转移。传统DLRMs从固定内容池检索视频，而RaG直接从用户兴趣生成个性化视频" src="https://arxiv.org/html/2606.25496v1/x1.png" /></p>
+<p>这一范式跃迁需要解决两大核心挑战：如何统一推荐系统和视频生成系统截然不同的数据表征（离散ID vs. 多模态连续信号），以及如何在工业规模下高效生成高质量且符合用户兴趣的视频。</p>
+<h3>创新点一：解耦语义ID（D-SIDs）作为统一接口</h3>
+<p>要实现推荐与生成的统一，首先需要一种共享的表征空间。RaG提出的<strong>解耦语义ID（D-SIDs）</strong> 正是这一接口。</p>
+<p>研究者基于Qwen2.5-VL-7B-Instruct多模态大语言模型，构建了一个指令引导的解耦表征框架。对于每个视频，该框架通过内容提示和创意提示分别提取两种因子化的嵌入：<strong>内容语义</strong>（实体、主题）和<strong>创意风格语义</strong>（风格、节奏、氛围）。随后，这些嵌入通过残差量化（RQ-Kmeans）被离散化为4层、每层8192个码本的内容语义ID和创意语义ID序列。</p>
+<p>完整的D-SIDs形式可以表示为：</p>
+$$
+\mathbf{D{-}SIDs}=\mathcal{E}(v)=(s_{\text{content}}^{1},\ldots,s_{\text{content}}^{L},s_{\text{creative}}^{1},\ldots,s_{\text{creative}}^{L})
+$$
+
+<p>在推荐侧，生成式推荐模型（GRM）通过自回归方式预测代表用户兴趣的D-SIDs序列。在生成侧，这些预测的D-SIDs可以直接解码为新的视频内容，从而打破固定视频池的限制。用户兴趣建模、内容生成和用户反馈在同一个语义空间中得到统一。</p>
+<p><img alt="图2：RaG框架架构图。视频通过解耦语义编码器生成D-SIDs，GRM预测用户兴趣D-SIDs，指令模型将其转化为镜头级生产指令，最终由视频生成智能体执行" src="https://arxiv.org/html/2606.25496v1/x2.png" /></p>
+<h3>创新点二：视频生成智能体（VGAs）实现工业级视频生产</h3>
+<p>视频生成是一件复杂而层次化的任务，包含视觉构图、音频对齐、特效增强等多个环节。直接用单一大模型端到端生成，往往面临语义不一致、成本高昂的问题。RaG提出的<strong>视频生成智能体（VGAs）</strong> 将这一问题转化为一个多智能体协同的序贯决策过程。</p>
+<p>VGAs包含三个角色专属的子智能体，它们共享一个Qwen2.5-32B骨干网络，仅通过不同的提示和工具访问进行区分：<br />
+- <strong>视觉规划智能体（VPA）</strong>：生成包含场景分割、布局配置和时间边界的镜头级故事板<br />
+- <strong>音频对齐智能体（AAA）</strong>：生成与场景切换同步的语音和背景音乐<br />
+- <strong>艺术效果增强智能体（AEEA）</strong>：添加字幕、视觉效果、转场和行动号召元素</p>
+<p>智能体的决策过程可以形式化为：</p>
+$$
+a_{t}\sim\pi_{\theta}(a_{t}\mid\mathcal{S}_{t}),\qquad\mathcal{S}_{t+1}=\mathcal{P}(\mathcal{S}_{t},a_{t})
+$$
+
+<p>VGAs还采用了有界反射循环（最多2次迭代）来改善跨模态一致性，并通过KV缓存复用大幅降低推理延迟。结合SID索引的内容缓存，这一系统能够可靠地为数亿级别用户提供服务。</p>
+<h3>创新点三：协同跨域奖励学习（SCRL）形成优化闭环</h3>
+<p>为了将推荐和视频生成统一在一个闭环优化框架中，RaG设计了<strong>协同跨域奖励学习（SCRL）</strong>。SCRL将多目标优化转化为一个约束策略学习问题：用户反馈作为主要目标，兴趣对齐和视频质量作为约束条件。</p>
+<p>其中视频质量奖励包含三个子项：视觉质量、音视一致性和特效对齐。兴趣对齐奖励则确保生成内容与GRM预测的D-SIDs语义一致。用户反馈奖励则融合了真实交互信号和排名模型估计的密集参与信号。</p>
+<p>SCRL采用基于GDPO的群体解耦归一化和PID控制的拉格朗日乘子，解决了异构奖励信号的尺度不匹配和优化不稳定问题：</p>
+$$
+R(y_{i})=R_{\text{feedback}}(y_{i})-\!\!\!\sum_{c\in\{a,q\}}\!\!\!\lambda_{c}(t)\,\mathrm{ReLU}\!\big(\tau_{c}-R_{c}(y_{i})\big)
+$$
+
+<p>这一机制使得系统能够自动权衡生成质量和用户偏好，避免手动调节带来的开销。</p>
+<h2>三、实验：从离线到在线的全面验证</h2>
+<h3>在线A/B测试</h3>
+<p>研究者在快手广告平台部署了完整的RaG系统，覆盖超过4亿日活用户。实验对比了三个递进的系统变体：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>相对于DLRM基线的收入提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GRM基线</td>
+<td>+3.526%</td>
+</tr>
+<tr>
+<td>GRM + 解耦语义ID（D-SIDs）</td>
+<td>+4.460%</td>
+</tr>
+<tr>
+<td>完整RaG系统（GRM + D-SIDs + IM + VGAs + SCRL）</td>
+<td>+5.462%</td>
+</tr>
+</tbody>
+</table></div>
+<p>从实验结果可以清晰看到两点：首先，解耦语义ID比传统语义ID带来了额外的0.902%提升，证明分离内容和创意属性确实改善了生成式推荐的质量。更重要的是，完整的RaG系统相较于GRM基线直接提升了1.870%，这一增量完全来自于D-SIDs驱动的个性化视频生成——标志着推荐系统从“检索匹配”进入“生成创造”的新阶段。</p>
+<h3>视频生成质量评估</h3>
+<p>在视频生成质量方面，VGAs相较于传统的工作流基线展现出了显著优势：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>工作流基线</th>
+<th>VGAs</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>自动评分（平均/中位数）</td>
+<td>62.4 / 62.0</td>
+<td>71.3 / 76.0</td>
+<td>+14.3% / +22.6%</td>
+</tr>
+<tr>
+<td>自动胜率</td>
+<td>28.7%</td>
+<td>70.1%</td>
+<td>+41.4pp</td>
+</tr>
+<tr>
+<td>用户研究胜率</td>
+<td>34.4%</td>
+<td>52.9%</td>
+<td>+18.5pp</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些提升来自于VGAs的推理能力和反思机制：层次化的端到端框架支持连贯的跨模态规划，而自校正循环确保了输出质量。</p>
+<h2>四、展望</h2>
+<p>RaG证明了在工业规模下实现“推荐即生成”范式的可行性。它不仅打破了传统推荐系统固定内容池的桎梏，更通过闭环优化让用户兴趣与内容生产形成了一个自演进的系统。</p>
+<p>论文中提到的D-SIDs、多智能体协作、约束策略优化等技术方案，为个性化推荐与AIGC的深度融合提供了宝贵的实践经验。未来，如果能够将推理延迟进一步降低，实现真正的实时个性化生成，将彻底改变视频平台的用户消费体验。</p>
+<p>推荐系统从“理解用户喜欢什么”到“为用户创造他们喜欢的内容”，这一转变或许才刚刚开始。当推荐不再是被动的匹配，而是主动的创造，短视频平台的内容生态将面临怎样的重构？</p>
+<p><strong>论文标题</strong>：Recommendation as Generation: Unifying Personalized Video Generation and Recommendation at Industrial Scale</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.25496.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-24_Recommendation-as-Generation-Unifying-Personalized-Video-Generation-and-Recommendation-at-Industrial.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-24_Recommendation-as-Generation-Unifying-Personalized-Video-Generation-and-Recommendation-at-Industrial.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
