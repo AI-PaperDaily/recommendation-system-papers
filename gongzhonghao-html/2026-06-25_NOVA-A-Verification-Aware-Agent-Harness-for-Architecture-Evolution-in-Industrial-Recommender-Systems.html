@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA: A Verification-Aware Agent Harness for Architecture Evolution in Industrial Recommender Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">NOVA: A Verification-Aware Agent Harness for Architecture Evolution in Industrial Recommender Systems</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-27</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>腾讯发布NOVA引擎：推荐系统架构演进效率暴增13倍，在线GMV提升2.02%</h1>
+<p>在工业界推荐系统的演进历史中，每一次架构创新都伴随着巨大的工程代价。从LR、FM到DeepFM，再到如今主流的Transformer-based架构，工程团队往往需要耗费数周甚至数月的时间才能将一个论文中的想法转化为可上线运行的模型——更可怕的是，很多修改看似“跑通了”，却在线上悄无声息地损失了业务指标。</p>
+<p>这一问题困扰着业界多年。近日，腾讯披露了其最新研究成果——<strong>NOVA</strong>，一套面向推荐系统架构演进的验证感知Agent系统。在工业级广告推荐场景下，NOVA在L3层“论文到生产”任务上实现了60.0%的有效通过率（EPR），将一次架构迭代所需的人力时间缩短了<strong>13倍以上</strong>，在线A/B测试中GMV提升最高达<strong>+2.02%</strong>，同时将pCVR偏差降低最高66.7%。</p>
+<h2>一、引言：架构演进之痛</h2>
+<p>推荐模型的性能提升越来越依赖于骨干网络的架构创新。腾讯的研究团队观察到，当简单的特征工程优化触及天花板后，更强大的骨干网络已成为业务增长的最后一个高杠杆点。然而，在实际生产中，架构演进面临着三重困境：</p>
+<ul>
+<li><strong>搜索空间庞大</strong>：跨模块的拓扑变更涉及特征路由、张量形状、数据类型的连锁约束</li>
+<li><strong>“无声失败”频繁</strong>：代码能跑通不代表架构语义正确——编译通过的系统可能在训练时暗中退化Attention为简单MLP</li>
+<li><strong>自动化工具断层</strong>：AutoML擅长调超参，通用编码代理优化可运行代码，但两者都无法保证推荐系统特有的架构有效性</li>
+</ul>
+<p>NOVA正是为解决这些核心痛点而生。</p>
+<h2>二、核心方法：验证感知的架构梯度搜索</h2>
+<p>NOVA的核心创新在于将架构演进形式化为一个<strong>验证感知的迭代搜索过程</strong>，并引入了类似SGD的“架构梯度”概念。</p>
+<h3>2.1 架构梯度：非可微分的更新信号</h3>
+<p>在推荐系统架构中，状态空间是离散且高度约束的（如模型图结构、特征配置等），标准梯度无法直接使用。NOVA提出了<strong>架构梯度</strong>（Architecture Gradient）作为结构化更新信号：</p>
+<p><img alt="图1：NOVA层级感知的架构梯度工作流总览" src="https://arxiv.org/html/2606.27243v1/figure/4_1_5.png" /></p>
+<p>在每一轮迭代中，NOVA计算架构梯度：</p>
+$$g_{t} = \mathrm{Grad}(e_{t-1}, V_{t}, \Delta J_{t}, H_{t})$$
+
+<p>其中$e_{t-1}$是上一次的架构修改，$V_{t}$是验证诊断结果，$\Delta J_{t}$是离线指标变化，$H_{t}$是历史轨迹记忆。该梯度提供了三种更新信息：<br />
+- <strong>薄弱组件</strong>：当前架构瓶颈所在<br />
+- <strong>修改方向</strong>：接下来应探索的方向<br />
+- <strong>禁止方向</strong>：已失败或语义无效的修改模式</p>
+<p>NOVA据此选择下一个可行修改：</p>
+$$e_{t}^{*} \in \arg\max_{e\in\mathcal{E}} \mathrm{Score}(e; g_{t}, H_{t})$$
+
+<h3>2.2 多阶段验证级联：拦截“无声失败”</h3>
+<p>NOVA设计了四级验证级联，在最昂贵的离线训练之前即拦截无效候选：</p>
+<p><img alt="图2：无声故障感知的验证级联流程" src="https://arxiv.org/html/2606.27243v1/figure/4_4_4.png" /></p>
+<ul>
+<li><strong>结构语义门</strong>：检查张量形状、注意力方向、Mask语义、Logit融合路径等架构语义</li>
+<li><strong>本地执行门</strong>：验证单机可执行性</li>
+<li><strong>离线内循环</strong>：基于AUC进行评估</li>
+<li><strong>在线外循环</strong>：使用GMV/Bias进行生产验证</li>
+</ul>
+<p>关键创新在于：验证诊断被反馈至架构梯度中，失败模式被记录为<strong>禁止方向</strong>。这使得NOVA不是在每次迭代中“从零开始”，而是逐步积累经验和禁忌。</p>
+<h3>2.3 L1-L4任务层级控制</h3>
+<p>NOVA根据任务复杂度将自动化范围划分为四个层级：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>任务类型</th>
+<th>典型任务</th>
+<th>执行模式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>原子结构调整</td>
+<td>调整单变量（如层级数）</td>
+<td>AutoRun</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>约束感知的ScaleUp</td>
+<td>联合调整耦合变量</td>
+<td>AutoRun</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>论文到生产迁移</td>
+<td>将新架构适配至生产模型</td>
+<td>AutoRun/Copilot</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>开放式创新</td>
+<td>提出全新结构</td>
+<td>Copilot</td>
+</tr>
+</tbody>
+</table></div>
+<p>其中，Copilot模式意味着高风险路由需要人工确认，而AutoRun模式下系统可自主运行。</p>
+<h2>三、实验验证：全面超越基线</h2>
+<h3>3.1 主要结果</h3>
+<p>腾讯团队在工业级广告推荐系统上进行了严格对比实验，训练数据涵盖数十亿用户-物品交互记录，每个记录关联上千个特征字段。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>L2 ScaleUp</th>
+<th>L3 论文到生产</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>LPR↑</td>
+<td>SFR↓</td>
+</tr>
+<tr>
+<td>人类专家循环</td>
+<td>95.5%</td>
+<td>48.4%</td>
+</tr>
+<tr>
+<td>ReActAgent</td>
+<td>37.5%</td>
+<td>66.7%</td>
+</tr>
+<tr>
+<td>OpenHands</td>
+<td>33.3%</td>
+<td>80.0%</td>
+</tr>
+<tr>
+<td>Optuna-TPE</td>
+<td>17.2%</td>
+<td>72.7%</td>
+</tr>
+<tr>
+<td><strong>NOVA</strong></td>
+<td><strong>99.0%</strong></td>
+<td><strong>45.5%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>在L3任务上，NOVA的EPR（60.0%）几乎是人类专家的两倍，而OpenHands和ReActAgent分别仅为10.2%和7.1%。这意味着在同样的预算下，NOVA能够找到更多真正有效的架构修改。</p>
+<h3>3.2 消融研究：每个组件都在发挥作用</h3>
+<p>通过逐个移除NOVA组件，研究者揭示了各模块的贡献：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>LPR↑</th>
+<th>SFR↓</th>
+<th>EPR↑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NOVA（完整）</td>
+<td>86.7%</td>
+<td>30.8%</td>
+<td>60.0%</td>
+</tr>
+<tr>
+<td>w/o 论文复现</td>
+<td>91.7%</td>
+<td>63.6%</td>
+<td>33.3%</td>
+</tr>
+<tr>
+<td>w/o 方案设计</td>
+<td>81.8%</td>
+<td>77.8%</td>
+<td>18.2%</td>
+</tr>
+<tr>
+<td>w/o 多候选生成</td>
+<td>66.7%</td>
+<td>61.1%</td>
+<td>25.9%</td>
+</tr>
+<tr>
+<td>w/o 质量评估</td>
+<td>71.9%</td>
+<td>69.6%</td>
+<td>21.9%</td>
+</tr>
+<tr>
+<td>w/o 架构梯度反馈</td>
+<td>87.5%</td>
+<td>57.1%</td>
+<td>37.5%</td>
+</tr>
+</tbody>
+</table></div>
+<p>特别值得注意的是，“无方案设计”变体的EPR跌至18.2%，证明从论文到生产的转化中，<strong>规划步骤</strong>是不可或缺的环节。而去除“架构梯度反馈”后，SFR飙升，说明历史失败信息的再利用对于避免重复犯错至关重要。</p>
+<h3>3.3 在线A/B测试：业务落地的最终检验</h3>
+<p>NOVA将离线搜索到的最佳候选部署至生产pCVR模型进行了在线A/B测试，结果显示：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>GMV提升</th>
+<th>pCVR偏差降低</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>task1</td>
+<td><strong>+1.25%</strong></td>
+<td>-58.8%</td>
+</tr>
+<tr>
+<td>task2</td>
+<td><strong>+1.70%</strong></td>
+<td><strong>-66.7%</strong></td>
+</tr>
+<tr>
+<td>task3</td>
+<td><strong>+2.02%</strong></td>
+<td>-37.3%</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些业务提升是在<strong>同时降低预测偏差</strong>的前提下实现的——打破了传统上“提GMV必牺牲校准”的trade-off。</p>
+<h2>四、展望：从搜索到全流程自动化</h2>
+<p>NOVA证明了一条可行的路径：通过将验证信号转化为搜索信号，推荐系统的架构演进可以从“专家密集型”转向“自动化驱动”。研究团队规划了四个未来演进方向：从精排扩展到全漏斗（召回、粗排、精排、重排），从模型优化扩展到全生命周期R&amp;D自动化，从人工维护技能规则进化为自进化技能，以及通过梯度感知的资源调度来进一步提升搜索效率。</p>
+<p>当架构演进变得可靠且低成本时，我们或许将看到推荐系统领域的创新速度迎来一次质变——这不仅是效率的提升，更是对生产力范式的重塑。</p>
+<p><strong>论文标题</strong>：NOVA: A Verification-Aware Agent Harness for Architecture Evolution in Industrial Recommender Systems</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.27243.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-25_NOVA-A-Verification-Aware-Agent-Harness-for-Architecture-Evolution-in-Industrial-Recommender-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-25_NOVA-A-Verification-Aware-Agent-Harness-for-Architecture-Evolution-in-Industrial-Recommender-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
