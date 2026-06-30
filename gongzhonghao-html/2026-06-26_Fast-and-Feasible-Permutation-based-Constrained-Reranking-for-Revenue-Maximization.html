@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast and Feasible: Permutation-based Constrained Reranking for Revenue Maximization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Fast and Feasible: Permutation-based Constrained Reranking for Revenue Maximization</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-06-30</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Avito 发布全新重排序算法：仅用 0.038 秒实现 63% 收入优化，A/B 测试 2% 收入增长</h1>
+<p>在电商搜索系统中，平台面临的终极矛盾从未改变：<strong>如何让付费推广商品获得更多曝光，同时又不牺牲用户体验？</strong> 当搜索排名系统已经产出高质量结果时，任何为了收入而进行的重排序都可能带来相关性下降或欺诈风险上升的代价。</p>
+<p>来自 Avito 与莫斯科国立大学的研究团队，给出了一份兼具理论与工程价值的答卷。他们提出的 <strong>PermR 算法</strong>，在每秒处理数十万次查询的生产环境中，仅用 0.038 秒就能完成重排序计算，实现了 ILP 精确求解器 63% 的收入提升效果，并在覆盖 5600 万次查询的 14 天 A/B 测试中，将平台收入提升了 2%。</p>
+<h2>一、核心方法：当收入优化遇上多约束条件</h2>
+<h3>1.1 问题形式化：整数线性规划</h3>
+<p>研究团队将这一重排序问题定义为标准的 <strong>整数线性规划（ILP）</strong> 问题。对于每个搜索查询，系统需要决定将哪个物品放置在哪个位置，目标是最大化主要收入指标 F₀，同时满足对相关性、欺诈检测等多个指标的约束。</p>
+$$ \begin{aligned} &\max_{\boldsymbol{d}}\sum_{i=1}^{N}\sum_{j=1}^{N}\gamma_{j}\cdot d_{ij}\cdot f_{0}^{(i)} \\ \text{s.t. }&\sum_{i=1}^{N}\sum_{j=1}^{N}\gamma_{j}\cdot d_{ij}\cdot f_{m}^{(i)}\geq F_{m}^{*},\ \forall m=1,\dots,M \\ &\sum_{j=1}^{N}d_{ij}=1,\ \forall i=1,\dots,N \\ &\sum_{i=1}^{N}d_{ij}=1,\ \forall j=1,\dots,N \\ &d_{ij}\in\{0,1\},\ \forall i=1,\dots,N\ \forall j=1,\dots,N. \end{aligned} $$
+
+<p>其中 $\gamma_j$ 表示位置 $j$ 的位置偏置权重，$f_m^{(i)}$ 表示物品 $i$ 对第 $m$ 个指标的贡献，$F_m^{*}$ 则是从当前生产排序中提取的约束边界。</p>
+<h3>1.2 多阶段重排序管线</h3>
+<p><img alt="图1：多阶段重排序管线，PermR 作为顶层后处理层" src="https://arxiv.org/html/2606.28059v1/pipeline.png" /></p>
+<p><strong>图1清晰地展示了 PermR 在整个搜索系统中的定位</strong>——它作为最顶层的后处理层，接收已经过召回、粗排、精排阶段的候选结果，通过轻量级的置换操作进行最终调整。</p>
+<h3>1.3 PermR 算法设计：邻域交换与约束修复</h3>
+<p>论文提出的 PermR 算法采用了一种极其简洁但高效的策略：<strong>通过迭代交换相邻物品来逼近最优解</strong>。算法的核心机制分为两种模式：</p>
+<ol>
+<li>
+<p><strong>目标改进模式</strong>：当所有约束都满足时，算法会以概率 $\max(0, f_0^{s_{j+1}} - f_0^{s_j})$ 采样一对相邻物品进行交换，将高收入物品推向更高位置。</p>
+</li>
+<li>
+<p><strong>约束修复模式</strong>：当某个约束被违反时，算法会随机选择一个被违反的约束，然后以 $\max(0, f_m^{s_{j+1}} - f_m^{s_j})$ 的概率采样相邻物品进行交换。</p>
+</li>
+</ol>
+<p>对于前缀约束（如 Top-5 的相关性），当邻域交换无法修复时，算法会直接将具有最高 $f_m$ 值的物品插入到前缀位置。</p>
+<p><img alt="算法1：PermR 完整伪代码" src="https://arxiv.org/html/2606.28059v1/algo1.png" /></p>
+<p><strong>算法1展示了 PermR 的完整流程</strong>，这个伪代码虽然看起来简洁，但包含了精妙的概率采样机制和约束修复策略。</p>
+<h2>二、实验验证：从离线到生产的完整评估</h2>
+<h3>2.1 离线实验：与精确求解器的对标</h3>
+<p>研究团队在包含 27000 条历史查询的大规模数据集上进行了离线评估。结果显示，PermR 在仅需 0.038 秒推理时间（远低于生产环境 0.05 秒的限制）的条件下，实现了 +4.3% 的收入提升，达到了 ILP 精确求解器（+6.9%）的 <strong>62% 近似度</strong>。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>推理时间（秒）</th>
+<th>收入提升 (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ILP (MOSEK 12线程)</td>
+<td>0.612</td>
+<td>+6.9</td>
+</tr>
+<tr>
+<td>PermR (750次迭代)</td>
+<td>0.038</td>
+<td>+4.3</td>
+</tr>
+<tr>
+<td>遗传算法 (0.05秒)</td>
+<td>0.05</td>
+<td>+0.48</td>
+</tr>
+</tbody>
+</table></div>
+<p>更值得注意的是，当推理时间放宽到 0.25 秒时，PermR 使用 2500 次迭代可将近似度提升至 80%。</p>
+<h3>2.2 推理时间与排序长度关系</h3>
+<p><img alt="图2(a)：不同 SERP 长度下的平均推理时间对比" src="https://arxiv.org/html/2606.28059v1/x1.png" /></p>
+<p><strong>图2(a)揭示了关键性能差异</strong>：随着搜索结果列表长度增加，ILP 求解器的推理时间呈指数级增长，在 50 个物品时已接近 1 秒。而 PermR 的推理时间增长极为平缓，即使在最长的列表中也能保持在 0.04 秒以内。</p>
+<h3>2.3 收入提升的稳定性评估</h3>
+<p><img alt="图2(b)：所有查询下收入提升的移动平均值" src="https://arxiv.org/html/2606.28059v1/x2.png" /></p>
+<p><strong>图2(b)展示了 PermR 结果的稳健性</strong>：收入提升的移动平均值在约 500 个查询后迅速稳定在水平平台上，表明算法对不同查询具有一致的表现。ILP 求解器达到了 +4.1% 的收益提升，PermR 为 +2.6%（63% 近似度），而遗传算法仅有 +0.4%。</p>
+<h3>2.4 在线 A/B 测试：真实流量的验证</h3>
+<p>在为期 14 天的 A/B 测试中，PermR 覆盖了 35% 的搜索流量（约 5600 万次查询），结果令人振奋：</p>
+<ul>
+<li><strong>全平台平均收入提升</strong>：+2.0%（$p < 0.05$）</li>
+<li><strong>最佳子类目表现</strong>：家居与花园 +6.0%</li>
+<li><strong>最稳定子类目</strong>：时尚类目 +4.2%，置信区间最窄（±0.8%）</li>
+</ul>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>子类目</th>
+<th>流量占比 (%)</th>
+<th>离线收入提升 (%)</th>
+<th>在线收入提升 (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>时尚</td>
+<td>23.2</td>
+<td>+3.0</td>
+<td>+4.2 ± 0.8</td>
+</tr>
+<tr>
+<td>家居与花园</td>
+<td>7.9</td>
+<td>+6.6</td>
+<td>+6.0 ± 1.8</td>
+</tr>
+<tr>
+<td>运动</td>
+<td>5.3</td>
+<td>+2.0</td>
+<td>+3.7 ± 0.9</td>
+</tr>
+</tbody>
+</table></div>
+<h2>三、展望</h2>
+<p>PermR 的成功之处在于<strong>它没有追求理论上的最优解，而是给出了工程上最优雅的妥协</strong>。对于电商平台而言，这不仅是 2% 的收入增长——以 Avito 的搜索规模计算，这代表着千万级的商业价值增量。</p>
+<p>研究者指出，PermR 的当前实现仍依赖固定迭代次数，未来可探索自适应收敛策略。此外，该框架可扩展至其他需要在多约束下优化单一目标的排序场景，如推荐系统、广告投放等。</p>
+<p><strong>当精确求解无法落地时，聪明的近似往往比完美的理论更有价值。</strong> 这份来自 Avito 的工作，为电商行业提供了一个可立即部署的收入优化方案。如果你正在为搜索排序的收入与体验平衡问题而困扰，不妨思考一下：你的系统中，哪些“完美的解”其实可以优雅地降维成一个“足够好的解”？</p>
+<p><strong>论文标题</strong>：Fast and Feasible: Permutation-based Constrained Reranking for Revenue Maximization</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.28059.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-26_Fast-and-Feasible-Permutation-based-Constrained-Reranking-for-Revenue-Maximization.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-26_Fast-and-Feasible-Permutation-based-Constrained-Reranking-for-Revenue-Maximization.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
