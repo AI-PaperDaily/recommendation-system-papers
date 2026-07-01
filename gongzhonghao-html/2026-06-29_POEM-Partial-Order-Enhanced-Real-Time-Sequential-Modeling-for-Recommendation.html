@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POEM: Partial-Order Enhanced Real-Time Sequential Modeling for Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">POEM: Partial-Order Enhanced Real-Time Sequential Modeling for Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-01</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手发布POEM实时推荐模型：巧用排序阶段“偏序”信号，用户播放时长提升0.249%</h1>
+<p>在信息爆炸的短视频时代，用户的兴趣状态瞬息万变——刷到一个搞笑视频后，可能立刻想看点影视解说。面对这种高速流转的意图，传统的推荐系统往往显得“迟钝”：它们依赖于用户点击历史的“事后总结”，却忽视了推荐系统在生成候选集时，已经对用户的偏好进行了实时评估。</p>
+<p>快手技术团队提出了一种名为 <strong>POEM（Partial-Order Enhanced Modeling）</strong> 的实时序列建模框架，有效解决了这一痛点。POEM并非被动等待用户点击，而是将上游排序阶段产生的多目标分数（如预估点击率、播放时长等）转化为一种动态的“偏序关系”，在每一轮请求中主动推测用户的即时兴趣。该方法在快手两大业务场景上线后，分别带来了 <strong>+0.249%</strong> 和 <strong>+0.213%</strong> 的用户人均播放时长提升，在工业界展现了显著的价值。</p>
+<h2>一、核心方法：当系统“预判”成为模型输入</h2>
+<p>POEM的核心创新在于重新定义了召回阶段的输入序列。传统模型只能观察用户的“行动”，而POEM开始学习系统对用户的“预判”。整个框架围绕三个关键技术点展开：</p>
+<h3>1. “偏序”序列构建：将排序分数结构化</h3>
+<p>传统模型将用户历史行为视为一个平铺的、无序或严格按时间排序的列表。POEM则认为，上一轮请求中系统对候选物料的排序分数，本身就包含了极有价值的“相对偏好”信息。</p>
+<p><img alt="图1：POEM框架工作流程" src="https://arxiv.org/html/2606.29946v1/poem_arch_v4.png" /></p>
+<p>上图左侧展示了POEM的序列构建过程。针对用户的当前请求，POEM首先从缓存中取出该用户<strong>上一轮刷新请求</strong>时产生的Top-K候选物料及其多目标排序分数（如CTR、CVR、WatchTime）。如何将这些异构分数融合成一个统一的“优先级”是一个挑战。论文提出了一种基于排序权重的融合方式：</p>
+$$p_{i}=\sum_{o\in\{\textrm{ctr},\textrm{cvr},\textrm{wt}\}}w^{o}\cdot \frac{1}{\operatorname{rank}^{o}(i)}$$
+
+<p>其中，$\frac{1}{\operatorname{rank}^{o}(i)}$ 表示物料 $i$ 在目标 $o$ 上的逆序排名分数。这种方法避免了直接平均原始分数带来的尺度偏差。</p>
+<p>获得融合分数 $p_i$ 后，所有候选物料被降序排列，并等分为8个组（Group）。接着，从每个组中随机抽取8个物料，最终拼接成一个固定长度为64的“动态偏序序列”。这个序列不仅包含了具体的物料ID，还包含了它们在各目标维度上的原始排名和融合分数，构成了一个包含系统智能的信号嵌入。</p>
+<h3>2. 双序列编码：融合“历史”与“系统预判”</h3>
+<p>为了充分利用新构建的偏序序列，POEM采用了双Transformer编码器架构。模型同时处理两个并行的序列：传统的用户历史交互序列（$S_h$）和上述的动态偏序序列（$S_r$）。</p>
+<p>两个序列分别由独立的Transformer编码器处理，各自生成一个$[CLS]$标记的向量（$\mathbf{h}_h$ 和 $\mathbf{h}_r$）。最终的用户表示向量 $\mathbf{h}_u$ 由这两个向量拼接后，通过一个多层感知机（MLP）融合而成：</p>
+$$\mathbf{h}_{u}=\text{MLP}\left([\mathbf{h}_{h};\mathbf{h}_{r}]\right)$$
+
+<p>这一设计使得最终的用户兴趣表示能够兼顾长期稳定偏好与实时系统洞察。</p>
+<h3>3. 层次化学习策略：对齐系统与用户</h3>
+<p>为了训练模型捕获这种“偏序”结构，POEM设计了一套独特的层次化学习目标。训练的正样本不再是单一的“用户点击”行为，而是引入了两种正样本：<br />
+- <strong>用户反馈正样本（$i^{+}_{\text{fb}}$）</strong>：用户真正点击或长时间播放的物料。<br />
+- <strong>系统偏好正样本（$i^{+}_{\text{sys}}$）</strong>：上一轮请求中，根据多目标分数计算的得分最高的物料。</p>
+<p>通过同时学习这两种正样本，模型既能保持对用户真实行为的敏感性，又能学会预测“系统认为用户会喜欢什么”，即实现了所谓的“级联感知”。</p>
+<p>此外，为了提升模型的判别力，POEM没有使用简单的随机负采样，而是引入了一种基于动态图挖掘的硬负样本策略，从物料相似度图中找到高相似度的负样本进行训练。</p>
+<h2>二、实验表现：实时响应能力的量化验证</h2>
+<p>POEM在快手的海量真实数据上进行了严格的离线与在线测评。离线数据涵盖了108M用户和42M物料，测试集对比了不同时间粒度的表现。</p>
+<h3>主要离线对比结果</h3>
+<p>下表展示了在1小时测试集上，POEM与DSSM、SASRec以及上下文建模模型CAIN的对比结果：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">HR@50</th>
+<th style="text-align: left;">NDCG@50</th>
+<th style="text-align: left;">HR@100</th>
+<th style="text-align: left;">NDCG@100</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">DSSM</td>
+<td style="text-align: left;">0.4703</td>
+<td style="text-align: left;">0.1778</td>
+<td style="text-align: left;">0.6070</td>
+<td style="text-align: left;">0.1999</td>
+</tr>
+<tr>
+<td style="text-align: left;">SASRec</td>
+<td style="text-align: left;">0.5267</td>
+<td style="text-align: left;">0.2092</td>
+<td style="text-align: left;">0.6568</td>
+<td style="text-align: left;">0.2303</td>
+</tr>
+<tr>
+<td style="text-align: left;">CAIN variant</td>
+<td style="text-align: left;">0.5749</td>
+<td style="text-align: left;">0.2371</td>
+<td style="text-align: left;">0.7008</td>
+<td style="text-align: left;">0.2575</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POEM</strong></td>
+<td style="text-align: left;"><strong>0.6661</strong></td>
+<td style="text-align: left;"><strong>0.3080</strong></td>
+<td style="text-align: left;"><strong>0.7725</strong></td>
+<td style="text-align: left;"><strong>0.3253</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><em>相对提升</em></td>
+<td style="text-align: left;"><em>+15.9%</em></td>
+<td style="text-align: left;"><em>+29.9%</em></td>
+<td style="text-align: left;"><em>+10.2%</em></td>
+<td style="text-align: left;"><em>+26.3%</em></td>
+</tr>
+</tbody>
+</table></div>
+<p>POEM在所有指标上均大幅领先，特别是在NDCG@50上提升了近30%，说明其推荐的排序质量得到了质的飞跃。</p>
+<h3>实时感知的微观证据</h3>
+<p>为了证明POEM动态调整用户兴趣的能力，研究者对一位用户的连续两次请求进行了案例分析。</p>
+<p><img alt="图2：案例研究：序列与检索结果的实时变化" src="https://arxiv.org/html/2606.29946v1/POEM_case1v3.png" /></p>
+<p>上图直观地展示，尽管该用户在两次请求间隔期间没有产生任何新的点击行为，但由于候选物料池和排序分数的更新，POEM构建的偏序序列内容有<strong>96.8%</strong> 被替换，最终输出的召回结果也有<strong>86.2%</strong> 发生了变化。模型从捕捉“喜剧”兴趣，成功转向了“影视解说”兴趣。这意味着，即使在没有用户交互的“静默期”，POEM依然能通过系统信号感知并响应兴趣变化。</p>
+<h2>三、总结与展望</h2>
+<p>POEM框架成功地将推荐系统中的排序阶段从“终局裁判”转变为“初始向导”，通过将实时的多目标排序信号结构化为“偏序”序列，实现了真正意义上的请求级实时兴趣建模。该工作不仅证明了将系统内部状态作为特征信号输入模型的有效性，也为工业界解决用户体验延迟问题提供了新思路。</p>
+<p>未来，如何进一步增强模型对噪声排序信号的鲁棒性，以及如何将这种“偏序”建模思想推广到跨域推荐场景，将成为值得关注的技术方向。对于正在研发下一代推荐系统的工程师而言，POEM提出的“让模型学会跟随系统的实时判断”这一理念，或许将引发新的趋势。</p>
+<p><strong>论文标题</strong>：POEM: Partial-Order Enhanced Real-Time Sequential Modeling for Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2606.29946.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-06-29_POEM-Partial-Order-Enhanced-Real-Time-Sequential-Modeling-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-06-29_POEM-Partial-Order-Enhanced-Real-Time-Sequential-Modeling-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
