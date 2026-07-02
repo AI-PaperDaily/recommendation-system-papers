@@ -463,96 +463,109 @@
             </div>
             <h1 class="article-title">POEM: Partial-Order Enhanced Real-Time Sequential Modeling for Recommendation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-07-01</span>
+                <span class="meta-item">📅 2026-07-02</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>快手发布POEM实时推荐模型：巧用排序阶段“偏序”信号，用户播放时长提升0.249%</h1>
-<p>在信息爆炸的短视频时代，用户的兴趣状态瞬息万变——刷到一个搞笑视频后，可能立刻想看点影视解说。面对这种高速流转的意图，传统的推荐系统往往显得“迟钝”：它们依赖于用户点击历史的“事后总结”，却忽视了推荐系统在生成候选集时，已经对用户的偏好进行了实时评估。</p>
-<p>快手技术团队提出了一种名为 <strong>POEM（Partial-Order Enhanced Modeling）</strong> 的实时序列建模框架，有效解决了这一痛点。POEM并非被动等待用户点击，而是将上游排序阶段产生的多目标分数（如预估点击率、播放时长等）转化为一种动态的“偏序关系”，在每一轮请求中主动推测用户的即时兴趣。该方法在快手两大业务场景上线后，分别带来了 <strong>+0.249%</strong> 和 <strong>+0.213%</strong> 的用户人均播放时长提升，在工业界展现了显著的价值。</p>
-<h2>一、核心方法：当系统“预判”成为模型输入</h2>
-<p>POEM的核心创新在于重新定义了召回阶段的输入序列。传统模型只能观察用户的“行动”，而POEM开始学习系统对用户的“预判”。整个框架围绕三个关键技术点展开：</p>
-<h3>1. “偏序”序列构建：将排序分数结构化</h3>
-<p>传统模型将用户历史行为视为一个平铺的、无序或严格按时间排序的列表。POEM则认为，上一轮请求中系统对候选物料的排序分数，本身就包含了极有价值的“相对偏好”信息。</p>
-<p><img alt="图1：POEM框架工作流程" src="https://arxiv.org/html/2606.29946v1/poem_arch_v4.png" /></p>
-<p>上图左侧展示了POEM的序列构建过程。针对用户的当前请求，POEM首先从缓存中取出该用户<strong>上一轮刷新请求</strong>时产生的Top-K候选物料及其多目标排序分数（如CTR、CVR、WatchTime）。如何将这些异构分数融合成一个统一的“优先级”是一个挑战。论文提出了一种基于排序权重的融合方式：</p>
-$$p_{i}=\sum_{o\in\{\textrm{ctr},\textrm{cvr},\textrm{wt}\}}w^{o}\cdot \frac{1}{\operatorname{rank}^{o}(i)}$$
+            <h2>快手发布POEM实时推荐框架：用户观看时长提升0.254%，如何实现毫秒级兴趣重构？</h2>
+<p>在信息过载的时代，推荐系统早已成为各大内容平台的核心引擎。然而，一个关键矛盾始终存在：用户的兴趣在毫秒间流转，而传统的序列推荐模型却只能基于静态的历史点击记录来揣摩用户心意。当用户划过一个短视频的瞬间，其对下一个视频的偏好可能已因当前内容而改变，但模型却还停留在上一轮交互的认知中。这种“观测滞后”不仅导致推荐结果滞后，更忽略了系统自身在排序环节产生的、富含用户偏好的实时信号。</p>
+<p>针对这一痛点，快手的工程师们提出了一种名为 <strong>POEM（Partial-Order Enhanced Modeling）</strong> 的创新框架。该框架不满足于仅仅观察用户的点击行为，而是创造性地利用推荐流水线中实时产生的多目标排序分数（如预估点击率、观看时长等）来构建输入序列，从而实现了真正的<strong>请求级实时兴趣建模</strong>。论文数据显示，POEM在快手单页和极速版两大场景中，分别带来了<strong>人均观看时长+0.249%</strong> 和 <strong>+0.213%</strong> 的显著在线提升，证明了其在工业界大规模部署中的巨大价值。</p>
+<h3>一、核心创新：让排序信号成为实时兴趣的“导航仪”</h3>
+<p>POEM的核心洞察在于：推荐系统内部的排序架构（Ranking Cascade）并非一个黑盒，而是一个持续生成“用户偏好评级”的精密仪器。每一次为用户请求生成候选集时，系统都会产出数千个预估分数，这些分数构成了一个描述用户当前偏好的<strong>偏序关系（Partial Order）</strong>。传统模型忽略了这座“金矿”，而POEM则将其转化为驱动模型学习的实时信号。</p>
+<h4>1. 动态偏序序列构建：从静态序列到实时系统“快照”</h4>
+<p>POEM摒弃了纯依赖历史点击的静态序列构建方式。对于每个用户请求，它会动态地从该用户的<strong>上一次请求</strong>的顶级候选结果中提取数据。这意味着，即使在上一次请求到现在之间用户没有任何新点击，模型也能根据上次请求结束时系统的“系统认知”来感知用户兴趣的演变。</p>
+<p>这些候选物品的排序分数是多维度的，直接平均会导致尺度不一致问题。为此，POEM提出了一种基于<strong>排序加权</strong>的融合方法。对于每个目标维度 $o$ (如CTR、观看时长)，论文将所有候选物品的原始分数降序排列，并赋予一个基于排名的效用分数。</p>
+$$s^{o}(i) = \frac{1}{\text{rank}^{o}(i)}$$
 
-<p>其中，$\frac{1}{\operatorname{rank}^{o}(i)}$ 表示物料 $i$ 在目标 $o$ 上的逆序排名分数。这种方法避免了直接平均原始分数带来的尺度偏差。</p>
-<p>获得融合分数 $p_i$ 后，所有候选物料被降序排列，并等分为8个组（Group）。接着，从每个组中随机抽取8个物料，最终拼接成一个固定长度为64的“动态偏序序列”。这个序列不仅包含了具体的物料ID，还包含了它们在各目标维度上的原始排名和融合分数，构成了一个包含系统智能的信号嵌入。</p>
-<h3>2. 双序列编码：融合“历史”与“系统预判”</h3>
-<p>为了充分利用新构建的偏序序列，POEM采用了双Transformer编码器架构。模型同时处理两个并行的序列：传统的用户历史交互序列（$S_h$）和上述的动态偏序序列（$S_r$）。</p>
-<p>两个序列分别由独立的Transformer编码器处理，各自生成一个$[CLS]$标记的向量（$\mathbf{h}_h$ 和 $\mathbf{h}_r$）。最终的用户表示向量 $\mathbf{h}_u$ 由这两个向量拼接后，通过一个多层感知机（MLP）融合而成：</p>
-$$\mathbf{h}_{u}=\text{MLP}\left([\mathbf{h}_{h};\mathbf{h}_{r}]\right)$$
+<p>然后，通过一个加权求和得到物品 $i$ 的最终优先级分数 $p_i$：</p>
+$$p_i = \sum_{o \in \{\text{ctr}, \text{cvr}, \text{wt}\}} w^{o} \cdot s^{o}(i)$$
 
-<p>这一设计使得最终的用户兴趣表示能够兼顾长期稳定偏好与实时系统洞察。</p>
-<h3>3. 层次化学习策略：对齐系统与用户</h3>
-<p>为了训练模型捕获这种“偏序”结构，POEM设计了一套独特的层次化学习目标。训练的正样本不再是单一的“用户点击”行为，而是引入了两种正样本：<br />
-- <strong>用户反馈正样本（$i^{+}_{\text{fb}}$）</strong>：用户真正点击或长时间播放的物料。<br />
-- <strong>系统偏好正样本（$i^{+}_{\text{sys}}$）</strong>：上一轮请求中，根据多目标分数计算的得分最高的物料。</p>
-<p>通过同时学习这两种正样本，模型既能保持对用户真实行为的敏感性，又能学会预测“系统认为用户会喜欢什么”，即实现了所谓的“级联感知”。</p>
-<p>此外，为了提升模型的判别力，POEM没有使用简单的随机负采样，而是引入了一种基于动态图挖掘的硬负样本策略，从物料相似度图中找到高相似度的负样本进行训练。</p>
-<h2>二、实验表现：实时响应能力的量化验证</h2>
-<p>POEM在快手的海量真实数据上进行了严格的离线与在线测评。离线数据涵盖了108M用户和42M物料，测试集对比了不同时间粒度的表现。</p>
-<h3>主要离线对比结果</h3>
-<p>下表展示了在1小时测试集上，POEM与DSSM、SASRec以及上下文建模模型CAIN的对比结果：</p>
+<p>根据 $p_i$ 对所有物品排序后，论文将其划分为 $G$ 组，再在每组中随机均匀采样 $K$ 个物品，最终拼接成一个长度固定为 $L = G \times K$ 的动态偏序序列。这种<strong>分组采样</strong>策略既保留了系统的全局偏好顺序（高分组在前），又通过组内随机性保证了序列的多样性，从而构建出一个能够实时反映系统认知的“快照”。</p>
+<p><img alt="图1：POEM框架工作流。左侧展示了如何从上一请求的候选物品中构建动态偏序序列，右侧展示了包含双编码器和层级损失函数的训练阶段。" src="https://arxiv.org/html/2606.29946v1/poem_arch_v4.png" /></p>
+<h4>2. 层级学习目标：融合系统智慧与用户真实反馈</h4>
+<p>有了高质量的序列，如何有效地训练模型？POEM提出了一个创新的<strong>层级学习目标</strong>，巧妙地将系统的“预测偏好”与用户的“真实行为”结合起来。论文定义了两类正样本：<br />
+- <strong>系统偏好正样本 ($i^+_{sys}$)</strong>  ：在当前候选集中优先级分数 $p_i$ 最高的物品，代表系统的“黄金标准”。<br />
+- <strong>用户反馈正样本 ($i^+_{fb}$)</strong>  ：实际被点击或长时间播放的物品，代表用户真实的满意度。</p>
+<p>为了训练模型在稠密的候选空间中精确区分偏好，POEM还引入了一种基于<strong>动态图挖掘的难负样本</strong>。它利用Swing算法构建物品共现图，为每个正样本检索其相似但实际未交互的物品作为难负样本。最终的损失函数组合了交叉熵损失与带有边界的成对损失：</p>
+$$\mathcal{L} = \mathcal{L}_{\text{CE}} + \lambda \mathcal{L}_{\text{pair}}$$
+
+$$\mathcal{L}_{\text{pair}} = \frac{1}{B} \sum_{b=1}^{B} \max\left(0, \gamma + \text{sim}(\mathbf{h}_{u}^{b}, \mathbf{e}_{i^{-}_{\text{hard},b}}) - \text{sim}(\mathbf{h}_{u}^{b}, \mathbf{e}_{i_{b}^{+}})\right)$$
+
+<p>这种设计确保了模型不仅能学到用户想看什么，还能学到系统认为什么是高质量的内容，从而实现真正的“级联对齐”。</p>
+<h3>二、实验验证：离线与在线的双重飞跃</h3>
+<p>为了验证POEM的有效性，研究者在快手平台的工业级数据集上进行了严格测试，并与DSSM、SASRec以及增强版CAIN模型进行了对比。</p>
+<p>在离线测试中，POEM展现了压倒性的优势。以下是在紧接训练期的1小时测试集上的结果，所有指标均大幅领先。</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th style="text-align: left;">Model</th>
-<th style="text-align: left;">HR@50</th>
-<th style="text-align: left;">NDCG@50</th>
-<th style="text-align: left;">HR@100</th>
-<th style="text-align: left;">NDCG@100</th>
+<th>模型</th>
+<th>HR@50</th>
+<th>NDCG@50</th>
+<th>HR@100</th>
+<th>NDCG@100</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">DSSM</td>
-<td style="text-align: left;">0.4703</td>
-<td style="text-align: left;">0.1778</td>
-<td style="text-align: left;">0.6070</td>
-<td style="text-align: left;">0.1999</td>
+<td>DSSM</td>
+<td>0.4703</td>
+<td>0.1778</td>
+<td>0.6070</td>
+<td>0.1999</td>
 </tr>
 <tr>
-<td style="text-align: left;">SASRec</td>
-<td style="text-align: left;">0.5267</td>
-<td style="text-align: left;">0.2092</td>
-<td style="text-align: left;">0.6568</td>
-<td style="text-align: left;">0.2303</td>
+<td>SASRec</td>
+<td>0.5267</td>
+<td>0.2092</td>
+<td>0.6568</td>
+<td>0.2303</td>
 </tr>
 <tr>
-<td style="text-align: left;">CAIN variant</td>
-<td style="text-align: left;">0.5749</td>
-<td style="text-align: left;">0.2371</td>
-<td style="text-align: left;">0.7008</td>
-<td style="text-align: left;">0.2575</td>
+<td>CAIN variant</td>
+<td>0.5749</td>
+<td>0.2371</td>
+<td>0.7008</td>
+<td>0.2575</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>POEM</strong></td>
-<td style="text-align: left;"><strong>0.6661</strong></td>
-<td style="text-align: left;"><strong>0.3080</strong></td>
-<td style="text-align: left;"><strong>0.7725</strong></td>
-<td style="text-align: left;"><strong>0.3253</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"><em>相对提升</em></td>
-<td style="text-align: left;"><em>+15.9%</em></td>
-<td style="text-align: left;"><em>+29.9%</em></td>
-<td style="text-align: left;"><em>+10.2%</em></td>
-<td style="text-align: left;"><em>+26.3%</em></td>
+<td><strong>POEM</strong></td>
+<td><strong>0.6661</strong></td>
+<td><strong>0.3080</strong></td>
+<td><strong>0.7725</strong></td>
+<td><strong>0.3253</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>POEM在所有指标上均大幅领先，特别是在NDCG@50上提升了近30%，说明其推荐的排序质量得到了质的飞跃。</p>
-<h3>实时感知的微观证据</h3>
-<p>为了证明POEM动态调整用户兴趣的能力，研究者对一位用户的连续两次请求进行了案例分析。</p>
-<p><img alt="图2：案例研究：序列与检索结果的实时变化" src="https://arxiv.org/html/2606.29946v1/POEM_case1v3.png" /></p>
-<p>上图直观地展示，尽管该用户在两次请求间隔期间没有产生任何新的点击行为，但由于候选物料池和排序分数的更新，POEM构建的偏序序列内容有<strong>96.8%</strong> 被替换，最终输出的召回结果也有<strong>86.2%</strong> 发生了变化。模型从捕捉“喜剧”兴趣，成功转向了“影视解说”兴趣。这意味着，即使在没有用户交互的“静默期”，POEM依然能通过系统信号感知并响应兴趣变化。</p>
-<h2>三、总结与展望</h2>
-<p>POEM框架成功地将推荐系统中的排序阶段从“终局裁判”转变为“初始向导”，通过将实时的多目标排序信号结构化为“偏序”序列，实现了真正意义上的请求级实时兴趣建模。该工作不仅证明了将系统内部状态作为特征信号输入模型的有效性，也为工业界解决用户体验延迟问题提供了新思路。</p>
-<p>未来，如何进一步增强模型对噪声排序信号的鲁棒性，以及如何将这种“偏序”建模思想推广到跨域推荐场景，将成为值得关注的技术方向。对于正在研发下一代推荐系统的工程师而言，POEM提出的“让模型学会跟随系统的实时判断”这一理念，或许将引发新的趋势。</p>
+<p>特别值得关注的是POEM的<strong>实时响应能力</strong>。进一步的细粒度分析表明，POEM的优势在时间间隔越短的测试集上越明显。在[1h, 2h)区间，其HR@50相较CAIN变体有15.9%的相对提升，而到了[12h, 24h)区间，优势缩小至2.29%。这有力地证明了其核心创新——依赖上一请求的实时排序信号——在短期内能极大增强模型的时效性。</p>
+<p>最终，在7天的在线A/B测试中，POEM成功落地并带来了可观的业务增长。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>应用场景</th>
+<th>总使用时长</th>
+<th>人均使用时长</th>
+<th>视频观看时长</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>快手单页</strong></td>
+<td>+0.254%</td>
+<td>+0.249%</td>
+<td>+0.237%</td>
+</tr>
+<tr>
+<td><strong>快手极速版</strong></td>
+<td>+0.158%</td>
+<td>+0.213%</td>
+<td>+0.335%</td>
+</tr>
+</tbody>
+</table></div>
+<h3>三、结语与展望</h3>
+<p>POEM的成功并非偶然，它揭示了推荐系统演进的一个重要方向：<strong>从被动观察者转变为主动参与者</strong>。通过挖掘和利用系统内生的、富含实时信息的排序信号，POEM打破了传统模型在兴趣建模上的延迟瓶颈。无论是0.249%的人均观看时长提升，还是离线15.9%的Hit Rate性能飞跃，都证明这种“偏序增强”思路的巨大潜力。</p>
+<p>论文提出的方法已在快手平台大规模部署，但这仅仅是开始。未来，如何进一步利用这种范式解决跨域推荐中的冷启动问题，或者将其应用于更广泛的“系统反馈”场景，将是值得持续探索的方向。当推荐系统学会从自身的“思考过程”中学习时，其智能水平必然迈上一个新的台阶。</p>
 <p><strong>论文标题</strong>：POEM: Partial-Order Enhanced Real-Time Sequential Modeling for Recommendation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
