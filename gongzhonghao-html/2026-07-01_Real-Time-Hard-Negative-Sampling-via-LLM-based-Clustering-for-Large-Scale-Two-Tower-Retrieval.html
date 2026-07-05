@@ -463,133 +463,208 @@
             </div>
             <h1 class="article-title">Real-Time Hard Negative Sampling via LLM-based Clustering for Large-Scale Two-Tower Retrieval</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-07-04</span>
+                <span class="meta-item">📅 2026-07-05</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>Meta发布颠覆性负采样技术：CTR暴涨53%，LLM聚类助力万亿级推荐系统去偏</h1>
-<p>在推荐系统领域，负样本的质量直接决定了模型的上限。传统方法中，无论是in-batch采样还是随机out-of-batch采样，都面临一个核心困境：生成的负样本太“容易”，模型学不到真正的区分能力。研究者发现，当负样本与正样本差异过大时，梯度更新几乎为零，训练沦为无效过程。</p>
-<p>近日，Meta研究团队发表了一项突破性工作，提出基于<strong>LLM聚类</strong>的实时困难负采样框架<strong>Cluster GOOBS</strong>，在工业级A/B测试中实现了<strong>CTR提升53%</strong>的惊人效果，并将Top 100热门物品的展示占比从50%降至32%，显著缓解了推荐系统的流行度偏差问题。该成果已被部署至Meta的亿级用户生产环境。</p>
-<h2>一、核心方法：Cluster GOOBS实时困难负采样框架</h2>
-<h3>1.1 传统负采样为何失效？</h3>
-<p>常规的两塔检索模型采用极多类分类公式：</p>
+            <h1>Meta最新力作发布：LLM聚类+实时负采样，CTR狂飙53%，双塔模型还能这么玩？</h1>
+<p>当推荐系统的检索管道面临数十亿候选物品时，负样本的质量直接决定了模型的收敛边界。传统方法要么依赖于批次内采样的局限性，要么陷于随机负样本过于简单的困境。Meta研究者近期提出的<strong>Cluster GOOBS</strong>框架，通过引入<strong>LLM驱动的语义聚类</strong>和<strong>实时负采样引擎</strong>，在工业级数据上实现了堪比暴力枚举的难负样本质量，同时保持了极低的计算开销。该方法在Amazon Electronics数据集上取得了<strong>HR@50提升55.6%</strong>的惊人结果，并在真实工业流量中获得了<strong>53%的CTR增长</strong>。</p>
+<h2>一、核心方法：自监督聚类难负采样</h2>
+<h3>1. 问题形式化与双塔模型困境</h3>
+<p>推荐系统中的检索模型通常被形式化为一个极多分类问题，标准的<strong>双塔模型</strong>架构将用户和物品分别编码为embedding，通过内积计算相关性。在训练时，模型需要优化的损失函数为交叉熵损失：</p>
+$$\mathcal{L}(\{x_i,y_i,r_i\}_{i=1}^n)=-\frac{1}{n}\sum_{i=1}^n r_i\cdot\log(P(y_i|x_i;\theta))$$
+
+<p>其中，每个正样本的概率计算需要面对整个候选物品集合$\mathcal{I}$：</p>
 $$P(y_i|x_i;\theta)=\frac{e^{s(x_i,y_i|\theta)}}{\sum_{j\in\mathcal{I}}e^{s(x_i,y_j|\theta)}}$$
 
-<p>其中$\mathcal{I}$是候选物品集合，$s(x_i,y_i|\theta)$是用户和物品的相似度函数。当负样本$y_j$与正样本$y_i$差异过大时，$e^{s(x_i,y_j|\theta)}$趋近于0，梯度信号消失，模型无法学习到微妙的语义区分。</p>
-<h3>1.2 自监督聚类负采样</h3>
-<p>论文提出的核心创新在于：<strong>强制从同一语义簇中采样负样本</strong>。具体而言，对于每个正样本$y_i$，从与其相同簇中采样$K$个负样本$\{y_{i1}^{-n},y_{i2}^{-n},...,y_{iK}^{-n}\}$。损失函数变为：</p>
-$$\mathcal{L}=-r_i\cdot\log\left(\frac{e^{s(x_i,y_i|\theta)}}{\sum_{j\in\{y_i,\{y_{ik}^{-n}\}_{k=1}^K\}}e^{s(x_i,y_j|\theta)}}\right)$$
-
-<p>这一设计的理论依据在于：簇内物品共享潜在特征，初始阶段相似度$s(x_i,y_j^{-n})$较高，产生的梯度幅度显著增大，迫使模型学习细粒度的簇内区分。</p>
-<h3>1.3 LLM驱动的高质量聚类</h3>
+<p>在实际工业应用中，$\mathcal{I}$的规模可达数百万甚至上亿，精准采样是唯一可行的路径。但传统的in-batch和out-of-batch采样往往产生<strong>易于区分的负样本</strong>，导致模型无法学到物品间的细粒度区分。</p>
 <p><img alt="图1：LLM-based cluster generation" src="https://arxiv.org/html/2607.00448v1/x1.png" /></p>
-<p>传统方法依赖物品类别或标签进行聚类，粒度粗糙且难以捕捉深层次语义。论文提出构建基于LLM的多模态内容编码器，通过预训练、多模态编码、微调三步生成语义丰富的嵌入表示，划分出300个高质量语义簇，其中98%的簇包含超过1万物品。</p>
-<h3>1.4 GOOBS实时采样框架</h3>
-<p><img alt="图2：GOOBS: Real-time cluster-based negative sampling framework" src="https://arxiv.org/html/2607.00448v1/x2.png" /></p>
-<p>GOOBS框架的核心在于<strong>更新引擎</strong>和<strong>采样引擎</strong>的双向协作。更新引擎通过自定义哈希函数，将每个训练批次中的物品ID映射到对应的簇段槽位。</p>
-<p><img alt="图3：GOOBS cluster-based pool update" src="https://arxiv.org/html/2607.00448v1/pictures/update_engine.png" /></p>
-<p><img alt="图4：GOOBS cluster-based sampling" src="https://arxiv.org/html/2607.00448v1/pictures/sample_engine.png" /></p>
-<p>采样引擎接收当前批次物品的簇ID后，从对应簇段中随机抽取一个已有物品作为OOB负样本。通过预加载历史数据，系统确保了训练初期的采样命中率，同时利用实时更新保持物品池的新鲜度。</p>
-<h2>二、实验验证：53% CTR提升与去偏奇迹</h2>
-<h3>2.1 公开数据集表现</h3>
-<p>论文在MovieLens-1M和Amazon Reviews四个子集上进行了严格评估，采用全全局排序而非采样评估，实验条件更为严苛。</p>
+<h3>2. LLM驱动的聚类生成</h3>
+<p>该方法依赖<strong>大语言模型（LLM）</strong>来构建高质量的语义聚类。不同于传统方法依靠物品类别或标签进行粗粒度聚类，研究者利用一个由LLM微调得到的多模态内容嵌入模型，能够处理文本、图像、视频等多种模态，生成语义丰富的物品表示。基于这些表示进行聚类，确保同一聚类内的物品具有高度的语义相似性。</p>
+<p>在负采样时，对于每个正样本，从该正样本所在聚类中采样K个负样本。这些聚类内负样本天然具有<strong>硬负样本</strong>特性——它们与正样本在语义上接近，迫使模型学习更精细的决策边界。</p>
+<h3>3. 理论上：梯度信号最大化</h3>
+<p>研究者从对比学习理论角度解释了聚类负采样的有效性。在标准的InfoNCE或softmax交叉熵损失中，负样本$x_j^-$对于用户锚点$x_u$的梯度贡献与其指数化相似度$\exp(s(x_u,x_j^-))$成正比。随机均匀采样的负样本通常与锚点在嵌入空间中相距很远，导致其相似度趋近于零，因而几乎没有梯度信号更新模型。</p>
+<p>通过从正样本相同的语义聚类中采样负样本，该方法确保了负样本与正样本共享潜在特征，使得模型在完全收敛前就能获得较大的相似度分数。这意味着负样本更接近模型当前的决策边界，产生的<strong>梯度幅度显著更大</strong>，迫使模型学习聚类内物品的细微差异，而非依赖简单的聚类间区分。</p>
+<h2>二、GOOBS：面向工业级部署的实时采样框架</h2>
+<p>理论上再精彩，如果不能落地都是空谈。该方法的另一大亮点是设计了<strong>GOOBS</strong>（Global Out-of-Batch Sampling）框架——一个能够无缝集成到生产模型、处理数十亿训练数据点的实时负采样系统。</p>
+<p><img alt="图2：GOOBS实时聚类负采样框架" src="https://arxiv.org/html/2607.00448v1/x2.png" /></p>
+<p>GOOBS的核心是一个<strong>物品池</strong>，用于存储OOB样本的张量。每个物品被分配到特定的“槽位”，存储其所有特征。训练过程中，当处理每个mini-batch时，<strong>更新引擎</strong>通过定制的哈希函数将当前批次中的物品映射到其所属聚类对应的槽位上。</p>
+<p><img alt="图3：GOOBS聚类池更新" src="https://arxiv.org/html/2607.00448v1/pictures/update_engine.png" /></p>
+<p><strong>算法1：更新引擎</strong>实现了一个O(1)的写入过程：<br />
+- 获取物品的聚类ID<br />
+- 通过哈希函数映射到聚类对应的槽位<br />
+- 更新物品特征</p>
+<p><img alt="图4：GOOBS聚类采样" src="https://arxiv.org/html/2607.00448v1/pictures/sample_engine.png" /></p>
+<p>与此同时，<strong>采样引擎</strong>接收当前批次物品的聚类ID作为输入，从物品池中对应的聚类段随机选取一个已存储的物品，搭配其完整特征，作为该批次样本的OOB负样本。</p>
+<p><strong>算法2：采样引擎</strong>同样高效：<br />
+- 获取当前批次样本的聚类ID<br />
+- 在对应聚类段内随机选择一个槽位<br />
+- 取出该槽位中的物品作为负样本</p>
+<p>为了确保训练初期的采样命中率，物品池会在训练开始前从历史数据表中预加载物品特征。虽然这些数据可能略微滞后于最新训练数据，但in-batch样本本身持续更新池中的内容，确保其新鲜度。这一设计使得GOOBS能够在<strong>全量负样本</strong>和<strong>实时性</strong>之间取得精确平衡。</p>
+<h2>三、实验与工业部署</h2>
+<h3>1. 公共数据集上的压倒性优势</h3>
+<p>研究者在MovieLens-1M和Amazon Reviews的多个子集上进行了实验，将Cluster GOOBS与以下方法对比：<br />
+- <strong>基线</strong>：In-batch负采样 + LogQ校正<br />
+- <strong>DNS</strong>：动态负采样<br />
+- <strong>CBNS</strong>：跨批次负采样<br />
+- <strong>ANCE</strong>：近似最近邻负采样<br />
+- <strong>GOOBS</strong>：随机OOB采样</p>
+<p><strong>表1: 公共数据集上的HR@50和HR@100对比</strong></p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th>数据集</th>
-<th>指标</th>
-<th>Baseline</th>
-<th>DNS</th>
-<th>CBNS</th>
-<th>ANCE</th>
-<th>GOOBS</th>
-<th>Cluster GOOBS</th>
+<th style="text-align: left;">数据集</th>
+<th style="text-align: left;">指标</th>
+<th style="text-align: left;">Baseline</th>
+<th style="text-align: left;">DNS</th>
+<th style="text-align: left;">CBNS</th>
+<th style="text-align: left;">ANCE</th>
+<th style="text-align: left;">GOOBS</th>
+<th style="text-align: left;">Cluster GOOBS</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Movielens-1M</td>
-<td>HR@50</td>
-<td>.2253</td>
-<td>.2298</td>
-<td>.2331</td>
-<td>.2380</td>
-<td>.2346</td>
-<td><strong>.2415</strong></td>
+<td style="text-align: left;">Movielens-1M</td>
+<td style="text-align: left;">hr@50</td>
+<td style="text-align: left;">.2253</td>
+<td style="text-align: left;">.2298</td>
+<td style="text-align: left;">.2331</td>
+<td style="text-align: left;">.2380</td>
+<td style="text-align: left;">.2346</td>
+<td style="text-align: left;"><strong>.2415</strong></td>
 </tr>
 <tr>
-<td>Amazon-Electronics</td>
-<td>HR@50</td>
-<td>.0084</td>
-<td>.0090</td>
-<td>.0099</td>
-<td>.0108</td>
-<td>.0110</td>
-<td><strong>.0131</strong></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">hr@100</td>
+<td style="text-align: left;">.3588</td>
+<td style="text-align: left;">.3618</td>
+<td style="text-align: left;">.3608</td>
+<td style="text-align: left;">.3661</td>
+<td style="text-align: left;">.3611</td>
+<td style="text-align: left;"><strong>.3682</strong></td>
 </tr>
 <tr>
-<td>Amazon-Home</td>
-<td>HR@50</td>
-<td>.0050</td>
-<td>.0054</td>
-<td>.0061</td>
-<td>.0065</td>
-<td>.0067</td>
-<td><strong>.0074</strong></td>
+<td style="text-align: left;">Amazon-Grocery</td>
+<td style="text-align: left;">hr@50</td>
+<td style="text-align: left;">.0254</td>
+<td style="text-align: left;">.0261</td>
+<td style="text-align: left;">.0271</td>
+<td style="text-align: left;">.0288</td>
+<td style="text-align: left;">.0279</td>
+<td style="text-align: left;"><strong>.0301</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">hr@100</td>
+<td style="text-align: left;">.0406</td>
+<td style="text-align: left;">.0419</td>
+<td style="text-align: left;">.0432</td>
+<td style="text-align: left;">.0451</td>
+<td style="text-align: left;">.0440</td>
+<td style="text-align: left;"><strong>.0470</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Amazon-Electronics</td>
+<td style="text-align: left;">hr@50</td>
+<td style="text-align: left;">.0084</td>
+<td style="text-align: left;">.0090</td>
+<td style="text-align: left;">.0099</td>
+<td style="text-align: left;">.0108</td>
+<td style="text-align: left;">.0110</td>
+<td style="text-align: left;"><strong>.0131</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">hr@100</td>
+<td style="text-align: left;">.0154</td>
+<td style="text-align: left;">.0163</td>
+<td style="text-align: left;">.0176</td>
+<td style="text-align: left;">.0186</td>
+<td style="text-align: left;">.0190</td>
+<td style="text-align: left;"><strong>.0201</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Amazon-Home</td>
+<td style="text-align: left;">hr@50</td>
+<td style="text-align: left;">.0050</td>
+<td style="text-align: left;">.0054</td>
+<td style="text-align: left;">.0061</td>
+<td style="text-align: left;">.0065</td>
+<td style="text-align: left;">.0067</td>
+<td style="text-align: left;"><strong>.0074</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">hr@100</td>
+<td style="text-align: left;">.0082</td>
+<td style="text-align: left;">.0088</td>
+<td style="text-align: left;">.0094</td>
+<td style="text-align: left;">.0099</td>
+<td style="text-align: left;">.0102</td>
+<td style="text-align: left;"><strong>.0118</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>Cluster GOOBS在所有指标上全面领先，在Amazon-Electronics上HR@50提升高达<strong>55.6%</strong>，远超ANCE等几何困难负采样方法，验证了语义簇信息的有效性。</p>
-<h3>2.2 工业级在线A/B测试</h3>
-<p>在Meta实际推荐系统中，测试组采用Cluster GOOBS，对照组为普通GOOBS，各覆盖3%用户流量。</p>
+<p>Cluster GOOBS在每个数据集、每个指标上都取得了最佳表现。在稀疏的Amazon Electronics数据集上，<strong>HR@50相对提升了55.6%</strong>，远超需要全局ANN索引刷新的ANCE方法（仅28.6%）。值得注意的是，这些结果是在<strong>完整全量评估</strong>（不进行k-core过滤、不对评估集进行采样）的条件下取得的，更具说服力。</p>
+<h3>2. 工业A/B测试：53% CTR提升与流行度偏置纠正</h3>
+<p>在Meta的工业推荐系统中，候选物品池约有1800万条内容，然而<strong>前100个物品就占了总展示量的50%</strong>。这种极端的流行度偏置导致长尾内容几乎无法获得曝光，形成了难以打破的系统反馈循环。</p>
+<p><img alt="图5：聚类大小分布" src="https://arxiv.org/html/2607.00448v1/pictures/cluster_size.png" /></p>
+<p>实验中，控制组使用随机OOB采样的GOOBS，测试组使用Cluster GOOBS，各覆盖3%的用户。LLM聚类生成了300个语义聚类，其中98%的聚类包含1万以上物品。</p>
+<p><strong>表2: 在线CTR对比</strong></p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th>模型</th>
-<th>CTR提升</th>
-<th>训练QPS变化</th>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">CTR</th>
+<th style="text-align: left;">训练QPS</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>GOOBS (control)</td>
-<td>0%</td>
-<td>0%</td>
+<td style="text-align: left;">GOOBS (control)</td>
+<td style="text-align: left;">0%</td>
+<td style="text-align: left;">0%</td>
 </tr>
 <tr>
-<td>Cluster GOOBS (test)</td>
-<td><strong>+53%</strong></td>
-<td><strong>-1.4%</strong></td>
+<td style="text-align: left;">Cluster GOOBS (test)</td>
+<td style="text-align: left;"><strong>+53%</strong></td>
+<td style="text-align: left;">-1.4%</td>
 </tr>
 </tbody>
 </table></div>
-<p>在线测试显示CTR提升53%，而训练性能仅下降1.4%，推理性能完全不受影响。</p>
+<p><strong>表3: 流行度偏置纠正效果</strong></p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th>模型</th>
-<th>≥1K展示物品占比变化</th>
-<th>Top100物品展示占比</th>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">展示量≥1k的物品占比</th>
+<th style="text-align: left;">Top 100物品的展示贡献</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>GOOBS (control)</td>
-<td>0%</td>
-<td>50%</td>
+<td style="text-align: left;">GOOBS (control)</td>
+<td style="text-align: left;">0%</td>
+<td style="text-align: left;">50%</td>
 </tr>
 <tr>
-<td>Cluster GOOBS (test)</td>
-<td><strong>+50%</strong></td>
-<td><strong>32%</strong></td>
+<td style="text-align: left;">Cluster GOOBS (test)</td>
+<td style="text-align: left;"><strong>+50%</strong></td>
+<td style="text-align: left;"><strong>32%</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>更令人振奋的是，Cluster GOOBS将Top 100热门物品的展示占比从50%降至32%，同时大幅增加了长尾物品的曝光机会。这一效果源于困难负采样打破了“热门物品→更多曝光→更热”的反馈闭环——当模型被迫从同类物品中区分时，长尾物品获得了与热门物品公平竞技的机会。</p>
-<h2>三、未来展望</h2>
-<p>Cluster GOOBS为大规模推荐系统提供了一种优雅而高效的负采样方案。论文指出，未来方向包括加权簇负采样（根据不同簇的区分难度赋予不同采样权重）以及基于用户查询的动态负采样。</p>
-<p>对于正在构建推荐系统的工程师而言，这一工作的启示在于：<strong>真正的困难负样本并非来自随机或全局最近邻，而来自同一语义簇内的细致区分</strong>。这或许是打破推荐系统“信息茧房”的一把关键钥匙。</p>
+<p>Cluster GOOBS不仅带来了<strong>53%的CTR提升</strong>，同时仅引入了<strong>1.4%的训练QPS损失</strong>，推理时无任何QPS退化。更重要的是，通过提供更难的负样本，模型被迫学习更细致的用户偏好信号，有效打破了系统反馈循环——前100个热门物品的展示贡献从50%降至32%，而展示量≥1k的长尾物品数量增长了50%。</p>
+<h2>四、技术价值与应用展望</h2>
+<p>Cluster GOOBS展示了语义聚类在大规模推荐系统中的巨大潜力。从技术角度看，该方法：<br />
+- <strong>无需全局索引</strong>，避免了ANCE等方法的维护成本<br />
+- <strong>实时在线生成</strong>，不需要预计算或辅助模型<br />
+- <strong>可解释性</strong>优于基于embedding距离的硬负采样<br />
+- <strong>自然缓解流行度偏置</strong>，打破系统反馈循环</p>
+<p>未来的探索方向包括<strong>加权聚类负采样</strong>和<strong>基于用户查询的个性化负采样</strong>，这将进一步提升负样本的针对性与质量。对于正在与推荐系统偏置和负样本质量作斗争的工程师而言，Cluster GOOBS提供了一个直接且高效的解决方案。</p>
+<p>当负样本质量决定模型上限时，你还在用随机负样本做训练吗？</p>
 <p><strong>论文标题</strong>：Real-Time Hard Negative Sampling via LLM-based Clustering for Large-Scale Two-Tower Retrieval</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
