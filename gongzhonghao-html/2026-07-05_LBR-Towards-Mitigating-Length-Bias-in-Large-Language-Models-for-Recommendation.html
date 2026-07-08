@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBR: Towards Mitigating Length Bias in Large Language Models for Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">LBR: Towards Mitigating Length Bias in Large Language Models for Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-08</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>浙大与CUHK联手攻克LLM推荐长度偏见：LBR框架平均NDCG@5提升16.82%</h1>
+<h2>引言</h2>
+<p>推荐系统已成为互联网的核心基础设施，但大语言模型（LLM）应用于推荐时，一个被广泛忽视的“暗礁”正在侵蚀系统性能——<strong>长度偏见</strong>。当用户历史行为中的物品包含不同长度的文本描述（如商品标题），LLM在注意力建模和解码过程中会产生系统性偏差：长描述物品因占据更多token而获得不成比例的注意力权重，反之在解码阶段又因累计负对数似然而被压低分数。这种双向偏差不仅损害推荐精度，更引发严重的公平性问题。</p>
+<p>浙江大学与香港中文大学联合研究团队在最新论文中提出了<strong>LBR（Length Bias Reduction）框架</strong>，通过长度感知注意力校准与有效信息长度归一化两大创新，在三个真实Amazon数据集上将NDCG@5平均提升<strong>16.82%</strong>，且几乎不增加训练和推理开销。</p>
+<h2>一、核心方法</h2>
+<h3>1.1 长度感知注意力校准</h3>
+<p>研究者揭示了LLM自注意力机制中的“长度优势”现象：在用户历史序列中，长文本物品的token数量更多，在注意力计算中天然获得更高的聚合权重。</p>
+<p><img alt="图1：LLM推荐与长度偏见示意图" src="https://arxiv.org/html/2607.04270v1/x1.png" /></p>
+<p>为了消除这种偏差，LBR在注意力权重计算中引入长度相关的偏移项：</p>
+$$
+\mathbf{A}^{\prime}_{uv}=\mathrm{Softmax}_{v}\!\left(\frac{\mathbf{Q}_{u}\mathbf{K}_{v}^{\top}}{\sqrt{d}}+\mathbf{M}_{uv}+{\color[rgb]{1,0,0}\delta(l_{v})}\right)
+$$
+
+<p>其中$\delta(l_{v}) = -\log(g(l_{v}))$，$g(l)$为物品长度与期望注意力质量之间的映射函数。通过在线性层中端到端学习该函数的参数$al+b$，模型能够自适应地对长文本物品施加注意力惩罚。</p>
+<h3>1.2 有效信息长度归一化</h3>
+<p>解码阶段的长度偏见更为复杂。在Trie约束解码中，不同位置的token携带的信息量截然不同：高分支节点（如选择类别）的信息熵远高于低分支节点（如拼写固定后缀）。</p>
+<p><img alt="图2：Trie约束解码可视化" src="https://arxiv.org/html/2607.04270v1/x2.png" /></p>
+<p>传统的长度归一化策略（除以token数）假设所有token同等重要，这反而导致对长文本物品的过度偏好。LBR提出基于Hartley熵的<strong>有效信息长度</strong>：</p>
+$$
+U_{y}=\sum_{k=1}^{|y|}\mu_{k}=\sum_{k=1}^{|y|}\log_{2}|\mathcal{V}_{k}|
+$$
+
+<p>其中$\mathcal{V}_{k}$表示第k步Trie节点下的有效token集合。最终的解码评分公式为：</p>
+$$
+s_{\mathrm{EIF}}(y)=\frac{1}{U_{y}}\sum_{k=1}^{|y|}\mu_{k}\cdot\log P_{\theta}\!\left(y_{k}\mid y_{<k},X\right)
+$$
+
+<p>这一设计本质上是将Trie树转换为等价的二进制决策树：高分支节点需要更多比特信息来区分，因此权重更高；低分支节点的贡献则相应减小。</p>
+<h2>二、实验分析</h2>
+<h3>2.1 性能对比</h3>
+<p>研究者在Amazon Toys、Office Products和Books三个数据集上进行了全面评测，与SASRec、BIGRec、LLaRA等13个基线方法对比。</p>
+<p><img alt="表1：性能对比结果" src="https://arxiv.org/html/2607.04270v1/x2.png" /></p>
+<p>结果显示，LBR在所有数据集上均取得最佳结果。在BIGRec骨干网络上，NDCG@5提升从7.18%到19.51%不等；在LLaRA骨干上，提升幅度更为显著，达到20.78%-26.79%。研究者指出，传统长度归一化方法（如D3）因未考虑token信息量差异，不仅无法消除偏见，甚至可能放大偏差。</p>
+<h3>2.2 消融研究</h3>
+<p><strong>表3：消融实验结果</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>Toy NDCG@5</th>
+<th>Office NDCG@5</th>
+<th>Book NDCG@5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LBR</td>
+<td>0.0195</td>
+<td>0.0224</td>
+<td>0.0098</td>
+</tr>
+<tr>
+<td>w/o LAAC</td>
+<td>0.0192</td>
+<td>0.0218</td>
+<td>0.0093</td>
+</tr>
+<tr>
+<td>w/o EILN</td>
+<td>0.0130</td>
+<td>0.0124</td>
+<td>0.0073</td>
+</tr>
+<tr>
+<td>w/o Both</td>
+<td>0.0123</td>
+<td>0.0105</td>
+<td>0.0062</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>有效信息长度归一化</strong>贡献最为关键：去除该模块后，性能下降高达44%。相比之下，长度感知注意力的影响较小但仍显著。</p>
+<h3>2.3 长度偏见缓解效果</h3>
+<p>研究人员通过可视化展示了方法的核心价值：</p>
+<p><img alt="图6：注意力权重可视化" src="https://arxiv.org/html/2607.04270v1/x7.png" /></p>
+<p>经过LBR校准后，模型在不同长度物品上的注意力分布趋于均匀，解除了长度与注意力之间的正相关关系。</p>
+<p><img alt="图7：解码分布对比" src="https://arxiv.org/html/2607.04270v1/x8.png" /></p>
+<p>在解码阶段，LBR生成物品的长度分布与测试集真实分布高度一致。而传统方法要么偏好短物品，要么偏好长物品，均存在系统性偏差。</p>
+<h2>三、效率优势</h2>
+<p><img alt="图8：效率与性能对比" src="https://arxiv.org/html/2607.04270v1/x9.png" /></p>
+<p>LBR仅引入两个可学习参数（a和b），训练和推理开销几乎可以忽略。相比之下，S-DPO因引入参考模型和负样本，训练效率显著下降；CFT则因双倍数据量而效率不佳。</p>
+<h2>展望</h2>
+<p>LBR框架为LLM推荐系统提供了轻量级、即插即用的偏误解决方案。更重要的是，这一工作提醒技术社区：当大模型应用于独特场景时，必须重新审视那些在NLP任务中已被“解决”的问题。长度偏见在生成任务中或许不那么致命，但在推荐系统中却直接左右用户体验和平台生态。未来，将信息论视角与结构化生成约束相结合，有望解锁更多LLM在垂直领域的高效应用路径。</p>
+<p><strong>论文标题</strong>：LBR: Towards Mitigating Length Bias in Large Language Models for Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.04270.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-05_LBR-Towards-Mitigating-Length-Bias-in-Large-Language-Models-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-05_LBR-Towards-Mitigating-Length-Bias-in-Large-Language-Models-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
