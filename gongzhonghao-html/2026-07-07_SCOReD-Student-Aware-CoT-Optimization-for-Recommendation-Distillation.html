@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOReD: Student-Aware CoT Optimization for Recommendation Distillation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SCOReD: Student-Aware CoT Optimization for Recommendation Distillation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-09</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Meta AI 破解推荐系统推理蒸馏难题：SCOReD 框架提升 NDCG 1.56%，推理长度压缩 27.3%</h1>
+<h2>引言</h2>
+<p>推荐系统正经历从“隐式打分”到“生成式推理”的范式转变。当大语言模型（LLM）被用来为推荐生成推理过程时，一个尖锐的矛盾浮出水面：最强大的推理能力来自千亿参数的大模型，但实际部署必须使用轻量级的小模型。知识蒸馏因此成为必要环节——让强模型（老师）的推理能力迁移到小模型（学生）。</p>
+<p>然而，推荐领域的推理蒸馏远比数学或代码任务棘手。用户的购买行为充满噪声，一个用户可能购买与历史记录关联薄弱的商品，忽略明显相关的推荐，或在同一会话中表现出多种相互冲突的兴趣。论文研究发现，老师模型在处理推荐任务时表现出<strong>异常高的推理不确定性</strong>，平均每条推理轨迹会进行 3.2 次重新检查，其中 79% 的检查不会改变最终答案。结果，学生模型在监督微调（SFT）中学到的不是精准推理，而是冗长的重复验证。</p>
+<h2>一、核心方法：SCOReD 学生感知推理优化框架</h2>
+<p>来自加州大学河滨分校和 Meta AI 的研究团队提出 <strong>SCOReD（Student-Aware CoT Optimization for Recommendation Distillation）</strong>，一个专门为推荐系统设计的链式思维（CoT）优化框架。该框架通过三个核心步骤，将老师模型冗长且充满冗余的推理轨迹转化为适合学生模型学习的干净信号。</p>
+<h3>1.1 LLM 驱动的推理轨迹分割</h3>
+<p>研究者首先使用 Google Gemma-4-26B 作为老师模型，生成大量推荐推理轨迹。与传统方法直接使用原始推理不同，SCOReD 首先通过一个二次 LLM 调用，将每条推理轨迹分割成连续的片段，并标注为六个类型：</p>
+<ul>
+<li><strong>购买历史回顾（H）</strong>：回顾和分类用户的购买历史</li>
+<li><strong>用户兴趣建模（P）</strong>：推断用户偏好和兴趣</li>
+<li><strong>候选分析（C）</strong>：将候选商品与购买历史和偏好进行比较</li>
+<li><strong>中间排序（R）</strong>：生成初步排序草案</li>
+<li><strong>验证（V）</strong>：成对检查、质疑和修订</li>
+<li><strong>最终排序（F）</strong>：得出最终排序结论</li>
+</ul>
+<p>论文对 11,350 条推理轨迹中的 289,541 个片段进行统计分析，发现验证（V）和排序（R）是最常见的阶段，合计占比约 63%。更关键的是，虽然老师模型平均包含 8.65 个验证阶段，但只有 47.15% 的轨迹最终排序与初始排序不同，92.89% 的独立精炼循环不会改变排序结果——这正是冗余的核心来源。</p>
+<p><img alt="图1：SCOReD 推荐推理压缩管道" src="https://arxiv.org/html/2607.05734v1/x1.png" /></p>
+<h3>1.2 基于注意力机制的重要性评分</h3>
+<p>SCOReD 的一个关键创新在于<strong>使用学生模型自身的注意力机制来评估推理片段的重要性</strong>。研究者利用 <code>&lt;think&gt;</code> 分隔符（CoT 的终止标记）的注意力机制：该标记会平均关注整个推理轨迹，因此各片段从 <code>&lt;think&gt;</code> 接收的平均注意力分数可以反映该片段对最终答案的贡献程度。</p>
+<p>基于这些注意力分数，片段被分为三个重要性等级：<br />
+- <strong>低重要性</strong>：注意力分数最低的 10%<br />
+- <strong>高重要性</strong>：注意力分数最高的 10%<br />
+- <strong>中等重要性</strong>：剩余片段</p>
+<h3>1.3 基于奖励的编辑选择</h3>
+<p>不同重要性的片段被赋予不同的操作选项：<br />
+- <strong>高重要性</strong>：<code>KEEP</code>（保留）或 <code>REWRITE</code>（重写）<br />
+- <strong>中等重要性</strong>：<code>REWRITE</code> 或 <code>FUSE</code>（融合）<br />
+- <strong>低重要性</strong>：<code>FUSE</code> 或 <code>PRUNE</code>（删除）</p>
+<p>编辑选择的决策由以下奖励函数驱动：</p>
+$$R_{i}(a)=\log P(answer\mid C_{i},\widetilde{S}_{i}^{a})-\alpha\,Len(\widetilde{S}_{i}^{a})-\beta\,PPL(\widetilde{S}_{i}^{a}\mid C_{i})$$
+
+<p>其中 $\log P(answer\mid C_{i},\widetilde{S}_{i}^{a})$ 是学生模型在给定上下文和候选编辑片段后生成正确答案的对数概率，$Len(\widetilde{S}_{i}^{a})$ 惩罚冗长，$PPL(\widetilde{S}_{i}^{a}\mid C_{i})$ 惩罚高困惑度（即学生模型难以建模的片段）。通过最大化这个奖励函数，SCOReD 能同时优化推理质量、压缩长度和学生的可学习性。</p>
+<h2>二、实验验证</h2>
+<p>研究团队在 Amazon Beauty 数据集上进行了严格的评估。他们使用 Gemma-4-26B 作为老师，Qwen-3-0.6B（仅 6 亿参数）作为学生，对比了多种方法。</p>
+<h3>2.1 主要结果</h3>
+<p><strong>表 3：重排序性能对比</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>原始 SFT</th>
+<th>LLM 压缩</th>
+<th><strong>SCOReD</strong></th>
+<th>Gemma-4-26B</th>
+<th>Qwen-3.6-35B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NDCG</td>
+<td>0.7786</td>
+<td>0.7342</td>
+<td><strong>0.7908</strong></td>
+<td>0.8030</td>
+<td>0.7879</td>
+</tr>
+<tr>
+<td>MRR</td>
+<td>0.7592</td>
+<td>0.7179</td>
+<td><strong>0.7725</strong></td>
+<td>0.7827</td>
+<td>0.7683</td>
+</tr>
+<tr>
+<td>MAP</td>
+<td>0.6558</td>
+<td>0.6197</td>
+<td><strong>0.6667</strong></td>
+<td>0.6781</td>
+<td>0.6666</td>
+</tr>
+<tr>
+<td>推理长度(K字符)</td>
+<td>8.5</td>
+<td>4.4</td>
+<td><strong>6.2</strong></td>
+<td>10.0</td>
+<td>9.4</td>
+</tr>
+<tr>
+<td>解析失败率</td>
+<td>2.82%</td>
+<td>8.74%</td>
+<td><strong>1.52%</strong></td>
+<td>0.00%</td>
+<td>2.10%</td>
+</tr>
+</tbody>
+</table></div>
+<p>相比原始 SFT，SCOReD 实现了：<br />
+- <strong>NDCG 提升 1.56%</strong>（0.7786 → 0.7908）<br />
+- <strong>Recall@5 提升 1.9%</strong>（0.7108 → 0.7243）<br />
+- <strong>推理长度压缩 27.3%</strong>（8.5K → 6.2K 字符）<br />
+- <strong>解析失败率降低 46%</strong>（2.82% → 1.52%）</p>
+<p>值得注意的是，仅有 6 亿参数的 SCOReD 学生模型，在多项指标上超越了拥有 350 亿参数的 Qwen-3.6-35B-A3B，并逼近 260 亿参数的老师模型 Gemma-4-26B。</p>
+<p><img alt="图2：训练过程中的 NDCG 与解析失败率" src="https://arxiv.org/html/2607.05734v1/x2.png" /><br />
+<img alt="图2（续）：训练过程中的 NDCG 与解析失败率" src="https://arxiv.org/html/2607.05734v1/x3.png" /></p>
+<h3>2.2 解析失败分析</h3>
+<p>论文进一步分析了模型输出格式错误的具体类型。LLM 压缩虽然实现了最高的推理压缩率（从 8.5K 压缩到 4.4K），但其解析失败率高达 8.74%，是 SCOReD 的 5.7 倍。特别地，LLM 压缩导致 18.4% 的失败来自重复索引问题——学生模型生成了包含重复候选的排名列表，这暴露了压缩过度导致推理轨迹严重偏离学生分布的问题。</p>
+<h2>三、展望与思考</h2>
+<p>SCOReD 的成功揭示了当前知识蒸馏中的一个重要原则：<strong>压缩不应该由老师或外部规则驱动，而应该由学生的实际学习能力驱动</strong>。通过使用学生自身的注意力机制评估推理片段的重要性，并利用学生对不同编辑操作的似然性选择最佳编辑，SCOReD 在压缩和可学习性之间找到了最优点。</p>
+<p>该方法的局限性在于依赖 LLM 进行分割和编辑操作，计算成本较高。未来的工作可能探索更轻量的分割方法，或推广到更多推荐场景。对于工业界的推荐系统工程师来说，SCOReD 提供了一个值得参考的思路：与其让学生模型去模仿老师的每一个思维步骤，不如教会学生如何从老师的思考中提取最精华的部分。</p>
+<p>你如何看待“学生感知”压缩在未来 AI 训练中的潜力？欢迎在评论区分享你的见解。</p>
+<p><strong>论文标题</strong>：SCOReD: Student-Aware CoT Optimization for Recommendation Distillation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.05734.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-07_SCOReD-Student-Aware-CoT-Optimization-for-Recommendation-Distillation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-07_SCOReD-Student-Aware-CoT-Optimization-for-Recommendation-Distillation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
