@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seeing and Reflecting: Multimodal Memory-Enhanced Agent Collaboration for Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Seeing and Reflecting: Multimodal Memory-Enhanced Agent Collaboration for Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-10</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>多模态记忆增强智能体协作框架MMEACR：推荐系统性能提升45%的背后技术</h1>
+<h2>一、引言</h2>
+<p>在当今的推荐系统领域，基于大语言模型（LLM）的智能体推荐系统正逐渐成为研究热点。这些系统通过自然语言推理来模拟用户偏好，在可解释性和灵活性方面展现出显著优势。然而，现有方法普遍面临两个核心痛点：一是过度依赖纯文本输入，忽视了产品图片中的视觉线索；二是记忆更新机制过于粗糙，容易引入语义噪声，导致用户偏好漂移。</p>
+<p>针对这些问题，来自清华大学、中国科学技术大学、北京大学、新南威尔士大学、麦考瑞大学和CSIRO's Data61的研究团队提出了一项创新解决方案——<strong>MMEACR</strong>（多模态记忆增强智能体协作推荐框架）。该框架在Fashion数据集上实现了N@1指标<strong>45.45%</strong>的提升，在Cell_Phones数据集上N@5提升了<strong>21.26%</strong>，展现出强大的性能优势。</p>
+<h2>二、双轨记忆架构：融合推理与匹配</h2>
+<p>MMEACR的核心创新在于其独特的<strong>双轨记忆架构</strong>，这一设计将可解释的智能体推理与细粒度的多模态匹配分离，从而克服了传统方法的核心局限。</p>
+<p><img alt="图1：MMEACR框架概述" src="https://arxiv.org/html/2607.07108v1/figures/Frame.png" /></p>
+<p>传统的智能体推荐方法（图1a）完全依赖文本记忆，通过不断积累交互历史来更新用户和物品描述。相比之下，MMEACR（图1b）引入了一个并行的多模态嵌入记忆通道，使得视觉信息和原始交互叙事能够直接用于密集匹配。</p>
+<h3>推理轨道：属性引导的记忆进化</h3>
+<p>在推理轨道中，用户记忆智能体和物品记忆智能体协同工作，维护持续演化的语义记忆。当用户与物品进行交互时，系统会构建一个三元组$(u, i^+, i^-)$，其中$i^+$是正样本，$i^-$是负样本。LLM智能体基于当前的记忆状态做出选择，并生成推理依据。</p>
+<p>为了防止自由形式推理带来的语义噪声，MMEACR引入了一个<strong>属性引导的强化与反思机制</strong>。系统从预定义的语义属性空间$\mathcal{A}=\{a_1,\dots,a_K\}$中提取与偏好相关的属性特征，并用其指导记忆的更新方向：</p>
+$$\mathbf{z}^{(t)}=f_{\mathrm{attr}}\left(M_{u}^{(t)},T_{i^{+}},T_{i^{-}},r^{(t)},\mathcal{A}\right)$$
+
+<p>其中$\mathbf{z}^{(t)}\in\mathbb{R}^{K}$编码了解释正负样本偏好差异的关键属性。这一设计使得智能体在强化正确偏好信号的同时，能够反思并修正误导性的记忆描述，有效减少了语义噪声和偏好漂移。</p>
+<h3>匹配轨道：多模态嵌入记忆</h3>
+<p>结构化记忆更新可能会过滤掉细粒度的视觉或文本细节。为此，MMEACR维护了一个<strong>多模态嵌入记忆</strong>，直接保存原始交互叙事和物品图像。使用预训练的多模态嵌入模型，系统将用户和物品映射到密集表示空间：</p>
+$$s_{\mathrm{emb}}(u,i)=\frac{\mathbf{e}_{u}^{\top}\mathbf{e}_{i}}{\|\mathbf{e}_{u}\|\|\mathbf{e}_{i}\|}$$
+
+<p>这种基于余弦相似度的密集匹配，能够捕捉到结构化记忆难以表达的跨模态语义信号，例如产品图像的色彩、纹理和风格等视觉特征。</p>
+<p><img alt="图2：模型整体架构" src="https://arxiv.org/html/2607.07108v1/figures/Model.png" /></p>
+<h2>三、混合排序：加权倒数排序融合</h2>
+<p>如何将推理轨道的可解释判断与匹配轨道的细粒度相似度有效结合？MMEACR采用了<strong>加权倒数排序融合（RRF）</strong>策略，为每个候选物品计算融合分数：</p>
+$$S_{\mathrm{RRF}}(i)=w_{\mathrm{des}}S_{\mathrm{des}}(i)+w_{\mathrm{emb}}S_{\mathrm{emb}}(i)$$
+
+<p>其中$S_{\mathrm{des}}(i)=\frac{1}{k_{\mathrm{des}}+\mathrm{rank}_{\pi_{\mathrm{des}}}(i)}$来自推理轨道，$S_{\mathrm{emb}}(i)=\frac{1}{k_{\mathrm{emb}}+\mathrm{rank}_{\pi_{\mathrm{emb}}}(i)}$来自匹配轨道。通过调整权重$w_{\mathrm{des}}$和$w_{\mathrm{emb}}$，系统能够在不同领域实现最优的排序性能。</p>
+<h2>四、实验验证：全面超越现有方法</h2>
+<p>研究者在Amazon评论数据集上的三个子集（CDs、Cell_Phones、Fashion）进行了实验，采用留一法进行评测。每个测试案例包含1个正样本和9个随机负样本。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>CDs N@1</th>
+<th>Cell_Phones N@1</th>
+<th>Fashion N@1</th>
+<th>Fashion MRR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pop</td>
+<td>0.1100</td>
+<td>0.1300</td>
+<td>0.1100</td>
+<td>0.3180</td>
+</tr>
+<tr>
+<td>BM25</td>
+<td>0.1600</td>
+<td>0.2100</td>
+<td>0.2100</td>
+<td>0.3650</td>
+</tr>
+<tr>
+<td>SASRec</td>
+<td>0.1400</td>
+<td>0.1200</td>
+<td>0.1300</td>
+<td>0.3034</td>
+</tr>
+<tr>
+<td>LLMSeqSim</td>
+<td>0.1800</td>
+<td>0.2100</td>
+<td>0.1800</td>
+<td>0.3982</td>
+</tr>
+<tr>
+<td>MLLMSeqSim</td>
+<td>0.1800</td>
+<td>0.1300</td>
+<td>0.1600</td>
+<td>0.3573</td>
+</tr>
+<tr>
+<td>LLMRank</td>
+<td>0.1895</td>
+<td>0.2043</td>
+<td>0.2200</td>
+<td>0.3987</td>
+</tr>
+<tr>
+<td>AgentCF</td>
+<td>0.1900</td>
+<td>0.2000</td>
+<td>0.1700</td>
+<td>0.3447</td>
+</tr>
+<tr>
+<td>CoTAgent</td>
+<td>0.2700</td>
+<td>0.2800</td>
+<td>0.1900</td>
+<td>0.3772</td>
+</tr>
+<tr>
+<td><strong>MMEACR-RRF</strong></td>
+<td><strong>0.3400</strong></td>
+<td><strong>0.3200</strong></td>
+<td><strong>0.3200</strong></td>
+<td><strong>0.5069</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>如表所示，MMEACR-RRF在所有数据集上均取得了最佳或次优性能。特别是在视觉密集的Fashion领域，N@1从0.2200提升至0.3200，提升了45.45%；MRR从0.3987提升至0.5069，提升了27.14%。这一结果充分证明了多模态记忆建模在视觉导向推荐中的巨大价值。</p>
+<p><img alt="图3：消融实验与性能演化" src="https://arxiv.org/html/2607.07108v1/x1.png" /></p>
+<p>进一步的消融实验表明，移除属性引导机制（w/o Attr.）或反思机制会导致性能下降。而单独使用推理轨道（MMEACR-DES）或匹配轨道（MMEACR-EMB）虽然也取得了竞争性结果，但融合后的MMEACR-RRF始终更优，验证了双轨设计的互补性。</p>
+<h2>五、效率与可解释性</h2>
+<p>除了性能优势，MMEACR在推理效率上同样表现出色。与代表性的AgentCF方法相比，MMEACR在三个数据集上分别实现了6.15%、16.27%和15.11%的推理时间缩减。这一结果表明，结构化属性引导的记忆更新反而比自由格式的语义积累更高效。</p>
+<p><img alt="图4：推理时间对比" src="https://arxiv.org/html/2607.07108v1/figures/EMNLP_Compare.png" /></p>
+<p>在可解释性方面，定性分析显示，传统方法如AgentCF在第五轮交互后已经出现偏好漂移，生成泛化的兴趣总结（如“喜欢爵士”或“喜欢手机配件”）。而MMEACR能够精准捕捉如“强调协调放松氛围”或“重型防护配时尚设计”这样的细粒度偏好，这得益于属性引导的反思机制对语义噪声的有效过滤。</p>
+<h2>六、展望</h2>
+<p>MMEACR提出了一种新颖的双轨记忆架构，通过分离智能体推理与密集匹配，成功克服了传统LLM推荐系统在视觉信息和记忆更新方面的局限性。该方法在多个领域的实际数据集上证明了其优越性，尤其是视觉密集型场景中的显著提升。</p>
+<p>未来，研究者可以考虑将该框架扩展到视频、音频等多模态内容推荐，同时优化记忆容量与终身学习效率之间的平衡。可以预见，这种融合结构化推理与密集表示的方法，将为下一代推荐系统指明新的技术方向。</p>
+<p><strong>互动思考：在多模态推荐场景中，您认为视觉特征和文本语义哪个更重要？欢迎在评论区分享您的见解。</strong></p>
+<p><strong>论文标题</strong>：Seeing and Reflecting: Multimodal Memory-Enhanced Agent Collaboration for Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.07108.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-08_Seeing-and-Reflecting-Multimodal-Memory-Enhanced-Agent-Collaboration-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-08_Seeing-and-Reflecting-Multimodal-Memory-Enhanced-Agent-Collaboration-for-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
