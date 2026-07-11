@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DaV-Gen: End-to-End Generative Retrieval via Draft-and-Verify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">DaV-Gen: End-to-End Generative Retrieval via Draft-and-Verify</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-11</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里达摩院提出DaV-Gen：生成式检索延迟降低2.5倍，A/B测试用户时长提升2.09%</h1>
+<h2>一、引言</h2>
+<p>在当今的搜索与推荐系统中，多数工业级应用仍依赖多阶段级联架构（MCA），通过“粗选-精排”流水线来平衡效果与效率。然而，这种架构存在一个致命缺陷：不同阶段的优化目标严重不一致，导致早期检索阶段的错误在后续阶段中被不断放大，最终影响结果质量。</p>
+<p>尽管端到端生成式检索（GenIR）模型有望解决这一问题，但其自回归生成过程的在线推理延迟却成为部署的最大瓶颈。</p>
+<p>近日，阿里达摩院联合多家机构发表了一项突破性工作——<strong>DaV-Gen</strong>，该框架通过创新的“草稿-验证”机制，在统一架构中同时实现了工业级推理效率和精准的语义理解，将生成式检索的延迟从约3秒降至仅70毫秒，并在千万级用户A/B测试中取得<strong>用户平均在线时长提升2.09%</strong> 的显著效果。</p>
+<h2>二、核心方法：三管齐下的创新设计</h2>
+<p>DaV-Gen的核心思想是重写生成式检索的范式：将传统的“逐token生成”转变为“快速候选生成+并行校验”的两阶段过程。论文围绕三个关键问题展开设计。</p>
+<p><img alt="图1：DaV-Gen整体架构概览，包含混合稀疏-稠密表示、统一训练框架和并行推理管道" src="https://arxiv.org/html/2607.08365v1/x1.png" /></p>
+<h3>1. 混合稀疏-稠密表示：兼顾效率与表现力</h3>
+<p>传统方法中，稀疏token（语义ID）便于生成但丢失细粒度语义，稠密向量检索能力强但缺乏结构层次。DaV-Gen通过融合两者来解决这一矛盾。</p>
+<p>具体而言，每个项目的混合嵌入由两部分构成：<br />
+- <strong>稠密内容向量</strong>：直接来自RQ-VAE编码器在量化前的输出，保留精细的非离散语义特征<br />
+- <strong>稀疏结构向量</strong>：通过Transformer骨干网络对语义ID序列进行平均池化获得</p>
+<p>这两部分经过投影层融合，形成最终的索引向量：</p>
+$$e_{i}^{\text{hyb}}=\text{LayerNorm}(e_{i}^{\text{spr}}+\text{MLP}(v_{i}^{\text{den}}))$$
+
+<p>这种设计使得模型既能支持高效的向量检索（MIPS），又保留了足够的信息用于精确校验。</p>
+<h3>2. 复合损失函数：统一优化目标</h3>
+<p>为了在单一模型中同时培养“快速草稿”和“精细校验”两种能力，研究者设计了复合损失函数：</p>
+$$\mathcal{L}_{\text{total}}=\lambda_{1}\mathcal{L}_{\text{ret}}+\lambda_{2}\mathcal{L}_{\text{gen}}+\lambda_{3}\mathcal{L}_{\text{pair}}$$
+
+<p>这三个损失各司其职：对比损失（$\mathcal{L}_{\text{ret}}$）负责组织嵌入空间便于高效检索，生成损失（$\mathcal{L}_{\text{gen}}$）学习项目的细粒度语义结构，配对排序损失（$\mathcal{L}_{\text{pair}}$）则直接优化最终排序质量。</p>
+<h3>3. 并行推理管道：破解延迟瓶颈</h3>
+<p>DaV-Gen的推理分为两个阶段。第一阶段通过近似最近邻搜索快速生成候选集，第二阶段利用广播式前缀缓存机制一次性并行计算所有候选项目的得分。</p>
+$$score(i)=\mathcal{F}_{\text{DaV-Gen}}(i|\text{Cache}(H_{u}))\quad\forall i\in\mathcal{C}_{u}$$
+
+<p>这种设计将传统自回归模型的$O(L)$复杂度降为$O(1)$，使得每秒可处理数万次推理请求，满足高并发工业场景的需求。</p>
+<h2>三、实验：全面超越现有方案</h2>
+<h3>实验设置</h3>
+<p>研究者在三个公开推荐数据集（Amazon Beauty、Amazon Sports、Yelp）和一个包含超1亿项目和5亿搜索日志的工业级搜索数据集（Ind-Search）上进行了广泛评估。</p>
+<h3>精准度对比</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">Amazon Beauty (Recall@10)</th>
+<th style="text-align: center;">Amazon Sports (Recall@10)</th>
+<th style="text-align: center;">Yelp (Recall@10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SASRec</td>
+<td style="text-align: center;">0.0624</td>
+<td style="text-align: center;">0.0482</td>
+<td style="text-align: center;">0.0681</td>
+</tr>
+<tr>
+<td>BERT4Rec</td>
+<td style="text-align: center;">0.0638</td>
+<td style="text-align: center;">0.0495</td>
+<td style="text-align: center;">0.0695</td>
+</tr>
+<tr>
+<td>TIGER</td>
+<td style="text-align: center;">0.0698</td>
+<td style="text-align: center;">0.0552</td>
+<td style="text-align: center;">0.0725</td>
+</tr>
+<tr>
+<td>OneRec</td>
+<td style="text-align: center;">0.0732</td>
+<td style="text-align: center;">0.0588</td>
+<td style="text-align: center;">0.0765</td>
+</tr>
+<tr>
+<td><strong>DaV-Gen</strong></td>
+<td style="text-align: center;"><strong>0.0752</strong></td>
+<td style="text-align: center;"><strong>0.0605</strong></td>
+<td style="text-align: center;"><strong>0.0784</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>在所有指标上，DaV-Gen均显著超越现有最优方法，其中相比最强基线OneRec提升2.48%-3.44%。</p>
+<h3>工业级搜索性能</h3>
+<p><img alt="图2：Ind-Search工业数据集上的性能对比" src="https://arxiv.org/html/2607.08365v1/x2.png" /></p>
+<p>在工业级搜索场景中，DaV-Gen的Recall@50达到惊人的77.4%，远超稠密检索基线（44.7%），同时NDCG@10和MRR@10也全面优于在线排序模型MoE。</p>
+<h3>在线A/B测试</h3>
+<p>在千万级用户的在线测试中，DaV-Gen取得了全部核心指标的显著提升：<br />
+- <strong>用户平均在线时长</strong>：+2.09%<br />
+- <strong>用户转化率</strong>：+0.47%<br />
+- <strong>平均成功搜索次数</strong>：+0.31%</p>
+<p>更令人关注的是其推理延迟：仅70毫秒，相比传统级联架构的130毫秒加速2.5倍，相比纯生成式模型的约3秒更是提升了两个数量级。</p>
+<h3>消融实验</h3>
+<p>研究者通过消融实验验证了每个组件的必要性。其中，移除稠密向量导致性能下降最为显著（Recall@10下降5.6%），验证了混合表示的关键作用。</p>
+<h2>四、展望</h2>
+<p>DaV-Gen通过“草稿-验证”机制成功弥合了传统级联架构与新兴生成式模型之间的鸿沟，在工业界首次实现了兼具效率与精度的统一检索范式。该框架不仅适用于当前的搜索和推荐场景，其设计思想还可以扩展到多模态检索等更广泛的领域。</p>
+<p>未来的研究方向包括将视觉或音频嵌入纳入稠密内容向量，实现更丰富的多模态融合，以及探索该框架在其他序列决策任务中的应用潜力。</p>
+<p><strong>论文标题</strong>：DaV-Gen: End-to-End Generative Retrieval via Draft-and-Verify</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.08365.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-09_DaV-Gen-End-to-End-Generative-Retrieval-via-Draft-and-Verify.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-09_DaV-Gen-End-to-End-Generative-Retrieval-via-Draft-and-Verify.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
