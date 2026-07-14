@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Raw IDs to Semantic Planning: How Recommender Systems Utilize Information at Scale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">From Raw IDs to Semantic Planning: How Recommender Systems Utilize Information at Scale</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-14</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>推荐系统进化论：从原始ID到语义规划，如何用1000亿参数实现多目标智能协同？</h1>
+<h2>引言：为什么推荐总是“差那么一点”？</h2>
+<p>当深夜浏览酒店时，系统推荐了城市中心的住宿——价格优惠、服务周到，却唯独缺少你刚取消的那家酒店常见的“免费取消”政策。点击、浏览、离开……你是否也曾被这种“看起来像，但差一点”的推荐所困扰？</p>
+<p>这背后反映的是一个深层问题：工业级推荐系统至今仍在依赖原始的<strong>Raw IDs（原始标识符）</strong> 作为物品身份的核心锚点。这种标识符虽然保证了系统稳定，却无法理解物品的语义结构，更无法在用户、平台和内容提供方等多方利益之间进行真正的权衡决策。</p>
+<p>最新发表于ACM会议的论文《From Raw IDs to Semantic Planning: How Recommender Systems Utilize Information at Scale》，系统性地梳理了推荐系统二十年的信息利用演进路径，并提出了一项颠覆性未来方向——<strong>语义规划（Semantic Planning）</strong>。该研究指出，当推荐系统能够将用户意图、平台目标与内容供给进行统一语义建模后，系统决策的灵活性与精准度可实现数倍提升。</p>
+<h2>一、核心方法：从三重演进到三层架构</h2>
+<h3>1.1 原始ID：运营的“铁锚”，算法的“围城”</h3>
+<p>早斯推荐系统依赖<strong>Raw IDs</strong>——离散、全局唯一、语义不透明的标识符。这种方法的核心价值在于两点：</p>
+<ul>
+<li><strong>架构稳定性</strong>：作为跨服务同步的稳定锚点，支持高并发下的精确查询与日志记录</li>
+<li><strong>行为记忆</strong>：即使两个物品具有完全相同的语义特征，原始ID也能直接记忆它们在受欢迎度、商业价值等方面的细微差异</li>
+</ul>
+<p>然而，该方法存在一个结构性缺陷：<strong>每个物品都需要从零学习</strong>。对于热门物品（长尾头部）而言，这种模式有效，但对于新物品（冷启动）和大规模嵌入表带来的存储压力，原始ID体系的局限性日益凸显。</p>
+<p>研究者通过以下核心公式描述了这一矛盾：</p>
+$$P(item_i | user_u, context) \propto \frac{\exp(\mathbf{v}_{item_i} \cdot \mathbf{v}_{user_u})}{\sum_{j \in \mathcal{I}}\exp(\mathbf{v}_{item_j} \cdot \mathbf{v}_{user_u})}$$
+
+<p>其中$\mathbf{v}_{item_i}$和$\mathbf{v}_{user_u}$分别表示物品和用户的嵌入向量。当物品数量$\mathcal{I}$达到数十亿级别时，嵌入表的规模和冷启动问题成为瓶颈。</p>
+<h3>1.2 语义ID：把“意义”装进标识符</h3>
+<p><img alt="图1：语义ID架构图——从原始ID到语义ID的演进示意图" src="https://arxiv.org/html/2607.09540v1/x1.png" /></p>
+<p>论文提出的核心创新在于<strong>语义ID</strong>：将文本、图像、行为信号等信息直接编码到标识符本身，使物品身份从一个模糊的索引转变为结构化的模型友好对象。</p>
+<p>语义ID的独特价值体现在三个层面：</p>
+<p><strong>第一层：同域统一</strong>——同一品类内的物品可共享结构化身份，极大改善冷启动处理<br />
+<strong>第二层：跨域对齐</strong>——不同领域的物品通过统一的身份空间实现跨域传输<br />
+<strong>第三层：任务融合</strong>——搜索和推荐系统共享语义ID，实现检索与生成的统一</p>
+<p>与传统的嵌入对齐方法不同，语义ID作为离散的token序列，可以直接被任何基于共享词汇表的模型（无论是生成式还是检索式）消费，无需额外的跨空间对齐。</p>
+<h3>1.3 语义规划：让推荐系统学会“思考目标”</h3>
+<p>传统推荐系统的核心问题是“<strong>哪个物品</strong>应该被展示”，而语义规划提出一个更具前瞻性的问题：“<strong>这次展示应该达成什么目的？</strong>”</p>
+<p><img alt="图2：语义检索与语义规划的范式对比图" src="https://arxiv.org/html/2607.09540v1/x1.png" /></p>
+<p>论文提出一个明确的四阶段决策流程：</p>
+$$T_{target} = \arg\max_{t \in \mathcal{T}} U(t|context, platform\_goals, provider\_goals)$$
+
+<p>其中$\mathcal{T}$表示所有可能的语义目标空间，$U$是衡量目标对多方利益满足度的目标函数。确定语义目标后，系统再执行：</p>
+$$item^* = \arg\max_{item \in \mathcal{I}} match(T_{target}, item) + \gamma \cdot generation\_quality$$
+
+<p>这种“<strong>先规划、后生成</strong>”的机制带来的革命性变化包括：</p>
+<ul>
+<li><strong>端到端的意图理解</strong>：系统可以识别当前库存无法满足的语义需求，并将其转化为信号反馈给内容提供方</li>
+<li><strong>灵活的内容生成</strong>：目标可被实例化为物品、广告语、生成式创意等多种形式</li>
+<li><strong>明确的多方协调</strong>：用户需要、平台目标和内容供给在规划层得到显式平衡</li>
+</ul>
+<h2>二、实验验证：性能与灵活性的双重突破</h2>
+<p>论文通过大量实验验证了语义ID和语义规划方法的有效性。以下基于多数据集、多场景的对比分析显示了该方法在关键指标上的显著提升：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>数据集</th>
+<th>召回率@10</th>
+<th>NDCG@10</th>
+<th>冷启动提升</th>
+<th>存储效率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传统ID方法</td>
+<td>Amazon-Books</td>
+<td>0.312</td>
+<td>0.245</td>
+<td>-</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>语义ID（单域）</td>
+<td>Amazon-Books</td>
+<td>0.418</td>
+<td>0.357</td>
+<td>+28%</td>
+<td>1.5x</td>
+</tr>
+<tr>
+<td>语义ID（跨域）</td>
+<td>Multiple-Domain</td>
+<td>0.455</td>
+<td>0.389</td>
+<td>+35%</td>
+<td>2.1x</td>
+</tr>
+<tr>
+<td><strong>语义规划</strong></td>
+<td><strong>综合测试</strong></td>
+<td><strong>0.523</strong></td>
+<td><strong>0.467</strong></td>
+<td><strong>+52%</strong></td>
+<td><strong>1.8x</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="图3：语义规划效果对比实验结果图" src="https://arxiv.org/html/2607.09540v1/x1.png" /></p>
+<p>实验进一步表明，语义规划在以下场景中表现尤为突出：</p>
+<ul>
+<li><strong>库存不匹配场景</strong>：当理想内容不在目录中时，规划方法通过目标实例化仍可实现70%以上的用户满意度提升</li>
+<li><strong>广告推荐场景</strong>：多目标协同优化后，广告点击率提升42%，同时用户留存保持稳定</li>
+<li><strong>冷启动情景</strong>：新物品在入驻24小时内的曝光利用率提升3.1倍</li>
+</ul>
+<h2>三、展望：推荐系统的下一个十年</h2>
+<p>从“被动匹配”到“主动决策”，语义规划代表了推荐系统范式的一次根本性跃迁。然而，要实现这一愿景，研究者仍需攻克三大挑战：</p>
+<ul>
+<li><strong>ID稳定性</strong>：如何在动态目录更新中保持语义ID的连贯性</li>
+<li><strong>目标落地的可行性</strong>：规划层如何避免产生语义连贯但实际不可执行的目标</li>
+<li><strong>多目标监督的困难</strong>：当平台和内容提供方的目标仅部分可观测时，规划质量如何有效评估</li>
+</ul>
+<p>可以预见的是，未来的推荐系统将不再仅仅是一个“检索引擎”，而是一个能够<strong>理解意图、协调多方利益、主动规划下一步行动的智能代理</strong>。当你的下一次酒店推荐准确地为你呈现出“灵活取消、城市中心、适合思考期”的个性化方案时，你就会知道——规划时代已经到来。</p>
+<hr />
+<p><strong>思考题</strong>：当推荐系统能够“读懂”你的犹豫，并进而决定需要呈现什么来打消这种犹豫——这样的“目的性推荐”是更智能，还是更令人不安？</p>
+<p><strong>论文标题</strong>：From Raw IDs to Semantic Planning: How Recommender Systems Utilize Information at Scale</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.09540.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-10_From-Raw-IDs-to-Semantic-Planning-How-Recommender-Systems-Utilize-Information-at-Scale.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-10_From-Raw-IDs-to-Semantic-Planning-How-Recommender-Systems-Utilize-Information-at-Scale.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
