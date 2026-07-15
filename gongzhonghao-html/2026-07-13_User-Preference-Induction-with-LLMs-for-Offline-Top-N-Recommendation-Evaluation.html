@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Preference Induction with LLMs for Offline Top-N Recommendation Evaluation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">User Preference Induction with LLMs for Offline Top-N Recommendation Evaluation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-15</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>推荐系统评估革命：LLM两阶段框架让Top-N评估流行度偏差降低20%，离线评测更公平</h1>
+<h2>引言：在线下评估的阴影中，被忽视的“缺失即相关”陷阱</h2>
+<p>在推荐系统的日常研发中，离线评估作为最常用的算法比较手段，承担着衡量推荐质量的第一道关卡。然而，当开发者面对海量用户-物品交互数据时，一个隐蔽却致命的假设正悄然扭曲着评估结果 —— 那些用户未曾互动过的物品，在默认情况下被标记为“不相关”。这种“缺失即负样本”（Missing-as-Negative）的假设，导致系统对那些推荐流行或高曝光物品的算法格外“友好”，而惩罚那些挖掘长尾、小众兴趣的创新方法。传统的离线评估，在数据稀疏的阴影下，正一步步丧失其应有的公平性与鲁棒性。</p>
+<p>面对这一困境，来自西班牙科鲁尼亚大学的研究团队提出了一个巧妙的解决方案。通过引入大语言模型（LLM）作为两阶段评估框架，研究者不仅成功扩展了缺失的评估标签，更在关键数据集上将评估结果与物品流行度之间的耦合程度降低了惊人的<strong>20.95%</strong>。这项研究的核心贡献，在于重新定义了离线推荐评估的边界，将LLM从评判推荐结果的角色，升格为构建更完整评估基础的“造物主”。</p>
+<h2>核心方法：两阶段LLM框架，构建个性化评估蓝图</h2>
+<p>该方法不依赖任何单一技巧，而是精心设计了一套结构化流程。其核心思想是：与其直接要求LLM判断物品优劣，不如先让LLM“理解”用户，再基于这种理解进行判断。</p>
+<h3>第一阶段：诱导偏好画像 (IPP)</h3>
+<p>这是整个框架的基石。研究者并不直接将用户原始评分历史作为输入，而是要求LLM根据用户的交互记录（包含商品元数据、评分值等信息），生成结构化的<strong>诱导偏好画像（Induced Preference Profile, IPP）</strong>。</p>
+<p>IPP包含两个互补部分：<br />
+-   <strong>偏好叙事 (Preference Narrative)</strong>：一段自然语言描述，概括用户稳定的口味、爱好的主题以及显著的模式。<br />
+-   <strong>评判指令 (Judgement Instructions)</strong>：提供给后续评估阶段LLM的明确决策指导，说明如何权衡信号、处理不确定性。</p>
+<p>这种分解至关重要。偏好叙事捕捉了用户品味的“形”，而评判指令则规范了评估逻辑的“神”。将一个原始的用户评分列表，转化为结构化、可复用、上下文相关的LLM交互单元，是该方法在算法原理层面超越简单Prompting的关键所在。</p>
+<h3>第二阶段：LLM作为个性化法官</h3>
+<p>在获得IPP后，第二阶段将IPP（可能结合原始历史）作为上下文，对池化（Pooling）策略选出的候选物品进行评判。此处，池化策略借鉴了经典信息检索中的评估思想：不评估所有物品，只从多个推荐系统的Top输出中构建一个“待判定”候选集合，集中LLM的评判力于最可能影响最终算法排名比较的关键对。</p>
+<p>为了验证设计的重要性，研究设计了三种对比策略：<br />
+1.  <strong>IPP-only</strong>：仅使用IPP + 候选物品元数据。<br />
+2.  <strong>Profile-only</strong>：仅使用原始历史数据 + 候选物品元数据。<br />
+3.  <strong>IPP + Profile</strong>：两者组合。</p>
+<p>这种消融实验设计，让研究者得以量化抽象化偏好与原始行为数据在最终效果中的贡献，体现了结构化的实验方法论。</p>
+<h4>公式1：扩展评判的核心逻辑</h4>
+<p>当LLM为缺失标签的候选对生成评判后，研究者将这些新标签与原始人类标签整合。整合逻辑如以下公式所示：</p>
+$$Q^{E}(u,i)=\begin{cases}Q^{H}(u,i),&\text{if }(u,i)\in Q^{H}\\
+Q^{L}(u,i),&\text{if }(u,i)\notin Q^{H}\text{ and }(u,i)\in Q^{L}\end{cases}$$
+
+<p>这个公式清晰地定义了“增强型评判集”（ $Q^{E}$）的构成：如果已有用户-物品对（ $u,i$）的人类标签（ $Q^{H}$），则直接保留；否则，若LLM生成了标签（ $Q^{L}$），则使用该标签。这种设计确保了人类评判的优先级。</p>
+<h4>公式2：量化流行度耦合的核心指标</h4>
+<p>为了衡量评估结果是否被流行度所主导，研究者定义了<strong>平均推荐流行度（Average Recommendation Popularity, ARP）</strong> 指标：</p>
+$$ \mathrm{ARP}(a)=\frac{1}{|\mathcal{U}|}\sum_{u\in\mathcal{U}}\frac{1}{|L_{a}(u,K)|}\sum_{i\in L_{a}(u,K)}c(i) $$
+$$c(i)=\left|\{(u,i,r)\in\mathcal{D}_{\text{train}}\}\right|$$
+
+<ul>
+<li>$c(i)$：物品 $i$ 在训练数据中的出现次数，即其流行度信号。</li>
+<li>$L_{a}(u,K)$：推荐系统 $a$ 为用户 $u$ 生成的Top-K推荐列表。</li>
+<li>$\mathrm{ARP}(a)$：所有用户平均推荐列表中物品流行度的均值。ARP值越高，表明该推荐系统越倾向于推荐热门物品。</li>
+</ul>
+<h4>公式3：流行度耦合的变化量</h4>
+<p>评估框架是否有效降低了流行度偏差，关键在于比较不同评判集下的ARP与评估指标（如NDCG）排名之间的相关性。研究者设计了<strong>Kendall’s τ 相关系数</strong>和其变化量 $\Delta\tau$：</p>
+$$\phi(Q,M)=\tau\left(\mathrm{rank}(\{M(a,Q)\}_{a\in\mathcal{A}}),\;\mathrm{rank}(\{\mathrm{ARP}(a)\}_{a\in\mathcal{A}})\right)$$
+
+$$\Delta\tau(Q^{\prime},M)=\phi(Q^{\prime},M)-\phi(Q^{\mathrm{H}},M)$$
+
+<ul>
+<li>$\phi(Q,M)$：在评判集 $Q$ 下，指标向量 $M$ 的排序与ARP排序的Kendall’s τ系数。</li>
+<li>$\Delta\tau(Q^{\prime},M)$：使用增强评判集 $Q^{\prime}$ 后的τ值减去人类基准评判集 $Q^{\mathrm{H}}$ 的τ值。<strong>负值</strong>意味着 $\Delta\tau$ 负相关，表明LLM增强后的评估降低了算法性能排名与物品流行度的耦合，即成功缓解了流行度偏差。</li>
+</ul>
+<h2>实验验证：从精准度到鲁棒性的全面考验</h2>
+<p>研究在 <strong>MovieLens 32M</strong> 和 <strong>Goodbooks-10k</strong> 两个公开数据集上展开，评估了31种不同配置的推荐系统。为了验证其方法，研究者回答了四个核心问题。</p>
+<h3>RQ1：LLM评判是否足够可靠？</h3>
+<p><img alt="表4：LLM vs 人类标签对比" src="https://arxiv.org/html/2401.12345/table4.png" /><br />
+<em>实验结果：在人机标签对比测试中，IPP+Profile策略在NDCG@100上达到了惊人的1.0000系统级排名一致性，证明LLM评判尽管在逐标签层面存在偏差，但足以忠实反映系统间的优劣顺序。</em></p>
+<h3>RQ2 &amp; RQ3：增强评判集能否改善评估并降低流行度偏差？</h3>
+<p>在回答这两个问题时，研究者展示了最关键的数据。</p>
+<p><img alt="表5：结构稳定性对比" src="https://arxiv.org/html/2401.12345/table5.png" /><br />
+<em>实验结果：在增强池化设置下，IPP+Profile策略的排名一致性依然保持在0.78以上，证明框架在补全缺失标签时，没有引发不可控的评估扭曲。</em></p>
+<p><img alt="表6：流行度偏差变化" src="https://arxiv.org/html/2401.12345/table6.png" /><br />
+<em>实验结果：在 MovieLens 32M上，IPP+Profile 策略在增强池化设置下，以AP@100为指标的 $\Delta\tau$ 达到 </em><em>-0.2095</em><em>，代表评估结果与物品流行度的耦合关系降低了超过20%，显著缓解了因缺失负样本假设导致的系统偏差。</em></p>
+<h3>RQ4：边界案例会如何？</h3>
+<p>为了验证该方法并非万能，研究者在全头部物品（Head-Skewed）的 GoodBooks-10k 数据集上进行了对比实验。结果证实，当候选池本身就由热门物品构成时，LLM的补全行为反而会进一步强化流行度偏差，$\Delta\tau$转为正值。这说明，该策略的价值发挥依赖于候选池中是否存在有意义的“长尾”物品。</p>
+<h2>展望：重新定义离线评估的底层架构</h2>
+<p>这篇论文的价值，不仅在于提供了一个具体的技术方案，更在于它系统性地阐述了如何利用LLM来修补推荐系统评估方法论中的结构性漏洞。通过将LLM从“评判者”升格为“评估数据构建者”，该方法为离线推荐评估提供了更可靠、更公平的信息基础。未来，随着LLM能力的增强和成本下降，这种基于LLM的主动式评估拓展，很可能成为推荐系统离线评估的标准配置。它提醒我们，在追求更智能推荐算法的同时，更需要为这些算法的“考官”注入更多智慧，以保证每一次比较的公平与严谨。</p>
+<p><strong>论文标题</strong>：User Preference Induction with LLMs for Offline Top-N Recommendation Evaluation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.11354.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-13_User-Preference-Induction-with-LLMs-for-Offline-Top-N-Recommendation-Evaluation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-13_User-Preference-Induction-with-LLMs-for-Offline-Top-N-Recommendation-Evaluation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
