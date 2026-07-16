@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheaper is Better: A Discount-Aware Network for Conversion Rate Prediction in E-commerce Recommendation System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Cheaper is Better: A Discount-Aware Network for Conversion Rate Prediction in E-commerce Recommendation System</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-16</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里巴巴天猫CVR预测新突破：DANet模型融合折扣率，GMV提升2.23%</h1>
+<p>在电商推荐系统中，转化率（CVR）预测一直是核心挑战。尽管学术界和工业界已围绕数据稀疏性、样本选择偏差和延迟反馈等问题提出了诸多解决方案，但一个关键因素——商品折扣率，却长期被忽视。</p>
+<p>近日，阿里巴巴团队在SIGIR 2026上发表了一项引人注目的研究成果。研究者提出了一种名为<strong>Discount-Aware Network (DANet)</strong> 的新型CVR预测模型，首次系统性地将商品折扣率纳入建模体系。该模型已在天猫APP上线，实际部署后实现了<strong>pCVR提升3.63%，GMV增长2.23%</strong> 的显著效果，且响应时间增幅控制在5%以内。</p>
+<h2>一、痛点与背景</h2>
+<p>传统CVR模型虽然能捕捉用户兴趣和商品特征，却无法感知价格变化对用户购买决策的影响。直接建模价格面临巨大挑战：商品价格跨度极大（从几元到数万元），不同品类和卖家之间分布差异显著，这导致模型难以有效学习价格与转化率之间的关系。</p>
+<p>论文提出用<strong>折扣率（Discount Rate, DR）</strong> 替代价格作为核心特征。研究者认为，DR受三重因素影响：<br />
+1. 卖家对特定品类的<strong>长期定价策略</strong><br />
+2. 平台组织的<strong>促销活动</strong><br />
+3. 用户对折扣的<strong>敏感度和参与程度</strong></p>
+<p>下图展示了不同用户对同一商品在不同时期购买时的折扣率分布差异，充分体现了DR的个性化和动态性：</p>
+<p><img alt="图1：不同用户对同一商品在不同时期购买时的折扣率分布差异" src="https://arxiv.org/html/2607.12578v1/x1.png" /></p>
+<h2>二、核心方法：DANet模型架构</h2>
+<p>DANet的整体框架由两大核心网络组成：<strong>Interest-Prefer Net (IPN)</strong> 和 <strong>Discount-Prefer Net (DPN)</strong>。其中DPN包含三个创新模块，构成了本文的核心贡献：</p>
+<p><img alt="图2：DANet完整架构图" src="https://arxiv.org/html/2607.12578v1/x2.png" /></p>
+<h3>2.1 时频变换模块（TFTM）</h3>
+<p>论文提出使用<strong>快速傅里叶变换（FFT）</strong> 来分析商品折扣率的时间序列信号。给定一个长度为N的DR时间序列：</p>
+$$S^{d}=[d_{1},d_{2},d_{3}...,d_{N}]$$
+
+<p>其中N设为400，覆盖过去约一年内的每日平均折扣率。研究者通过FFT将时域信号转换为频域，经过MLP滤波后，再通过逆FFT还原，从而提取出商品的长期折扣趋势：</p>
+$$Z=FFT(S^{d}),\ Z_{l}=f_{t}(Z),\ {S}^{d}_{l}=IFFT(Z_{l})$$
+
+<p>TFTM还能通过残差网络提取高频信号分量，捕捉折扣率的短期波动。</p>
+<h3>2.2 分布修正模块（DCM）</h3>
+<p><strong>DCM-User</strong>：不同用户对折扣的敏感度差异显著。该模块利用基于属性的注意力机制，从用户的购买行为序列中学习用户的折扣偏好。注意力权重体现了候选商品与历史购买商品在折扣、品类、价格等维度的相似度：</p>
+$${h}^{D}_{u}=\mathcal{A}\mathcal{A}_{u}\left(E_{A},{e}_{1}^{i},{e}_{2}^{i}\cdots\cdot{e}_{L}^{i}\right)=\sum_{j=1}^{L}w_{j}\left[{e}_{jd}^{i};{e}_{jc}^{i};{e}_{jp}^{i}\right]$$
+
+<p><strong>DCM-Context</strong>：不同促销周期（如双十一、618）的折扣策略差异巨大。该模块通过门控网络动态生成与促销上下文相关的偏差嵌入，矫正周期性折扣偏差。</p>
+<h3>2.3 监督回归辅助任务</h3>
+<p>为学习到高质量的DR表示，论文设计了显式的折扣率标签，仅对购买样本使用均方误差（MSE）进行监督学习：</p>
+$$\text{Loss}=\text{Loss}_{m}+\alpha*\begin{cases}\operatorname{MSE}\left(y_{d},\hat{y}_{d}\right),&y=1\\0,&y=0\end{cases}$$
+
+<h2>三、离线与在线实验效果</h2>
+<h3>3.1 数据集与评估指标</h3>
+<p>研究者基于天猫平台2025年8月26日至11月25日的真实在线服务日志构建实验数据集，其中训练集包含976万用户、508万商品、24.1亿曝光和5.08万购买样本。</p>
+<h3>3.2 对比实验结果</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>离线AUC (mean±std.)</th>
+<th>在线pCVR增益</th>
+<th>在线GMV增益</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IPN-Base</td>
+<td>0.8345±0.00062</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>PASBR</td>
+<td>0.8370±0.00021</td>
+<td>+1.62%</td>
+<td>+0.79%</td>
+</tr>
+<tr>
+<td>CoHHN</td>
+<td>0.8337±0.00253</td>
+<td>-0.74%</td>
+<td>-0.91%</td>
+</tr>
+<tr>
+<td>DIN</td>
+<td>0.8343±0.00132</td>
+<td>-0.01%</td>
+<td>-0.04%</td>
+</tr>
+<tr>
+<td><strong>DANet</strong></td>
+<td><strong>0.8479±0.00163</strong></td>
+<td><strong>+3.63%</strong></td>
+<td><strong>+2.23%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3>3.3 消融实验分析</h3>
+<p>各模块贡献排序为：<strong>TFTM &gt; DCM-User &gt; DCM-Context &gt; 辅助任务</strong>。其中TFTM模块贡献最大（在线pCVR +2.65%），表明长期折扣趋势建模对购买导向学习至关重要。</p>
+<h3>3.4 案例分析</h3>
+<p>研究者通过可视化验证了TFTM的有效性——低频信号展现了平滑的长期趋势，高频信号则包含更多噪声成分：</p>
+<p><img alt="图3：TFTM中不同频率信号的可视化分析" src="https://arxiv.org/html/2607.12578v1/x3.png" /></p>
+<h2>四、技术价值与展望</h2>
+<p>DANet的成功部署标志着电商推荐系统从单纯关注用户兴趣走向“兴趣+折扣”双维感知的新阶段。该方法不仅显著提升了CVR和GMV，更展现了对平销期和促销期不同场景的自适应能力。</p>
+<p>这一研究为工业界提供了启示：在追求模型精度的过程中，那些看似“朴素”却直接关联用户决策的信号，往往蕴含着未被挖掘的巨大价值。未来的推荐系统或许需要更加重视与用户决策直接相关的“显性特征”建模，而非一味堆叠复杂的网络结构。</p>
+<p><strong>思考：在你的购物决策中，折扣率是否是决定下单的关键因素？</strong></p>
+<p><strong>论文标题</strong>：Cheaper is Better: A Discount-Aware Network for Conversion Rate Prediction in E-commerce Recommendation System</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.12578.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-14_Cheaper-is-Better-A-Discount-Aware-Network-for-Conversion-Rate-Prediction-in-E-commerce-Recommendati.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-14_Cheaper-is-Better-A-Discount-Aware-Network-for-Conversion-Rate-Prediction-in-E-commerce-Recommendati.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
