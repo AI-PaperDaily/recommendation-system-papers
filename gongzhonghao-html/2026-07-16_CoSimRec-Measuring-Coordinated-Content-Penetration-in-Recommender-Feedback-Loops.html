@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-18</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>推荐系统“隐形渗透”：协调账号如何突破算法闭环，曝光穿透率最高达0.4505</h1>
+<p>“信息茧房”和“算法操纵”是近年来舆论场的核心议题。当一个协调账号群（俗称“水军”）集中推广特定内容，它能否突破推荐系统的层层过滤，最终将这些内容送到普通用户的屏幕上，甚至引发真实互动？这不仅仅是网络安全问题，更是关乎平台内容生态的核心挑战。一篇来自中国传媒大学的论文《CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops》提供了量化这一过程的全新框架，揭示了部分推荐机制存在惊人的“穿透”漏洞，曝光提升率（APR-Lift）在特定场景下竟高达<strong>0.4505</strong>。</p>
+<h2>一、核心方法：CoSimRec离线反馈环模拟</h2>
+<p>传统的推荐系统鲁棒性研究，通常衡量的是基于静态模型的“目标排名变化”，这忽略了现实世界中用户行为、算法排序和内容更新之间持续交互的<strong>闭环动态</strong>。为了填补这一空白，CoSimRec框架应运而生。</p>
+<h3>1. 闭环模拟架构</h3>
+<p>论文构建了一个包含<strong>协调账号、动态排序、非机器人用户响应和排序干预</strong>的封闭循环过程。整个过程被设计为一个可复现的离线评估框架，其核心思想是：并非所有来自机器人的推广都能成功“渗透”，只有当目标内容进入普通用户的推荐列表并引发其互动时，才算一次成功的渗透。</p>
+<p><img alt="图1：CoSimRec框架衡量协调互动能否通过推荐反馈到达非协调用户" src="https://arxiv.org/html/2607.15114v1/figures/fig_framework.drawio.png" /></p>
+<p>上图清晰地展示了这一闭环：协调账号发起互动，更新系统反馈状态；推荐器根据新状态生成Top-K列表；非机器人用户（普通用户和意见领袖）接收列表并产生行为；这些行为又成为下一轮排序的信号。CoSimRec的评估指标——APR（算法穿透率）正是从非机器人用户的“接受端”来定义成功。</p>
+<h3>2. 算法渗透率（APR）指标族</h3>
+<p>为了实现量化评估，论文提出了一个带“无攻击基线”的指标族，将“协调活动”与“真实渗透”严格区分。核心指标如下：</p>
+<p><strong>曝光穿透率（APR_E@K）</strong>：衡量在非机器人用户推荐列表中，目标内容所占的推荐槽位比例。</p>
+$$ \mathrm{APR}_{E}@K=\frac{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C_{A}}X_{u,c,t}^{K}}{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C}X_{u,c,t}^{K}+\epsilon} $$
+
+<p>其中，$U_{N}$和$U_{L}$代表普通用户和意见领袖，$C_{A}$代表目标内容，$X_{u,c,t}^{K}$表示内容$c$在时刻$t$是否出现在用户$u$的Top-K列表中。分母是所有非机器人用户的推荐总量，这确保了分子中的“成功”是落在真实用户身上的。</p>
+<p><strong>APR提升（APR-Lift）</strong>：这是评估攻击效果的核心指标，它将协调攻击条件下的APR与一个完全匹配的“无攻击”基线进行对比，从而剔除目标内容可能偶然得到的自然曝光。</p>
+$$ \mathrm{APR\text{-}Lift} = \mathrm{APR}_{E}(\pi_{A}) - \mathrm{APR}_{E}(NoAttack) $$
+
+<h3>3. 非机器人用户行为模型</h3>
+<p>为了模拟真实用户的反馈，论文设计了一个精细的概率模型。非机器人用户在看到推荐列表后，其点击、点赞、评论、分享等行为的概率由多个因素共同决定。</p>
+$$ \displaystyle P_{a}(u,c,t)=\sigma( $$
+<p>该模型综合了<strong>偏好匹配度</strong>、<strong>立场一致性</strong>、<strong>情感强度</strong>、<strong>内容质量</strong>、<strong>时效新鲜度</strong>、<strong>社会热度</strong>、<strong>用户易受影响度</strong>以及<strong>个人历史画像</strong>等多个维度，使得模拟的反馈行为更加贴近现实。</p>
+<h2>二、实验结果：突破闭环的“达利特”模式</h2>
+<h3>1. 主流推荐器下的“穿透”效果</h3>
+<p>研究者使用MIND（新闻）、MovieLens（电影）和LastFM（音乐）三个数据集，对比了<strong>随机推荐</strong>、<strong>基于流行度推荐</strong>和<strong>基于反馈的推荐</strong>三种机制。在“粉丝-工人”协调策略下，结果差异巨大。</p>
+<p><img alt="图2：主实验穿透证据：APR-Lift热力图与曝光-行为耦合散点图" src="https://arxiv.org/html/2607.15114v1/figures/fig_exposure_behavior_scatter.png" /></p>
+<p>表二的数据清晰地展示了结果：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">数据集</th>
+<th style="text-align: left;">推荐器</th>
+<th style="text-align: left;">APR-Lift均值 [Bootstrap 95% CI]</th>
+<th style="text-align: left;">方向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">MIND</td>
+<td style="text-align: left;">随机</td>
+<td style="text-align: left;">0.0001 [-0.0006, 0.0008]</td>
+<td style="text-align: left;">无</td>
+</tr>
+<tr>
+<td style="text-align: left;">MIND</td>
+<td style="text-align: left;">流行度</td>
+<td style="text-align: left;"><strong>0.0245</strong> [0.0202, 0.0291]</td>
+<td style="text-align: left;">正向</td>
+</tr>
+<tr>
+<td style="text-align: left;">MIND</td>
+<td style="text-align: left;">反馈</td>
+<td style="text-align: left;"><strong>0.0314</strong> [0.0243, 0.0387]</td>
+<td style="text-align: left;">正向</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>LastFM</strong></td>
+<td style="text-align: left;"><strong>流行度</strong></td>
+<td style="text-align: left;"><strong>0.4505</strong> [0.4353, 0.4657]</td>
+<td style="text-align: left;"><strong>正向</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>LastFM</strong></td>
+<td style="text-align: left;"><strong>反馈</strong></td>
+<td style="text-align: left;"><strong>0.3130</strong> [0.2924, 0.3328]</td>
+<td style="text-align: left;"><strong>正向</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>研究发现，<strong>随机推荐</strong>由于其分配逻辑的随机性，几乎没有任何可统计的有效穿透（APR-Lift接近零），这构成了一个可靠的负控制。而<strong>基于流行度和反馈的推荐机制</strong>，由于其本质上容易放大热度信号，成为了协调行为的“放大器”。尤其是在<strong>LastFM</strong>音乐数据集上，由于用户对特定艺术家的偏好具有持久性，协调行为造成的流行度和反馈信号能被稳定放大，APR-Lift最高达到了惊人的<strong>0.4505</strong>。这意味着，在本次模拟中，协调账号每发起一次互动，就能将相当比重的目标内容“注入”到真实用户的视野中，其效果远超在新闻或电影领域的表现。</p>
+<h3>2. 防御策略：同步惩罚是最佳非神谕方案</h3>
+<p>论文还测试了多种排序干预策略。结果显示，结合多种信号的“神谕”防御（如风险标签)虽然效果拔群，但难以落地。在可实际应用的策略中，<strong>同步惩罚</strong>表现最为稳健。</p>
+<p><img alt="图4：排序干预措施下的APR降低热力图" src="https://arxiv.org/html/2607.15114v1/figures/fig_defense_heatmap.png" /></p>
+<p>表四总结了所有防御策略的平均效果：</p>
+<ul>
+<li><strong>同步惩罚</strong>：在全部6个实验设置中均降低了APR，平均降低 <strong>71.13%</strong>，且对CTR（点击率）影响很小。</li>
+<li><strong>热度惩罚、语义惩罚和多样性重排序</strong>：效果不稳定，甚至在部分场景下增加了穿透率或损害了推荐效用。</li>
+</ul>
+<p>这表明，针对协调行为在<strong>时间和账号行为模式</strong>上的同步性特征进行打击，远比尝试识别内容本身的语义或单纯追求多样性要有效。</p>
+<h2>三、展望：从评估到防御的未来</h2>
+<p>CoSimRec框架为理解推荐系统的反馈循环漏洞提供了一个严谨、可复现的评估基础。它清晰地表明：<strong>并非所有的水军行为都能成功，但一旦推荐器对“热度”或“协同信号”过度敏感，就给“算法渗透”打开了大门</strong>。</p>
+<p>这一发现对于平台运营和算法工程师具有重要启示。未来的安全策略不应仅停留在检测“僵尸粉”账号，更应关注<strong>设计能抵抗短期同步信号干扰的排序机制</strong>，例如引入基于时间序列的行为异常检测，或对拥节奏过于一致的群体行为进行降权。</p>
+<p>推荐系统就像一个放大器，它既能放大优质内容的光芒，也可能放大恶意操纵的回声。如何校准这把放大镜，不让它与噪声共振，是未来很长一段时间内，AI安全和内容治理领域的核心挑战。<strong>你的信息流，是否真的只代表你自己的兴趣？</strong></p>
+<p><strong>论文标题</strong>：CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops</p>
+<p>欢迎投稿！欢迎合作！</p>
+$$\displaystyle b_{a}+\theta_{m}M_{uc}+\theta_{s}A_{uc}+\theta_{e}E_{c}+\theta_{q}Q_{c} $$$$\displaystyle+\theta_{f}F_{ct}+\theta_{h}H_{ct}\rho_{u}+\theta_{i}\iota_{u}+\mu G_{uct}) $$
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.15114.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-16_CoSimRec-Measuring-Coordinated-Content-Penetration-in-Recommender-Feedback-Loops.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-16_CoSimRec-Measuring-Coordinated-Content-Penetration-in-Recommender-Feedback-Loops.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
