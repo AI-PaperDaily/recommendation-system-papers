@@ -463,96 +463,107 @@
             </div>
             <h1 class="article-title">CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-07-18</span>
+                <span class="meta-item">📅 2026-07-20</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>推荐系统“隐形渗透”：协调账号如何突破算法闭环，曝光穿透率最高达0.4505</h1>
-<p>“信息茧房”和“算法操纵”是近年来舆论场的核心议题。当一个协调账号群（俗称“水军”）集中推广特定内容，它能否突破推荐系统的层层过滤，最终将这些内容送到普通用户的屏幕上，甚至引发真实互动？这不仅仅是网络安全问题，更是关乎平台内容生态的核心挑战。一篇来自中国传媒大学的论文《CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops》提供了量化这一过程的全新框架，揭示了部分推荐机制存在惊人的“穿透”漏洞，曝光提升率（APR-Lift）在特定场景下竟高达<strong>0.4505</strong>。</p>
-<h2>一、核心方法：CoSimRec离线反馈环模拟</h2>
-<p>传统的推荐系统鲁棒性研究，通常衡量的是基于静态模型的“目标排名变化”，这忽略了现实世界中用户行为、算法排序和内容更新之间持续交互的<strong>闭环动态</strong>。为了填补这一空白，CoSimRec框架应运而生。</p>
-<h3>1. 闭环模拟架构</h3>
-<p>论文构建了一个包含<strong>协调账号、动态排序、非机器人用户响应和排序干预</strong>的封闭循环过程。整个过程被设计为一个可复现的离线评估框架，其核心思想是：并非所有来自机器人的推广都能成功“渗透”，只有当目标内容进入普通用户的推荐列表并引发其互动时，才算一次成功的渗透。</p>
-<p><img alt="图1：CoSimRec框架衡量协调互动能否通过推荐反馈到达非协调用户" src="https://arxiv.org/html/2607.15114v1/figures/fig_framework.drawio.png" /></p>
-<p>上图清晰地展示了这一闭环：协调账号发起互动，更新系统反馈状态；推荐器根据新状态生成Top-K列表；非机器人用户（普通用户和意见领袖）接收列表并产生行为；这些行为又成为下一轮排序的信号。CoSimRec的评估指标——APR（算法穿透率）正是从非机器人用户的“接受端”来定义成功。</p>
-<h3>2. 算法渗透率（APR）指标族</h3>
-<p>为了实现量化评估，论文提出了一个带“无攻击基线”的指标族，将“协调活动”与“真实渗透”严格区分。核心指标如下：</p>
-<p><strong>曝光穿透率（APR_E@K）</strong>：衡量在非机器人用户推荐列表中，目标内容所占的推荐槽位比例。</p>
-$$ \mathrm{APR}_{E}@K=\frac{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C_{A}}X_{u,c,t}^{K}}{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C}X_{u,c,t}^{K}+\epsilon} $$
+            <h1>协同内容穿透率最高达0.4505！CoSimRec框架揭示推荐系统反馈循环的脆弱性</h1>
+<h2>一、引言：推荐系统并非静态预测器，而是危险的反馈循环</h2>
+<p>在信息过载的数字时代，推荐系统已成为用户与内容之间的核心桥梁。从新闻推送到视频流，从电影推荐到音乐分享，算法决定了用户看到什么，而用户的互动行为（点击、点赞、评论）又反过来塑造未来的推荐结果。</p>
+<p><strong>问题在于，这一反馈循环为恶意攻击者留下了可乘之机。</strong> 传统研究通常关注攻击能否改变目标物品的排名，却忽略了一个更关键的问题：<strong>当恶意账户协同推广特定内容后，这些内容是否真正渗透到了普通用户的推荐列表中？</strong></p>
+<p>《CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops》这篇论文提出了一个革命性的评估框架，首次系统性地测量了协调内容在推荐系统反馈循环中的穿透能力。研究者在MIND、MovieLens和LastFM三个数据集上进行了大规模实验，发现<strong>在LastFM数据集上，基于流行度的推荐系统遭受协调攻击后，目标内容的渗透率（APR-Lift）高达0.4505</strong>，这意味着普通用户的推荐列表中近一半的曝光被协同推广内容占据。</p>
+<h2>二、核心创新：CoSimRec框架与APR指标家族</h2>
+<h3>2.1 从静态攻击到闭环穿透：CoSimRec框架</h3>
+<p>如图1所示，CoSimRec框架构建了一个完整的反馈循环模拟环境，包含四个关键组件：用户代理、内容集合、推荐器反馈和排名干预。研究人员通过协调账户（Coordinated Accounts）生成目标交互，然后观察这些交互如何通过推荐系统传播到非协调用户（Non-coordinated Users）。</p>
+<p><img alt="图1：CoSimRec框架" src="https://arxiv.org/html/2607.15114v1/figures/fig_framework.drawio.png" /></p>
+<p><strong>该框架的核心创新在于区分了“攻击成功”与“内容穿透”。</strong> 传统研究只测量目标在训练模型中的排名提升，而CoSimRec测量的是普通用户实际接收到的曝光和互动。这意味着，即使攻击者成功推广了内容，只要这些内容没有进入普通用户的Top-K列表，就不算真正的穿透。</p>
+<h3>2.2 APR指标家族：从曝光到互动的完整穿透度量</h3>
+<p>研究团队设计了<strong>算法渗透率（Algorithmic Penetration Rate, APR）</strong>指标家族，其核心思想是：<strong>穿透与否应由接收端（普通用户）而非发起端（攻击者）来定义</strong>。</p>
+<p><strong>核心公式1：曝光APR</strong></p>
+<p>曝光APR测量的是在普通用户推荐列表中，目标协调内容所占的份额：</p>
+$$\mathrm{APR}_{E}@K=\frac{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C_{A}}X_{u,c,t}^{K}}{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C}X_{u,c,t}^{K}+\epsilon}$$
 
-<p>其中，$U_{N}$和$U_{L}$代表普通用户和意见领袖，$C_{A}$代表目标内容，$X_{u,c,t}^{K}$表示内容$c$在时刻$t$是否出现在用户$u$的Top-K列表中。分母是所有非机器人用户的推荐总量，这确保了分子中的“成功”是落在真实用户身上的。</p>
-<p><strong>APR提升（APR-Lift）</strong>：这是评估攻击效果的核心指标，它将协调攻击条件下的APR与一个完全匹配的“无攻击”基线进行对比，从而剔除目标内容可能偶然得到的自然曝光。</p>
-$$ \mathrm{APR\text{-}Lift} = \mathrm{APR}_{E}(\pi_{A}) - \mathrm{APR}_{E}(NoAttack) $$
+<p>其中 $X_{u,c,t}^{K}=1$ 表示物品c在时间t出现在用户u的Top-K列表中，$U_{N}$ 是普通用户，$U_{L}$ 是意见领袖，$C_{A}$ 是目标协调内容。这个公式直接量化了普通用户接收到的“被污染”内容比例。</p>
+<p><strong>核心公式2：行为APR</strong></p>
+<p>行为APR测量的是普通用户对目标协调内容的实际互动比例：</p>
+$$\mathrm{APR}_{B}=\frac{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C_{A}}Engage(u,c,t)}{\sum_{t}\sum_{u\in U_{N}\cup U_{L}}\sum_{c\in C}Engage(u,c,t)+\epsilon}$$
 
-<h3>3. 非机器人用户行为模型</h3>
-<p>为了模拟真实用户的反馈，论文设计了一个精细的概率模型。非机器人用户在看到推荐列表后，其点击、点赞、评论、分享等行为的概率由多个因素共同决定。</p>
-$$ \displaystyle P_{a}(u,c,t)=\sigma( $$
-<p>该模型综合了<strong>偏好匹配度</strong>、<strong>立场一致性</strong>、<strong>情感强度</strong>、<strong>内容质量</strong>、<strong>时效新鲜度</strong>、<strong>社会热度</strong>、<strong>用户易受影响度</strong>以及<strong>个人历史画像</strong>等多个维度，使得模拟的反馈行为更加贴近现实。</p>
-<h2>二、实验结果：突破闭环的“达利特”模式</h2>
-<h3>1. 主流推荐器下的“穿透”效果</h3>
-<p>研究者使用MIND（新闻）、MovieLens（电影）和LastFM（音乐）三个数据集，对比了<strong>随机推荐</strong>、<strong>基于流行度推荐</strong>和<strong>基于反馈的推荐</strong>三种机制。在“粉丝-工人”协调策略下，结果差异巨大。</p>
-<p><img alt="图2：主实验穿透证据：APR-Lift热力图与曝光-行为耦合散点图" src="https://arxiv.org/html/2607.15114v1/figures/fig_exposure_behavior_scatter.png" /></p>
-<p>表二的数据清晰地展示了结果：</p>
+<p>这里的互动权重函数为：$Engage=Click+Like+\omega_{1}Comment+\omega_{2}Share$，表示不同互动行为的加权和。</p>
+<p><strong>核心公式3：APR提升量</strong></p>
+<p>APR-Lift是比较攻击条件与匹配的无攻击基线的差值，<strong>消除了目标内容本身自然曝光带来的影响</strong>：</p>
+$$\mathrm{APR\text{-}Lift}=\mathrm{APR}_{E}(\pi_{A})-\mathrm{APR}_{E}(NoAttack)$$
+
+<p>这个公式回答了关键问题：<strong>协调活动是否真正增加了普通用户的曝光？</strong> 如果这个值显著为正，说明攻击有效。</p>
+<p><strong>核心公式4：穿透增益</strong></p>
+<p>穿透增益归一化了额外曝光与协调交互预算的关系：</p>
+$$PenetrationGain=\frac{E_{N}(C_{A}|\pi_{A})-E_{N}(C_{A}|NoAttack)}{Budget(\pi_{A})+\epsilon}$$
+
+<p>这个公式量化了<strong>每次协同交互能带来多少额外的普通用户曝光</strong>，是评估攻击效率的关键指标。</p>
+<h3>2.3 多样化的攻击策略与防御机制</h3>
+<p>研究团队设计了多种协调策略：<br />
+- <strong>随机机器人（Random Bots）</strong>：弱同步的目标交互<br />
+- <strong>主从协调（Master-Worker）</strong>：集中的高协调攻击<br />
+- <strong>同步感知、模板化、语义伪装</strong>等变体</p>
+<p>排名干预方面，团队测试了多种防御策略，包括<strong>热度降权、多样性重排序、语义惩罚、同步惩罚、可信度惩罚</strong>等。</p>
+<p>并行推荐器的评分函数为：</p>
+$$Score_{t}(u,c)=\alpha M_{uc}+\beta H_{ct}+\gamma F_{ct}+\delta CF_{uct}+QBonus(c)-\lambda Risk(c)$$
+
+<p>其中 $M_{uc}$ 是用户-内容匹配度，$H_{ct}$ 是热度，$F_{ct}$ 是新鲜度，$CF_{uct}$ 是协同反馈，$QBonus(c)$ 是质量加分，$Risk(c)$ 是风险惩罚。</p>
+<h2>三、实验验证：穿透率差异显著</h2>
+<h3>3.1 核心穿透结果</h3>
+<p>图2展示了不同数据集和推荐器下APR-Lift的穿透热图：</p>
+<p><img alt="图2：穿透率热图" src="https://arxiv.org/html/2607.15114v1/figures/fig_penetration_heatmap.png" /></p>
+<p><strong>最关键的结果：随机推荐在所有数据集上APR-Lift均接近零</strong>，证明了穿透并非源于目标内容本身的自然可用性，而是需要推荐系统的反馈循环来放大。</p>
+<p>三个数据集的主要结论如表1所示：</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th style="text-align: left;">数据集</th>
-<th style="text-align: left;">推荐器</th>
-<th style="text-align: left;">APR-Lift均值 [Bootstrap 95% CI]</th>
-<th style="text-align: left;">方向</th>
+<th>数据集</th>
+<th>随机推荐APR-Lift</th>
+<th>流行度推荐APR-Lift</th>
+<th>反馈推荐APR-Lift</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">MIND</td>
-<td style="text-align: left;">随机</td>
-<td style="text-align: left;">0.0001 [-0.0006, 0.0008]</td>
-<td style="text-align: left;">无</td>
+<td>MIND</td>
+<td>0.0001（无显著）</td>
+<td>0.0245</td>
+<td>0.0314</td>
 </tr>
 <tr>
-<td style="text-align: left;">MIND</td>
-<td style="text-align: left;">流行度</td>
-<td style="text-align: left;"><strong>0.0245</strong> [0.0202, 0.0291]</td>
-<td style="text-align: left;">正向</td>
+<td>MovieLens</td>
+<td>0.0004（无显著）</td>
+<td>0.1332</td>
+<td>0.0978</td>
 </tr>
 <tr>
-<td style="text-align: left;">MIND</td>
-<td style="text-align: left;">反馈</td>
-<td style="text-align: left;"><strong>0.0314</strong> [0.0243, 0.0387]</td>
-<td style="text-align: left;">正向</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>LastFM</strong></td>
-<td style="text-align: left;"><strong>流行度</strong></td>
-<td style="text-align: left;"><strong>0.4505</strong> [0.4353, 0.4657]</td>
-<td style="text-align: left;"><strong>正向</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>LastFM</strong></td>
-<td style="text-align: left;"><strong>反馈</strong></td>
-<td style="text-align: left;"><strong>0.3130</strong> [0.2924, 0.3328]</td>
-<td style="text-align: left;"><strong>正向</strong></td>
+<td>LastFM</td>
+<td>-0.0007（负）</td>
+<td><strong>0.4505</strong></td>
+<td>0.3130</td>
 </tr>
 </tbody>
 </table></div>
-<p>研究发现，<strong>随机推荐</strong>由于其分配逻辑的随机性，几乎没有任何可统计的有效穿透（APR-Lift接近零），这构成了一个可靠的负控制。而<strong>基于流行度和反馈的推荐机制</strong>，由于其本质上容易放大热度信号，成为了协调行为的“放大器”。尤其是在<strong>LastFM</strong>音乐数据集上，由于用户对特定艺术家的偏好具有持久性，协调行为造成的流行度和反馈信号能被稳定放大，APR-Lift最高达到了惊人的<strong>0.4505</strong>。这意味着，在本次模拟中，协调账号每发起一次互动，就能将相当比重的目标内容“注入”到真实用户的视野中，其效果远超在新闻或电影领域的表现。</p>
-<h3>2. 防御策略：同步惩罚是最佳非神谕方案</h3>
-<p>论文还测试了多种排序干预策略。结果显示，结合多种信号的“神谕”防御（如风险标签)虽然效果拔群，但难以落地。在可实际应用的策略中，<strong>同步惩罚</strong>表现最为稳健。</p>
-<p><img alt="图4：排序干预措施下的APR降低热力图" src="https://arxiv.org/html/2607.15114v1/figures/fig_defense_heatmap.png" /></p>
-<p>表四总结了所有防御策略的平均效果：</p>
+<p><strong>LastFM的0.4505穿透率意味着，在流行度推荐器下，普通用户推荐列表中近一半的位置被协同内容占据。</strong> 这展示了协调攻击在特定域下的巨大威胁。</p>
+<h3>3.2 防御策略效果</h3>
+<p>研究团队对六种防御策略进行了系统评估。图4展示了APR降低热图：</p>
+<p><img alt="图4：防御策略效果" src="https://arxiv.org/html/2607.15114v1/figures/fig_defense_heatmap.png" /></p>
+<p><strong>最有效的非神谕（non-oracle）防御策略是同步惩罚</strong>，在所有六个主从数据集-推荐器设置中均降低了APR。而多样性策略和语义惩罚在某些情况下反而增加了APR，因为它们改变了候选集构成但未能有效抑制协调反馈信号。</p>
+<h3>3.3 规模化实验</h3>
+<p>研究团队将用户规模从200扩展到1000，观察到在固定攻击预算下，APR-Lift有所下降。这符合预期：<strong>当攻击资源固定而用户基数扩大时，穿透效果被稀释</strong>。但这也暗示，如果攻击者根据用户数量线性扩展资源，穿透效果可能保持甚至增强。</p>
+<p><img alt="图3：规模化实验" src="https://arxiv.org/html/2607.15114v1/figures/fig_scale_up_apr_lift.png" /></p>
+<h2>四、展望与应用</h2>
+<p>CoSimRec框架为推荐系统的对抗鲁棒性研究提供了全新的视角和工具。研究表明，<strong>推荐系统反馈循环中的穿透风险并非均匀分布</strong>，而是取决于数据域、推荐算法、协调策略和防御措施的四重交互作用。</p>
 <ul>
-<li><strong>同步惩罚</strong>：在全部6个实验设置中均降低了APR，平均降低 <strong>71.13%</strong>，且对CTR（点击率）影响很小。</li>
-<li><strong>热度惩罚、语义惩罚和多样性重排序</strong>：效果不稳定，甚至在部分场景下增加了穿透率或损害了推荐效用。</li>
+<li>对平台运营者而言，同步惩罚等针对性防御比通用策略更有效</li>
+<li>对攻击者而言，主从协调和基于流行度的放大是最有效的组合</li>
+<li>对研究者而言，APR指标家族提供了比传统排名指标更完整的穿透评估</li>
 </ul>
-<p>这表明，针对协调行为在<strong>时间和账号行为模式</strong>上的同步性特征进行打击，远比尝试识别内容本身的语义或单纯追求多样性要有效。</p>
-<h2>三、展望：从评估到防御的未来</h2>
-<p>CoSimRec框架为理解推荐系统的反馈循环漏洞提供了一个严谨、可复现的评估基础。它清晰地表明：<strong>并非所有的水军行为都能成功，但一旦推荐器对“热度”或“协同信号”过度敏感，就给“算法渗透”打开了大门</strong>。</p>
-<p>这一发现对于平台运营和算法工程师具有重要启示。未来的安全策略不应仅停留在检测“僵尸粉”账号，更应关注<strong>设计能抵抗短期同步信号干扰的排序机制</strong>，例如引入基于时间序列的行为异常检测，或对拥节奏过于一致的群体行为进行降权。</p>
-<p>推荐系统就像一个放大器，它既能放大优质内容的光芒，也可能放大恶意操纵的回声。如何校准这把放大镜，不让它与噪声共振，是未来很长一段时间内，AI安全和内容治理领域的核心挑战。<strong>你的信息流，是否真的只代表你自己的兴趣？</strong></p>
+<p>这项研究揭示了一个重要启示：<strong>推荐系统的安全评估不能停留在静态模型层面，必须纳入完整的反馈循环动态</strong>。当你在平台上看到“热门推荐”时，是否想过，其中有多少是真的热门，又有多少是精心策划的渗透？</p>
 <p><strong>论文标题</strong>：CoSimRec: Measuring Coordinated-Content Penetration in Recommender Feedback Loops</p>
 <p>欢迎投稿！欢迎合作！</p>
-$$\displaystyle b_{a}+\theta_{m}M_{uc}+\theta_{s}A_{uc}+\theta_{e}E_{c}+\theta_{q}Q_{c} $$$$\displaystyle+\theta_{f}F_{ct}+\theta_{h}H_{ct}\rho_{u}+\theta_{i}\iota_{u}+\mu G_{uct}) $$
         </article>
         
         
