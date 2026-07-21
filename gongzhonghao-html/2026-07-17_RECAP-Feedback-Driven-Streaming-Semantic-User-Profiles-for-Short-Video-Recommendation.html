@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RECAP: Feedback-Driven Streaming Semantic User Profiles for Short-Video Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">RECAP: Feedback-Driven Streaming Semantic User Profiles for Short-Video Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-21</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手公开最新推荐框架RECAP：流式语义画像+在线时长提升0.139%的秘密</h1>
+<h2>一、引言</h2>
+<p>推荐系统的核心在于<strong>理解用户</strong>。然而，传统推荐系统依赖用户行为信号、ID嵌入和交互统计来建模兴趣，这种基于行为共现的表征方式往往缺乏对行为背后<strong>语义内容</strong>的显式描述。</p>
+<p>随着大语言模型（LLM）的崛起，语言化的用户画像成为推荐系统的新方向——它们能够将用户的长序列行为转化为清晰的语义表示。但一个关键问题随之浮现：<strong>如何让这些画像生成器真正为推荐服务？</strong></p>
+<p>现有的画像生成器大多处于“开环”状态：它们可以流畅地总结用户历史行为，却不会直接针对未来的推荐效果进行优化。在快手这样每天面对海量流式到达的短视频数据的平台上，用户画像不仅需要持续增量更新，还必须保持结构化的有界状态。</p>
+<p>本次论文提出<strong>RECAP</strong>框架，通过闭环优化流式结构化语义画像，以历史推荐反馈为信号，实现了离线uAUC提升<strong>0.0084</strong>、Recall@2000提升约<strong>4.9%</strong>，并在七天的在线A/B测试中，带来了<strong>0.139%</strong>的应用平均使用时长提升。</p>
+<p><img alt="图1：RECAP框架概览" src="https://arxiv.org/html/2607.15730v1/x1.png" /></p>
+<h2>二、核心方法</h2>
+<h3>2.1 流式结构化用户记忆</h3>
+<p>RECAP将每个用户画像表示为固定大小的结构化兴趣条目集合。与传统自由文本摘要不同，这种基于槽位的设计支持<strong>可控的长周期更新</strong>——每个条目可以被独立确认、插入或逐出，在重复更新下限制漂移，同时保持可预测的令牌预算。</p>
+<p>每个条目包含语义对（话题，描述）和生命周期元数据（时间跨度、新近度、强度）。研究者将流式更新分解为<strong>LLM语义模块</strong>和<strong>确定性状态机</strong>两个组件：<br />
+- <strong>LLM语义模块</strong>：仅输出语义差异——重新观察到的已有兴趣和新出现的兴趣，并附带支持视频索引<br />
+- <strong>确定性状态机</strong>：负责生命周期记账和容量控制，包括更新、添加、删除三个操作</p>
+<p>Streaming profile update:</p>
+$$P_{u}^{t} = f_{\theta}(C_{t}, P_{u}^{t-1}), \quad t=1,\dots,M$$
+
+<p>这种解耦设计的优势在于：LLM擅长语义抽象但不擅长维护紧凑有效的数值状态，而确定性规则可以提供稳定的记账功能，同时保持LLM输出聚焦在语义上。</p>
+<h3>2.2 高置信度语义反馈构建</h3>
+<p>为了优化画像生成器，需要能够评估生成画像质量的反馈信号。研究者指出，直接复用生产推荐器的排名分数存在两个问题：<br />
+1. <strong>信号混杂</strong>：排名分数与画像语义之外的多种特征纠缠<br />
+2. <strong>标签歧义</strong>：观看和跳过的观察标签是隐式行为信号，其语义含义受内容形式、曝光上下文或用户惯性影响</p>
+<p>为此，RECAP首先使用<strong>LLM判据</strong>进行标签一致性过滤。对于每个用户，LLM判据观察用户近期的有效观看历史，在随机化的正负视频对中选择用户更可能观看的项。聚合多个成对比较后，为每个项目分配标签一致性分数。只有高于阈值$\tau$的样本才被保留。</p>
+<p>通过这种方式，研究者构建了高置信度的行为数据来训练双塔评估器，其匹配分数作为GRPO奖励。</p>
+<p>Recommendation-aligned reward:</p>
+$$R_{\mathrm{rec}}(\tilde{P}_{u,i}^{t})=\exp\!\Bigl(-\mathcal{L}_{\mathrm{bce}}\bigl(s(\tilde{P}_{u,i}^{t}),\mathcal{V}_{u}\bigr)\Bigr)+w_{\mathrm{rec}}\cdot\Delta\!\cos\bigl(s(\tilde{P}_{u,i}^{t}),\mathcal{V}_{u}\bigr)$$
+
+<p>其中，第一项衡量画像预测反馈标签的能力，第二项衡量正负视频之间的语义分离程度。</p>
+<h3>2.3 GRPO策略优化</h3>
+<p>RECAP采用<strong>GRPO</strong>（Group Relative Policy Optimization）进行策略优化。为了降低流式过程顺序更新的成本，研究者预计算前缀画像，将每个块级更新独立优化。</p>
+<p>对于每个块级输入，策略采样K个候选语义差异，每个差异通过确定性状态机得到候选更新画像。rollout奖励结合推荐对齐奖励与输出控制惩罚，包括JSON格式惩罚和冗余惩罚。</p>
+<p>Group-relative advantage:</p>
+$$\hat{A}_{u,i}^{t}=\frac{r_{u,i}^{t}-\mathrm{mean}_{j}(r_{u,j}^{t})}{\mathrm{std}_{j}(r_{u,j}^{t})+\epsilon_{\mathrm{std}}}$$
+
+<p>GRPO loss:</p>
+$$\mathcal{L}_{\mathrm{GRPO}}(\theta)=-\mathbb{E}_{u,t,i,j}\left[\ell_{u,i,j}^{t}\right]+\beta D_{\mathrm{KL}}\bigl(\pi_{\theta}\,\|\,\pi_{\mathrm{ref}}\bigr)$$
+
+<h2>三、实验与结果</h2>
+<h3>3.1 离线评估表现</h3>
+<p>研究者使用快手短视频推荐内部数据集，将RECAP与多个对照变体进行对比：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>清洗评估uAUC</th>
+<th>清洗评估Recall</th>
+<th>原始评估uAUC</th>
+<th>原始评估Recall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base</td>
+<td>0.7519</td>
+<td>0.0122</td>
+<td>0.5871</td>
+<td>0.0088</td>
+</tr>
+<tr>
+<td>GRPO-raw</td>
+<td>0.7539</td>
+<td>0.0119</td>
+<td>0.5874</td>
+<td>0.0087</td>
+</tr>
+<tr>
+<td>GRPO-clean</td>
+<td>0.7572</td>
+<td>0.0121</td>
+<td>0.5883</td>
+<td>0.0087</td>
+</tr>
+<tr>
+<td>SFT</td>
+<td>0.7564</td>
+<td>0.0127</td>
+<td>0.5866</td>
+<td>0.0091</td>
+</tr>
+<tr>
+<td>RECAP (SFT+GRPO)</td>
+<td><strong>0.7603</strong></td>
+<td><strong>0.0128</strong></td>
+<td><strong>0.5886</strong></td>
+<td><strong>0.0089</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="图2：消融实验分析" src="https://arxiv.org/html/2607.15730v1/x2.png" /></p>
+<p>从结果可以看出，<strong>RECAP（SFT+GRPO）</strong>在清洗评估数据上取得了最优性能，相比Base提升了<strong>uAUC 0.0084</strong>和<strong>Recall约4.9%</strong>。</p>
+<h3>3.2 画像行为诊断分析</h3>
+<p>研究者进一步通过LLM判据进行画像行为诊断，揭示了不同训练信号下的画像特性：</p>
+<p><img alt="图4：画像行为诊断" src="https://arxiv.org/html/2607.15730v1/x3.png" /></p>
+<p>关键发现包括：<br />
+- <strong>GRPO-raw</strong>更新现有兴趣描述的频率远低于GRPO-clean，同时产生更多空兴趣（无支持视频的条目）<br />
+- <strong>GRPO-clean</strong>产生更多以<strong>动机为中心</strong>的描述（用户为什么看），而GRPO-raw产生更多以<strong>内容特征为中心</strong>的描述（视频中出现什么）<br />
+- <strong>SFT+GRPO</strong>实现了最高的历史覆盖率和最低的重复分配率</p>
+<p><img alt="图5：画像语义分析" src="https://arxiv.org/html/2607.15730v1/x4.png" /></p>
+<h2>四、展望</h2>
+<p>RECAP框架的成功表明，将大语言模型与推荐系统的反馈信号紧密结合，能够显著提升用户画像的质量和推荐效果。这种流式结构化语义画像的思路不仅适用于短视频推荐，更有望推广到电商推荐、内容平台、社交媒体等多个领域。</p>
+<p>对于<strong>流式画像生成器的优化</strong>，跳出传统“一言以蔽之”的思路，转向持续迭代、反馈驱动的闭环模式，或许是推荐系统走向更智能理解用户的下一个重要方向。</p>
+<p><em>读者如果对论文中的具体实现细节或代码复现感兴趣，欢迎在评论区留言讨论。</em></p>
+<p><strong>论文标题</strong>：RECAP: Feedback-Driven Streaming Semantic User Profiles for Short-Video Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.15730.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-17_RECAP-Feedback-Driven-Streaming-Semantic-User-Profiles-for-Short-Video-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-17_RECAP-Feedback-Driven-Streaming-Semantic-User-Profiles-for-Short-Video-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
