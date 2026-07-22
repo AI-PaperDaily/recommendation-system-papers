@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAMP: Robust Ad Recommendation Under Limited Personalized-Feature Availability via Masking and Alignment Pathways</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">RAMP: Robust Ad Recommendation Under Limited Personalized-Feature Availability via Masking and Alignment Pathways</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-22</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>都柏林大学联合华为突破隐私广告推荐：RAMP架构缺失特征场景AUC提升0.87%</h1>
+<h2>一、引言</h2>
+<p>在数字广告领域，点击率（CTR）和转化率（CVR）预测是决定广告投放效果的核心技术。传统深度学习模型依赖用户性别、年龄等个性化特征来实现精准预测，然而，随着GDPR和《个人信息保护法》等法规的严格执行，用户隐私数据的可用性正受到前所未有的限制。</p>
+<p>当个性化特征因用户未授权而缺失时，现有主流CTR/CVR模型的预测精度会遭遇断崖式下跌——这在业界被称为“特征缺失场景”。针对这一痛点，都柏林大学与华为爱尔兰研究中心联合提出<strong>RAMP</strong>（Robust Ad Recommendation under Limited Personalized-Feature Availability via Masking and Alignment Pathways），通过创新的掩码对齐双路径架构，在个性化特征不可用的情况下，实现广告推荐的鲁棒性能提升。</p>
+<p>研究者在CriteoPrivateAd数据集上的实验表明，RAMP在缺失个性化特征的场景下，<strong>AUC可比最优基线提升0.87%</strong>，且在工业级A/B测试中实现总广告价值（TAV）提升超3%。</p>
+<p><img alt="图1：动机研究——移除个性化特征导致性能下降，RAMP有效恢复精度" src="https://arxiv.org/html/2607.17473v1/fig/lead_fig.png" /></p>
+<h2>二、核心方法：RAMP的双路径对齐架构</h2>
+<p>RAMP的核心设计理念是<strong>避免跨特征可用性场景的负迁移</strong>。传统单一网络在处理混合流量（部分样本有完整特征，部分样本仅含非个性化特征）时，容易因梯度方向冲突而性能下降。RAMP通过三个创新组件解决这一问题。</p>
+<h3>1. 基于双塔的个人化路径</h3>
+<p>个人化路径包含两个结构相同但参数独立的<strong>特征交互网络（FI层）</strong>——Tower A和Tower B。两者共享底层嵌入层，但利用<strong>输出掩码机制</strong>实现任务分化：</p>
+<p><img alt="图2：RAMP整体架构——双塔个人化路径与并行非个人化路径" src="https://arxiv.org/html/2607.17473v1/fig/FCN-MT.png" /></p>
+<p>给定一个批次样本，定义掩码向量 $\mathbf{m} = (m_1, \ldots, m_b)$，其中$m_i=1$表示该样本为个性化流量（拥有完整特征），$m_i=0$为非个性化流量。Tower A的预测经过掩码过滤，仅保留个性化样本的预测结果：</p>
+$$
+\hat{\mathbf{y}}_A = \hat{\mathbf{y}}_{PL_A} \odot \mathbf{m}
+$$
+
+<p>Tower B则通过互补掩码，仅处理非个性化流量：</p>
+$$
+\hat{\mathbf{y}}_B = \hat{\mathbf{y}}_{PL_B} \odot (\mathbf{1} - \mathbf{m})
+$$
+
+<p>最终输出的组合预测通过求和实现，由于掩码机制的互斥性，该操作等价于按流量类型的选择性激活。</p>
+<h3>2. 并行非个人化路径</h3>
+<p>为了进一步强化非个性化场景的学习能力，RAMP引入一个<strong>独立的非个人化路径</strong>。该路径仅以非个性化特征作为输入，不依赖任何用户关联数据，通过专用的特征交互网络 $FI_{NP}$ 和预测层 $PL_{NP}$ 产生输出。</p>
+<h3>3. 蒸馏式预测对齐架构</h3>
+<p>RAMP的核心创新在于两个路径之间的<strong>知识蒸馏对齐机制</strong>。研究者使用跨条目L1距离衡量两个路径输出的一致性：</p>
+$$
+\mathcal{D}_{dis} = \frac{1}{b_{np}} \sum_{i=1}^{b_{np}} \| \hat{\tilde{y}}_i - \hat{\tilde{y}}_{np,i} \|_1
+$$
+
+<p>其中，$\hat{\tilde{y}}_i$ 和 $\hat{\tilde{y}}_{np,i}$ 分别表示个人化路径和非个人化路径在激活函数前的logits，$b_{np}$ 为批次中非个性化样本的数量。</p>
+<p>总损失函数由基础任务损失和对齐损失共同构成：</p>
+$$
+\mathcal{L}_{overall} = \alpha \cdot \mathcal{L}_{base} + \beta \cdot \mathcal{L}_{dis}
+$$
+
+<p>这种<strong>logit级别的对齐</strong>相较于特征级别对齐更为有效，因为两个路径依赖不同的特征空间，特征级对齐可能破坏路径的专业化分工，而logit级对齐仅规范最终预测行为，保留了各路径内部表示的灵活性。</p>
+<h2>三、实验验证</h2>
+<h3>1. 主实验结果</h3>
+<p>研究者在四个真实数据集上进行了全面评估，涵盖CTR和CVR预测任务：</p>
+<p><img alt="表2：非个性化性能对比——RAMP在所有数据集上实现最优" src="https://arxiv.org/html/2607.17473v1/table2.png" /></p>
+<p>在<strong>CriteoPrivateAd</strong>数据集上，RAMP在非个性化场景下取得<strong>79.52% AUC</strong>，相比最优基线（FCN 78.65%）提升<strong>0.87个百分点</strong>，相对提升达1.11%。在工业数据集<strong>IndustryAd</strong>上，RAMP也实现了81.49% AUC的领先表现。</p>
+<h3>2. 消融研究：超参数敏感性</h3>
+<p>研究者通过网格搜索分析了对齐损失权重 $\beta$ 的影响，发现呈<strong>倒U型曲线</strong>——过小导致知识迁移不足，过大则过度偏向对齐任务损害主目标：</p>
+<p><img alt="图3(a)：距离损失权重对非个性化性能的影响" src="https://arxiv.org/html/2607.17473v1/x1.png" /></p>
+<p>最优权重范围因数据集而异：TaobaoAd为150，CriteoPrivateAd为80。</p>
+<h3>3. 鲁棒性验证：逐步移除个性化特征</h3>
+<p>研究者设计了渐进式特征移除实验，按重要性降序依次移除个性化特征字段。即使移除21个最关键的个性化特征（仅保留11个），RAMP依然保持<strong>79.31% AUC</strong>，相比完整32个特征时仅下降0.21个百分点：</p>
+<p><img alt="图3(b)：逐步移除个性化特征的鲁棒性表现" src="https://arxiv.org/html/2607.17473v1/x2.png" /></p>
+<p>这种鲁棒性归功于双塔设计的解耦能力——非个性化塔在训练中已学会不依赖特定个性化信号做出准确预测。</p>
+<h3>4. 特征表示可视化</h3>
+<p>通过t-SNE降维可视化特征嵌入空间，RAMP的变体展现出<strong>清晰的类间分离</strong>——个性化特征与非个性化特征形成两个紧凑且可区分的簇，而基线模型中的两类特征则高度混叠：</p>
+<p><img alt="图4：t-SNE可视化——RAMP实现个性化与非个性化特征的清晰分离" src="https://arxiv.org/html/2607.17473v1/x3.png" /></p>
+<h2>四、展望</h2>
+<p>RAMP为隐私约束下的广告推荐提供了即插即用的实用方案。未来可在三个方向进一步拓展：一是引入知识图谱等辅助数据源增强非个性化特征的表征质量；二是建模真实的非授权用户分布偏移（非合成掩码）；三是与MoE（混合专家）架构结合，进一步提升多场景适应能力。</p>
+<p>对于广大广告技术从业者而言，RAMP的<strong>模型不可知</strong>特性意味着它可以无缝嫁接在现有深度学习模型之上，无需修改底层系统架构，即可在隐私合规的前提下守住推荐性能的底线——在数据红利逐渐褪去的后隐私时代，这或许正是业界亟需的务实答案。</p>
+<p><strong>论文标题</strong>：RAMP: Robust Ad Recommendation Under Limited Personalized-Feature Availability via Masking and Alignment Pathways</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.17473.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-20_RAMP-Robust-Ad-Recommendation-Under-Limited-Personalized-Feature-Availability-via-Masking-and-Alignm.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-20_RAMP-Robust-Ad-Recommendation-Under-Limited-Personalized-Feature-Availability-via-Masking-and-Alignm.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
