@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniRank: Benchmarking Ranking Models for Unified Sequential Modeling and Feature Interaction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">UniRank: Benchmarking Ranking Models for Unified Sequential Modeling and Feature Interaction</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-24</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>腾讯、快手等巨头联手发布UniRank：首个统一排序模型开源基准，15模型性能全揭秘</h1>
+<h2>引言</h2>
+<p>排序模型是推荐系统与在线广告的决策中枢，其性能的微小提升往往能带来显著的业务增量。然而，当前学术界面临着一个尴尬的困境：最先进的排序模型大多基于私有数据、闭源实现和工业级基础设施，导致可复现性严重缺失，研究进展难以比较。论文提出，现有基准如FuxiCTR、RecBole等虽然推动了推荐系统的标准化评估，但普遍不支持工业级别的长序列建模和多任务联合优化。</p>
+<p>为了弥合学术研究与工业应用之间的鸿沟，来自腾讯、中国科学技术大学、安徽大学的研究团队提出了<strong>UniRank</strong>——首个专注于统一序列建模与特征交互的排序模型开放基准。该基准覆盖了5个大规模公开数据集，最庞大的数据集包含超过7亿个样本，最长行为序列超过10万次交互，并对15个代表性统一模型进行了系统评估。</p>
+<h2>一、核心方法：重新定义排序模型的评估范式</h2>
+<p>UniRank的核心创新在于提出了<strong>时间顺序点状自回归范式</strong>，从根本上改变了传统排序模型的训练方式。</p>
+<h3>1. 从“新印象模式”到“点状自回归”</h3>
+<p>传统的排序管道仅保留用户历史中的正反馈行为，并将其作为固定上下文来预测新印象。这种单任务新印象模式（New-Impression-Only, NIO）的损失函数为：</p>
+$$
+\mathcal{L}_{\mathrm{NIO}} = \sum_{i=1}^{N} \mathrm{BCE}(y_{i}, f_{\theta}(H_{i}^{+}, x_{i}))
+$$
+
+<p>其中，( H_{i}^{+} ) 是多个样本共享的固定正反馈历史，只有新目标 ( x_{i} ) 产生梯度，监督信号极其稀疏。</p>
+<p><a href="https://arxiv.org/html/2607.19987v1/x1.png">图1：传统单任务新印象模式</a></p>
+<p>UniRank提出了点状自回归范式（Pointwise Autoregressive），构建时间顺序的完整反馈序列，保留正反馈和隐式负反馈（如曝光未点击）。每个有效位置都成为独立的点状样本，其损失函数为：</p>
+$$
+\mathcal{L}_{\mathrm{AR}} = \sum_{t \in \mathcal{T}} \sum_{k=1}^{K} \mathrm{BCE}(y_{t,k}, f_{\theta}(H_{<t}, x_{t}))
+$$
+
+<p><a href="https://arxiv.org/html/2607.19987v1/x2.png">图2：点状自回归范式</a></p>
+<p>这一范式提供多达 ( |\mathcal{T}|K ) 个监督损失项，梯度来自连续位置而非仅最新的目标，极大地提升了对长序列数据的利用效率。</p>
+<h3>2. 统一数据流水线与时间划分</h3>
+<p>UnRank采用了严格的<strong>时间顺序数据划分</strong>，而非传统的随机用户分离。所有交互按时间排序，前80%用于训练，随后各10%用于验证和测试。每个用户轨迹中的目标交互仅使用其之前的行为进行构建，模拟了从过去到未来的预测场景。</p>
+<p><a href="https://arxiv.org/html/2607.19987v1/x3.png">图3：随机用户分离与时间顺序划分对比</a></p>
+<h3>3. 全面的效率优化</h3>
+<p>UniRank集成了多项效率优化技术：Distributed Data Parallel（DDP）训练、混合精度训练（bf16）、Flash Attention支持、操作符编译（torch.compile）、以及稀疏与稠密参数的独立优化。测试表明，在4GPU配置下，OneTrans模型实现了14.24倍的训练加速，同时每GPU峰值内存降低了69.2%。</p>
+<p><a href="https://arxiv.org/html/2607.19987v1/x4.png">图4：训练加速与每GPU峰值内存</a></p>
+<h2>二、实验：15个模型在5大数据集上的全面对决</h2>
+<p>研究者对15个代表性统一排序模型进行了系统评估，包括堆叠式架构（HiFormer、RankMixer、UniMixer等）和逐层式架构（OneTrans、TokenFormer、UltraHSTU等）。</p>
+<h3>核心发现：</h3>
+<ol>
+<li>
+<p><strong>两种统一交互范式各有优势</strong>：堆叠模型如HeMix和UniMixer，以及逐层模型如EST和TokenFormer，在不同数据集和任务上各有领先，没有一种范式在所有场景下一致占优。</p>
+</li>
+<li>
+<p><strong>模型性能高度依赖数据集</strong>：EST和HeMix在淘宝和MerRec上表现优异，TokenFormer在广告数据集TAAC-25上领先，而UltraHSTU和UniMixer则在短视频平台QK-Video和KuaiRand上更具竞争力。</p>
+</li>
+<li>
+<p><strong>没有模型在所有任务上同样出色</strong>：同一数据集内，不同任务的最佳模型也不同，这支持了多任务联合评估的必要性。</p>
+</li>
+</ol>
+<p><a href="https://arxiv.org/html/2607.19987v1/x5.png">图5：KuaiRand数据集上的效率对比</a></p>
+<h3>实际应用手册</h3>
+<p>论文提供了详细的实用指南：<br />
+- <strong>标记化策略</strong>：Auto策略（允许每个标记投影访问所有特征）在大多数场景下表现最佳<br />
+- <strong>注意力激活函数</strong>：GeLU和SiLU是高性能默认选择，提供了0.005+ AUC的提升<br />
+- <strong>架构增强</strong>：AttGate（学习到的sigmoid门控）是唯一在所有任务上稳定提升的组件<br />
+- <strong>稠密优化器</strong>：SOAP、Muon和LaProp在不同数据集上各有优势</p>
+<p><a href="https://arxiv.org/html/2607.19987v1/x6.png">图6：KuaiRand上的缩放定律研究</a></p>
+<p>缩放定律研究表明，RankMixer主要通过更宽的标记维度提升性能，而OneTrans则在序列长度、深度和标记维度三个方向上一致扩展，这揭示了架构兼容的信息流对有效缩放的关键作用。</p>
+<h2>展望</h2>
+<p>UniRank作为一个开放基准，为学术界和工业界提供了一个可复现、可比较的统一平台。研究者可以在此基础上探索更长序列、更大模型和多模态信号；工业从业者则能获得生产级优化策略和性能基准。未来版本将扩展至多模态排序模型（如TaoBao-MM、MicroLens）和更大规模数据集（如MerRec-1B、RecFlow-1B甚至VK-LSVD-40B）。对于正在探索推荐系统前沿的开发者而言，UniRank的出现无疑是一个值得深度关注的技术里程碑。</p>
+<p><strong>论文标题</strong>：UniRank: Benchmarking Ranking Models for Unified Sequential Modeling and Feature Interaction</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.19987.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-22_UniRank-Benchmarking-Ranking-Models-for-Unified-Sequential-Modeling-and-Feature-Interaction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-22_UniRank-Benchmarking-Ranking-Models-for-Unified-Sequential-Modeling-and-Feature-Interaction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
