@@ -463,127 +463,143 @@
             </div>
             <h1 class="article-title">Bridging the Structural Gap: Adapting Autoregressive Generation for Recommendation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-07-25</span>
+                <span class="meta-item">📅 2026-07-26</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>腾讯发布BARGE：基于正交双通道生成式推荐系统，A/B测试点击率提升1.7%</h1>
-<h2>引言：生成式推荐的结构性困局</h2>
-<p>推荐系统正经历从“判别式”到“生成式”的范式迁移。传统方法对所有候选物品逐一打分，计算量随物品库线性增长；而生成式推荐（Generative Recommendation, GR）通过自回归生成物品标识符，将推理复杂度从<strong>线性</strong>降为<strong>对数级</strong>。然而，这一借鉴自自然语言处理的范式，在推荐场景中暴露出两个致命的结构性缺陷：</p>
-<p><strong>物品边界消失（Item-Boundary Gap）</strong>：将物品分解为多个语义ID令牌并展平成单一序列后，编码器再也无法区分哪些令牌属于同一个物品。<strong>语义漂移（Semantic Drift）</strong>：层级式码本中，任何一层的预测错误都会将解码导向错误子树，导致目标物品彻底不可达。</p>
-<p>针对上述问题，腾讯与多所高校联合团队提出<strong>BARGE</strong>（Bridging Autoregressive Generation for Recommendation），通过三项轻量化模块修补生成式推荐的结构断层。在腾讯商业媒体平台的大规模A/B测试中，该方法实现点击率提升<strong>0.60%</strong>、点击独立访客提升<strong>1.34%</strong>、总阅读时长提升<strong>1.70%</strong>。</p>
-<hr />
-<h2>一、核心方法：三项模块修补结构断层</h2>
-<p>BARGE从编码器和解码器两端同时修复结构断裂。下图展示了完整的模型架构：</p>
-<p><img alt="图1：BARGE模型架构总览" src="https://arxiv.org/html/2607.21028v1/picture/overview_v2.png" /></p>
-<h3>1.1 编码器侧：物品上下文感知注意力（ICA）</h3>
-<p>传统方法将所有物品令牌视为无差别的平铺序列。ICA采用“先聚合、后融合”策略：首先通过交叉注意力池化提取每个物品的统一上下文表征，再通过门控网络将上下文信息注入到每个令牌中。</p>
-<p>对于物品$v_i$的令牌嵌入$\{\mathbf{x}_1^{(i)},\dots,\mathbf{x}_L^{(i)}\}$，ICA使用可学习查询向量$\mathbf{q}$计算物品级上下文：</p>
+            <h2>腾讯商业平台工业级推荐系统：BARGE攻克生成式推荐结构断层，离线Recall提升19.6%，在线CTR提升0.60%</h2>
+<p>生成式推荐（Generative Recommendation, GR）通过自回归生成物品的语义ID，规避了传统判别式模型随物品集线性增长的算力瓶颈，成为序列推荐的新范式。然而，现有GR模型在编码器端丢失了物品边界，导致模型难以区分属于不同物品的token；在解码器端，层次化语义ID的树状结构使得任何一层的预测错误都会将后续解码引入错误子树，引发严重的<strong>语义漂移</strong>。一篇来自腾讯的研究论文提出了BARGE模型，通过三项轻量级正交模块，在离线基准上取得显著提升：Recall@10在Beauty数据集上提升19.6%，NDCG@10提升20.4%。该模型已在腾讯商业媒体平台落地，A/B测试结果显示点击率（CTR）提升0.60%，点击独立访客（UV）提升1.34%，总阅读时长提升1.70%。</p>
+<h2>一、核心方法</h2>
+<p>BARGE的核心在于针对性地修复生成式推荐管线中的两个结构性断层，提出三个相互正交的模块。</p>
+<h3>1. 面向编码器端：物品上下文感知注意力（ICA）</h3>
+<p><strong>问题背景</strong>：现有GR模型将每个物品分解为多个层次化语义ID token，并将所有token扁平化为一个无差别的序列输入编码器。自注意力机制平等地对待所有token，无法区分哪些token属于同一物品，导致物品级推荐退化为token级序列预测。</p>
+<p><strong>ICA模块设计</strong>：ICA采用“先聚合，后融合”的策略。首先，通过可学习的查询向量对物品内所有token进行交叉注意力池化，得到一个物品级的上下文表征。随后，通过<strong>门控残差融合</strong>机制，将该物品级上下文注入到每个token中：</p>
 $$
-\mathbf{z}^{(i)}=\text{LayerNorm}\left(\text{CrossAttn}(\mathbf{q},\;\mathbf{X}^{(i)},\;\mathbf{X}^{(i)})\right)
+\begin{aligned}
+\mathbf{g}_{l}^{(i)} &=\sigma\left(W_{g}\cdot[\mathbf{x}_{l}^{(i)}\|\hat{\mathbf{z}}^{(i)}]+\mathbf{b}_{g}\right),\\
+\hat{\mathbf{x}}_{l}^{(i)} &=\mathbf{x}_{l}^{(i)}+\mathbf{g}_{l}^{(i)}\odot\hat{\mathbf{z}}^{(i)},
+\end{aligned}
 $$
 
-<p>其中$\mathbf{X}^{(i)}=[\mathbf{x}_1^{(i)};\dots;\mathbf{x}_L^{(i)}]\in\mathbb{R}^{L\times d}$是该物品所有令牌的嵌入矩阵。门控网络通过元素级乘法控制融合强度，使得每个令牌可以自主决定吸收多少物品上下文。实验发现，门控激活值稳定在0.35-0.38之间，说明网络学会了适度和一致的融合强度。</p>
-<p><img alt="图2：ICA门控激活值分布" src="https://arxiv.org/html/2607.21028v1/x4.png" /></p>
-<h3>1.2 解码器侧：层级路径重排序（HPR）</h3>
-<p>HPR在束搜索的每一层引入路径级评估机制。核心思想是：解码器的初始隐藏状态$\mathbf{h}_0$（由交叉注意力生成）天然编码了用户历史偏好的全局信息，可以作为路径语义兼容性的锚点。</p>
-<p>对于每个候选路径，HPR计算累积路径嵌入$\mathbf{p}^{(l)}$，并采用双塔结构计算其与解码器隐藏状态的相似度：</p>
+<p>其中，$\mathbf{x}_{l}^{(i)}$是物品$i$的第$l$个token的嵌入，$\hat{\mathbf{z}}^{(i)}$是物品级表征，$\mathbf{g}_{l}^{(i)}$是门控向量，控制注入强度。实验观察到门控值稳定在0.35-0.38之间，表明网络学习到了适度且稳定的融合强度。</p>
+<h3>2. 面向解码器端一：层次化路径重排序（HPR）</h3>
+<p><strong>问题描述</strong>：在层次化解码中，一旦在某一层选择了错误的码字，模型就被引导到错误的子树中，无论后续层如何预测，目标物品都无法到达。</p>
+<p><em>[图片来源：论文Figure 1]</em><br />
+<img alt="图1：生成式推荐中的两个结构性断层" src="https://arxiv.org/html/2607.21028v1/picture/question.png" /></p>
+<p><strong>HPR模块</strong>：HPR在标准束搜索的每一层后介入，通过一个双塔对比评分器重新评估候选路径的语义一致性。该评分器利用解码器的初始隐藏状态$\mathbf{h}_0$（代表用户历史兴趣的整体表征）与候选路径的累积嵌入$\mathbf{p}^{(l)}$计算相似度：</p>
 $$
-r_{l}(\mathbf{h}_0,\mathbf{p}^{(l)})=\cos\!\bigl(\phi_{l}^{\text{ctx}}(\mathbf{h}_0),\;\phi_{l}^{\text{path}}(\mathbf{p}^{(l)})\bigr)\cdot e^{\tau_{l}}
-$$
-
-<p>在推理阶段，HPR将每个候选路径的原始生成概率与重排序得分融合：</p>
-$$
-\begin{split}\text{score}(c,l)=\;&\log p(c\mid c_{lt;l},\mathbf{s}_{u})\\
-&+\lambda\cdot\log\text{softmax}\!\left(r_{l}(\mathbf{h}_0,\mathbf{p}^{(l)})\right)\end{split}
+r_{l}(\mathbf{h}_{0},\mathbf{p}^{(l)})=\cos\!\bigl(\phi_{l}^{\text{ctx}}(\mathbf{h}_{0}),\;\phi_{l}^{\text{path}}(\mathbf{p}^{(l)})\bigr)\cdot e^{\tau_{l}},
 $$
 
-<p>研究者发现，仅凭束宽为20的标准束搜索，在第三层（$c_3$）上，正确前缀的准确率为77.0%，而错误前缀的准确率骤降至0.6%，两者相差128倍。HPR通过纠正语义不一致的路径，显著抑制了这种级联崩溃。</p>
-<h3>1.3 跨通道融合：双路径解码（DPD）</h3>
-<p>DPD引入正交分割量化VAE（OSQ-VAE），将物品嵌入分解为两个互补的正交子空间：</p>
-<p><img alt="图3：语义漂移原理图" src="https://arxiv.org/html/2607.21028v1/picture/question.png" /></p>
-<p>每个物品经正交旋转矩阵$R$分解后，在两个独立的码本栈中各生成一组语义ID。训练时，两个解码塔共享编码器但参数独立，各自预测本通道的语义ID。推理时，通过OR融合机制合并两通道的候选列表：</p>
+<p>其中$\phi_{l}^{\text{ctx}}$和$\phi_{l}^{\text{path}}$是层特定的线性投影。HPR通过对称InfoNCE损失训练，旨在最大化用户上下文与正确累积路径之间的互信息。在推理时，HPR将重排序分数与原始生成概率融合，以修正语义不一致的路径。</p>
+<h3>3. 面向解码器端二：双路径解码（DPD）</h3>
+<p><strong>问题描述</strong>：单一RQ-VAE结构将物品的丰富语义投影到单一的量化轴上，那些未被该轴捕获的语义方面将被永久地锁在对应语义子树之外。</p>
+<p><strong>DPD模块</strong>：DPD通过一个<strong>正交分割与量化VAE（OSQ-VAE）</strong>，将物品嵌入分解到两个互补的子空间中，并为每个子空间配备独立的解码器。OSQ-VAE首先对预训练的item embedding进行可学习的正交旋转，然后将其分成两半，每一半通过独立的残差量化器生成各自的语义ID。两个解码器在共享的编码器之上并行运行，各自独立地进行束搜索和HPR重排序。推理时，通过OR融合策略合并两个解码器的候选列表：</p>
 $$
-s(v)\;=\;f\!\bigl(s^{(A)}(v),\,s^{(B)}(v)\bigr)
-$$
-
-<p>OR融合的增益可以用条件概率公式精确刻画。定义$E^{(A)}$和$E^{(B)}$分别表示两通道在Top-K中遗漏真实物品的事件，$\kappa=\Pr[E^{(B)}|E^{(A)}]$表示给定通道A遗漏时通道B也遗漏的条件概率：</p>
-$$
-\underbrace{\Pr[E^{(A)}]-\Pr[E^{(A)}\cap E^{(B)}]}_{\text{OR融合相对于通道A的增益}}\;=\;(1-\kappa)\cdot\Pr[E^{(A)}]
+s(v) = f\bigl(s^{(A)}(v),\,s^{(B)}(v)\bigr),
 $$
 
-<p>实验验证，两通道的Top-K候选集合Jaccard相似度仅0.18（Beauty）和0.17（Sports），15%-24%的OR融合命中来自单一通道，证明了通道间的高度互补性。</p>
-<hr />
-<h2>二、实验结果：全面超越现有方法</h2>
-<h3>2.1 基准数据集性能</h3>
-<p>在Amazon Beauty和Sports &amp; Outdoors两个基准数据集上，BARGE在所有指标上取得最佳表现：</p>
+<p>只要至少一个通道将目标物品排在靠前位置，该物品就能被恢复，从而从跨通道角度抑制语义漂移。</p>
+<p><em>[图片来源：论文Figure 2]</em><br />
+<img alt="图2：BARGE模型总览" src="https://arxiv.org/html/2607.21028v1/picture/overview_v2.png" /></p>
+<h2>二、实验</h2>
+<p>研究者在两个Amazon数据集（Beauty， Sports &amp; Outdoors）和腾讯商业平台的大规模离线测试上评估了BARGE。</p>
+<h3>1. 整体性能对比</h3>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
-<th>方法</th>
-<th>Beauty R@10</th>
-<th>Beauty N@10</th>
-<th>Sports R@10</th>
-<th>Sports N@10</th>
+<th style="text-align: left;">方法</th>
+<th style="text-align: left;">Beauty R@10</th>
+<th style="text-align: left;">Beauty N@10</th>
+<th style="text-align: left;">Sports R@10</th>
+<th style="text-align: left;">Sports N@10</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>TIGER</td>
-<td>0.0648</td>
-<td>0.0384</td>
-<td>0.0400</td>
-<td>0.0225</td>
+<td style="text-align: left;">TIGER (基线)</td>
+<td style="text-align: left;">0.0648</td>
+<td style="text-align: left;">0.0384</td>
+<td style="text-align: left;">0.0400</td>
+<td style="text-align: left;">0.0225</td>
 </tr>
 <tr>
-<td>COBRA</td>
-<td>0.0725</td>
-<td>0.0456</td>
-<td>0.0434</td>
-<td>0.0257</td>
+<td style="text-align: left;">COBRA</td>
+<td style="text-align: left;">0.0725</td>
+<td style="text-align: left;">0.0456</td>
+<td style="text-align: left;">0.0434</td>
+<td style="text-align: left;">0.0257</td>
 </tr>
 <tr>
-<td>APAO</td>
-<td>0.0795</td>
-<td>0.0453</td>
-<td>0.0444</td>
-<td>0.0237</td>
+<td style="text-align: left;">APAO-pointwise</td>
+<td style="text-align: left;">0.0795</td>
+<td style="text-align: left;">0.0453</td>
+<td style="text-align: left;">0.0444</td>
+<td style="text-align: left;">0.0237</td>
 </tr>
 <tr>
-<td><strong>BARGE</strong></td>
-<td><strong>0.0927</strong></td>
-<td><strong>0.0547</strong></td>
-<td><strong>0.0544</strong></td>
-<td><strong>0.0308</strong></td>
+<td style="text-align: left;"><strong>BARGE (本论文)</strong></td>
+<td style="text-align: left;"><strong>0.0927</strong></td>
+<td style="text-align: left;"><strong>0.0547</strong></td>
+<td style="text-align: left;"><strong>0.0544</strong></td>
+<td style="text-align: left;"><strong>0.0308</strong></td>
 </tr>
 </tbody>
 </table></div>
-<p>与最强基线相比，BARGE在Recall@10上提升19.6%（Beauty）和16.7%（Sports）。</p>
-<h3>2.2 语义漂移分析</h3>
-<p>下表展示了教师强制（TF）与自回归（AR）模式下各层的预测质量差异：</p>
-<p><img alt="实验数据表对比" src="" /></p>
-<p>在$c_3$层，TF模式下的目标概率为0.787，而AR模式仅0.015，降幅达52倍。更关键的是，当自回归前缀完全正确时，$c_3$准确率可达0.738；一旦前缀出错，立即暴跌至0.006，差距达128倍。这证实了错误累积的严重性，也解释了HPR重排序机制的有效性。</p>
-<h3>2.3 消融实验</h3>
-<p>组件消融实验清晰地展示了三个模块的互补性：</p>
-<ul>
-<li><strong>仅ICA</strong>：相比基线提升，但最深层的漂移问题仍存在</li>
-<li><strong>仅HPR</strong>：有效纠正路径内漂移，但跨通道问题未解决</li>
-<li><strong>仅DPD</strong>：单模块性能最强，因扩大语义覆盖范围</li>
-<li><strong>三者联合</strong>：进一步超越所有单模块变体，证实增益可累加</li>
-</ul>
-<h3>2.4 在线A/B测试</h3>
-<p>在腾讯商业媒体平台的在线测试中，BARGE在6%的实时流量上对比现有系统：</p>
-<ul>
-<li>点击率：+0.60%</li>
-<li>点击独立访客：+1.34%</li>
-<li>总阅读时长：+1.70%</li>
-</ul>
-<p>所有指标达到统计显著性，证明了BARGE在工业级推荐场景中的实际价值。</p>
-<hr />
-<h2>三、展望：结构洞察驱动技术演进</h2>
-<p>BARGE的成功表明，单纯从NLP借用的生成式框架需要进行深度的结构适配。研究团队揭示的“物品边界消失”和“语义漂移”两个结构性缺口，为后续工作提供了明确的技术演进方向。</p>
-<p>当推荐系统的物品库规模达到百万级甚至亿级，结构性修补带来的增益只会更加显著。未来，如何将层级语义结构进一步融入模型设计，以及如何将这种结构感知扩展到大语言模型时代的推荐系统，将是值得关注的方向。</p>
+<p>BARGE在所有指标上均取得最优结果，相对于最强基线（APAO-pointwise）在Beauty上Recall@10提升16.6%，NDCG@10提升20.7%。</p>
+<h3>2. 消融研究</h3>
+<p>通过逐模块消融，三个模块的贡献清晰可见：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">变体</th>
+<th style="text-align: left;">Beauty R@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">BARGE (完整)</td>
+<td style="text-align: left;">0.0927</td>
+</tr>
+<tr>
+<td style="text-align: left;">BARGE w/o ICA</td>
+<td style="text-align: left;">0.0859</td>
+</tr>
+<tr>
+<td style="text-align: left;">BARGE w/o HPR</td>
+<td style="text-align: left;">0.0864</td>
+</tr>
+<tr>
+<td style="text-align: left;">BARGE w/o DPD</td>
+<td style="text-align: left;">0.0913</td>
+</tr>
+</tbody>
+</table></div>
+<p>所有单模块变体均超越最强基线，且完整模型进一步超越所有单模块变体，验证了三者在不同错误源上（编码器端、单通道路径内、跨通道）的互补性。</p>
+<h3>3. 语义漂移分析</h3>
+<p>研究深入分析了语义漂移现象及其严重性。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">评价指标</th>
+<th style="text-align: left;">教师强制 (TF)</th>
+<th style="text-align: left;">自回归生成 (AR)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">第3层目标概率</td>
+<td style="text-align: left;">0.787</td>
+<td style="text-align: left;">0.015</td>
+</tr>
+</tbody>
+</table></div>
+<p>当使用标准自回归解码时，深层语义ID的预测概率从0.787骤降至0.015，降幅达52倍。当自回归前缀完全正确时，第3层准确率为77.0%；但一旦前缀出错，准确率暴跌至0.6%，相差128倍，充分说明了累积漂移的毁灭性影响。</p>
+<p><em>[图片来源：论文Figure 3]</em><br />
+<img alt="图3：HPR超参数敏感性分析" src="https://arxiv.org/html/2607.21028v1/x1.png" /></p>
+<h2>三、展望</h2>
+<p>BARGE通过精确定位并修复生成式推荐中的两个结构性断层，在不显著增加计算开销的前提下，实现了推荐性能的质的飞跃。该工作不仅为学术研究提供了新思路，更在腾讯商业平台的实际流量中取得了点击率、UV和停留时长等核心指标的显著提升，证明了其强大的工业应用价值。未来，研究者计划进一步探索利用层次化语义来设计更强大的生成式推荐结构。对于生成式推荐这一发展迅速的领域，BARGE的模块化修复思路无疑提供了宝贵的借鉴。</p>
 <p><strong>论文标题</strong>：Bridging the Structural Gap: Adapting Autoregressive Generation for Recommendation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
