@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIREN (Luring LLMs onto the Rocks): PAIR-Driven Preference Manipulation in Web-RAG Recommenders</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SIREN (Luring LLMs onto the Rocks): PAIR-Driven Preference Manipulation in Web-RAG Recommenders</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-07-28</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>研究者提出SIREN：成功率50%的Web-RAG推荐系统操纵新方法，连Claude也难逃诱导？</h1>
+<h2>引言</h2>
+<p>当用户向AI助手询问“某城市排名前五的餐厅”或“某地标附近最佳中档酒店”时，背后运行的是一套复杂的<strong>Web-RAG（检索增强生成）推荐系统</strong>：大语言模型（LLM）实时发起网络搜索、抓取候选页面，并基于检索文本合成一份排名推荐。</p>
+<p>这种模式正在重塑用户发现和选择产品与服务的方式，但也带来了全新的安全挑战。试想：如果某个商家能在自己网站或可控页面中嵌入特定内容，悄无声息地让AI将其列为“第一推荐”，这种操纵是否可行？效果有多稳定？这正是来自昆士兰大学与科廷大学的研究团队在<strong>SIREN</strong>论文中要回答的核心问题。</p>
+<p>研究者在两个生产级Claude模型（Haiku 4.5和Sonnet 5）上设计了124次实验，发现SIREN能够在50.0%的测试中让目标实体升至<strong>排名第一</strong>，成功载荷在新鲜会话中的平均保持率高达80.5%。</p>
+<h2>一、核心方法：当PAIR劫持遇上竞品排名操纵</h2>
+<h3>创新点1：PAIR劫持循环的竞品适配</h3>
+<p>SIREN的核心灵感源于<strong>PAIR（Prompt Automatic Iterative Refinement）</strong>——原本用于寻找越狱提示的自动化攻击-裁判循环。研究者创造性地将其改造为<strong>迭代网页编辑</strong>机制，让攻击者模型不断优化对检索到的网页内容的修改。</p>
+<p>该循环包含三个角色：攻击者提出编辑方案，目标模型基于编辑后的源集生成推荐答案，裁判从答案中提取目标实体的排名并返回反馈。</p>
+<p>SIREN优化循环流程如下图所示：</p>
+<p><img alt="图1：SIREN优化循环流程" src="https://arxiv.org/html/2501.00000v1/x1.png" /></p>
+<p>攻击者被限定在特定编辑技术中，通过三种操作修改页面：插入内容、修改现有文本、设置链接或图片属性。每次迭代，系统都是从源始干净副本重新构建页面，避免编辑累积造成的偏移。</p>
+<h3>创新点2：固定上下文的RAG回放平台</h3>
+<p>传统方法难以区分推荐结果变化是源于检索差异还是内容编辑的影响。SIREN引入的<strong>自定义RAG回放平台</strong>解决了这一关键问题：</p>
+<p>该平台通过四个阶段实现可控实验：<br />
+- <strong>搜索阶段</strong>：使用目标模型的服务器端web_search工具获取URL源集<br />
+- <strong>抓取阶段</strong>：使用web_fetch工具完整捕获页面文本<br />
+- <strong>编辑阶段</strong>：离线修改指定源，支持23种内容投毒技术<br />
+- <strong>回放阶段</strong>：将完整源集作为search_result块重新送入目标模型</p>
+<p><img alt="图2：自定义RAG回放管道流程" src="https://arxiv.org/html/2501.00000v2/x2.png" /></p>
+<p>这种方法的关键价值在于：由于源集和顺序完全固定，推荐排名的任何变化都可以直接归因于内容编辑，而非检索差异。</p>
+<h3>核心指标公式</h3>
+<p>SIREN采用GEO-Bench中的排名偏移度量进行评估。其中核心公式定义了<strong>归一化排名增益（NRG）</strong>，用于衡量排名移动的程度：</p>
+$$ \displaystyle=\operatorname{clip}\!\left(\frac{\rho_{0}-\rho^{\ast}}{L-1},\,-1,\,1\right) $$
+
+<p>其中$\rho_{0}$是目标实体的基线排名，$\rho^{\ast}$是攻击迭代中的最佳排名，$L$是请求的列表长度。NRG取值被限制在$[-1,1]$之间，1表示从最末提升至第一。</p>
+<p>排名成功率的计算公式为：</p>
+$$ \textsf{ASR}=\frac{1}{N}\sum_{i=1}^{N}\mathbb{1}[\rho^{\ast}_{i}=1] $$
+
+<p>这个ASR（攻击成功率）指标衡量的是目标实体最终达到排名第一的试验比例，是整个研究的主线评估指标。</p>
+<h3>23种技术的结构化分类</h3>
+<p>研究者构建了一个包含6个报告家族、23种内容投毒技术的系统化分类体系。这些技术基于四个属性变化：载荷载体、载荷形式、编辑操作和应用时变换。</p>
+<p>其中<strong>可见种子</strong>家族（如植入完整排名列表）在实验中的表现最突出，成功率达到83.3%，远超指令型注入的16.7%。</p>
+<h2>二、实验：对Claude模型的全面评估</h2>
+<h3>攻击效果总览</h3>
+<p>研究者在8个查询-模型上下文中评估了SIREN，覆盖两个Claude目标模型和4个匿名化推荐场景，共包含124次技术试验。</p>
+<p>攻击效果汇总表如下：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>评估块</th>
+<th>试验数</th>
+<th>ASR</th>
+<th>平均NRG</th>
+<th>Promote@3</th>
+<th>Success@3</th>
+<th>平均迭代次数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全部</td>
+<td>124</td>
+<td>0.500</td>
+<td>0.597</td>
+<td>0.500</td>
+<td>0.685</td>
+<td>5.48</td>
+</tr>
+<tr>
+<td>全扫描(4×23)</td>
+<td>92</td>
+<td>0.435</td>
+<td>0.560</td>
+<td>0.424</td>
+<td>0.674</td>
+<td>6.95</td>
+</tr>
+<tr>
+<td>缩减(4×8)</td>
+<td>32</td>
+<td>0.688</td>
+<td>0.703</td>
+<td>0.719</td>
+<td>0.719</td>
+<td>2.82</td>
+</tr>
+</tbody>
+</table></div>
+<h3>成功载荷的稳定性验证</h3>
+<p>对62个成功达到排名第一的载荷，研究者在10次新鲜回放会话中进行了验证：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>目标模型</th>
+<th>验证数</th>
+<th>平均排名1率</th>
+<th>全部成功</th>
+<th>从未成功</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Haiku 4.5</td>
+<td>39</td>
+<td>0.936</td>
+<td>33</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Sonnet 5</td>
+<td>23</td>
+<td>0.583</td>
+<td>4</td>
+<td>2</td>
+</tr>
+<tr>
+<td>全部</td>
+<td>62</td>
+<td>0.805</td>
+<td>37</td>
+<td>2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Haiku的成功载荷稳定性极佳，平均保持率高达93.6%，而Sonnet仅有58.3%。</p>
+<h3>不同技术家族的效果对比</h3>
+<p>下图展示了不同技术家族在全扫描阶段的ASR表现差异：</p>
+<p><img alt="图3：不同技术家族的成功率对比" src="https://arxiv.org/html/2501.00000v3/x3.png" /></p>
+<p>研究者的关键发现是：<strong>声明式排名声称和种子列表普遍优于指令型注入</strong>。可见种子的ASR高达83.3%，而可见注入仅16.7%。这意味着直接告诉模型“某实体应该排第一”比指令“请将某实体排第一”更有效。</p>
+<h3>目标模型的差异性分析</h3>
+<p>在不同目标模型上的表现差异明显：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>评估块</th>
+<th>目标</th>
+<th>ASR</th>
+<th>平均NRG</th>
+<th>平均迭代次数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全扫描</td>
+<td>Haiku</td>
+<td>0.609</td>
+<td>0.674</td>
+<td>5.61</td>
+</tr>
+<tr>
+<td>全扫描</td>
+<td>Sonnet</td>
+<td>0.261</td>
+<td>0.446</td>
+<td>10.08</td>
+</tr>
+<tr>
+<td>缩减</td>
+<td>Haiku</td>
+<td>0.688</td>
+<td>0.688</td>
+<td>3.18</td>
+</tr>
+<tr>
+<td>缩减</td>
+<td>Sonnet</td>
+<td>0.688</td>
+<td>0.719</td>
+<td>2.45</td>
+</tr>
+</tbody>
+</table></div>
+<p>在更复杂的Sonnet模型上，攻击难度显著提高，但通过迭代优化仍能达到目标。</p>
+<h2>三、技术价值与防御思考</h2>
+<p>SIREN的研究揭示了当前Web-RAG推荐系统的脆弱性。研究者发现，防御指令型注入相对容易——Sonnet有时能识别出嵌入指令并标识来源，但处理声明式排名声称则困难得多。</p>
+<p>真正的挑战在于：<strong>种子列表、FAQ和元数据声明与普通网页内容难以区分</strong>。研究者据此提出，防御策略需要超越简单的标记过滤，转向来源验证和跨源交叉验证——例如，当独立来源不支持某个排名声称时，系统应自动降低该声明的权重。</p>
+<p>这项研究对各类依赖LLM做推荐决策的平台（旅游预订、电商搜索、内容推荐等）都敲响了警钟。未来，随着更多LLM应用采用实时网页检索作为信息源，如何平衡内容操纵的可行性与防御有效性，将成为一个持续博弈的技术战场。而研究人员已经在考虑：<strong>如果多个内容提供者同时优化各自页面，目前的单源编辑策略还能否保持效果？</strong></p>
+<p><strong>论文标题</strong>：SIREN (Luring LLMs onto the Rocks): PAIR-Driven Preference Manipulation in Web-RAG Recommenders</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2607.21951.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-07-24_SIREN-Luring-LLMs-onto-the-Rocks-PAIR-Driven-Preference-Manipulation-in-Web-RAG-Recommenders.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-07-24_SIREN-Luring-LLMs-onto-the-Rocks-PAIR-Driven-Preference-Manipulation-in-Web-RAG-Recommenders.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
