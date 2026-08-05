@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Self-Triggered Agentic Push Recommendation System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">A Self-Triggered Agentic Push Recommendation System</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-08-05</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>抖音推送系统升级：STEPS自触发Agent架构让用户活跃提升0.2843%，资源消耗骤降79.42%</h2>
+<h3>一、引言</h3>
+<p>推送通知是平台触达用户、提升长期活跃的关键渠道，但“何时推送”与“是否推送”的决策始终困扰着工业界。推送太频繁或时机不当，会引发用户疲劳甚至关闭权限；推送太少，则错失宝贵的用户召回机会。如何在有限的系统资源下，精准捕捉每个用户的“最佳推送时刻”？字节跳动与北京大学研究者联合提出<strong>STEPS自触发端到端Agentic推送系统</strong>，已在抖音完成全量部署，覆盖超过10亿用户。该系统通过让系统自主决策“下一次唤醒自己的时间”，实现了用户活跃天数提升0.2843%、推送权限关闭率降低1.9089%、计算资源消耗减少79.42%的显著效果。</p>
+<h3>二、核心方法：自触发的Agentic闭环</h3>
+<h4>2.1 整体框架</h4>
+<p>传统推送方案分为两类：一类是<strong>预计划频率方法</strong>，通过离线模型预先分配推送时间，缺乏实时适应性；另一类是<strong>固定间隔触发方法</strong>，以固定频率轮询系统，在计算开销与最佳时机捕捉之间面临两难。STEPS完全抛弃了预定义时间表，将推送重构为一个<strong>自触发Agentic闭环过程</strong>，由三个Agent协作完成：</p>
+<p><img alt="图2：整体框架" src="https://arxiv.org/html/2608.01949v1/x2.png" /></p>
+<p><strong>规划Agent</strong>负责预测下一个最优推送时刻；<strong>执行Agent</strong>在该时刻评估实时上下文并决策是否发送；<strong>过滤Agent</strong>作为轻量级守卫，过滤低价值请求并控制计算开销。系统动态生成动作与下一次激活时间，形式上表达为：</p>
+$$(a_{t},\Delta_{t})=(\pi_{A}(s_{t},R_{t}),\pi_{P}(s_{t},R_{t}))$$
+
+<p>其中 $a_t$ 表示是否推送的二元决策，$\Delta_t$ 表示距离下次系统激活的时间间隔，$s_t$ 为当前状态，$R_t$ 为目标回报（Return-to-Go）。</p>
+<h4>2.2 规划Agent：门控序数回归生成推送时机</h4>
+<p>规划Agent的核心任务是预测下一次系统激活时间。论文提出两项关键机制：</p>
+<p><strong>门控RTG机制（Gated-RTG）</strong>。标准决策Transformer将目标回报与状态嵌入直接拼接，但高维状态特征容易淹没低维的RTG信号，导致模型忽略条件输入。STEPS改用<strong>逐元素乘法</strong>将RTG注入状态嵌入：</p>
+$$e_{gated}=e_{s}\odot\text{MLP}(R_{t})$$
+
+<p>这种门控方式强制状态表征受RTG调制，使模型无法绕过条件信号。实验显示，标准DT模型的“条件-动作相关性比率”在1.0附近随机波动（即完全忽略RTG），而Gated-RTG机制使该比率稳定收敛至1.8，与训练数据的真实统计值吻合。</p>
+<p><strong>序数回归生成时间</strong>。预测0到24小时的连续时间间隔是强噪声任务，且标签分布呈严重长尾。论文提出将连续时间空间划分为100个等频桶（每个桶样本数相同），将时间预测转化为序数回归问题：</p>
+$$\mathcal{L}_{next}=\sum_{k=1}^{K}BCE(y_{k},z_{k})$$
+
+<p>其中 $y_{k}=\mathbf{1}[\Delta_{t}>\tau_{k}]$ 表示真实间隔是否大于第 $k$ 个边界。在线推断时，通过概率聚合将序数逻辑值解码为连续时间间隔。实验表明，等频分桶策略在100个桶时达到最优回归AUC 0.75116。</p>
+<p><img alt="图3：规划Agent架构" src="https://arxiv.org/html/2608.01949v1/x3.png" /></p>
+<h4>2.3 执行Agent：基于Bellman RTG的价值引导决策</h4>
+<p>执行Agent在规划Agent生成的时刻做最终发送决策。传统方法直接回归观测RTG，但离线数据中的动作可能是次优的，导致观测RTG无法准确反映真实回报。论文借鉴GAVE框架，提出<strong>基于Bellman方程的价值引导决策</strong>，以累积方式估计动作价值函数：</p>
+$$R^{+}_{t}=r_{t}^{+}+\gamma\max_{a}Q^{+}(s_{t},a|\lambda_{n})$$
+
+<p>其中正回报 $r_t^+$ 根据用户是否在时间区间 $[M, M+1)$ 内激活来定义。通过价值差异计算优势权重，对动作策略进行加权学习，引导模型朝向更优行为。在线A/B测试显示，Bellman RTG建模带来持续稳定的长期价值增长，而直接回归观测RTG的方法经历初始上升后即回落至基线水平。</p>
+<p><img alt="图4：执行Agent架构" src="https://arxiv.org/html/2608.01949v1/x4.png" /></p>
+<h4>2.4 过滤Agent：轻量级安全阀</h4>
+<p>由于系统取消了固定预算限制，存在异常时间规划（如间隔过短）和计算资源失控的风险。过滤Agent通过蒸馏执行Agent的知识构建3层MLP模型，<strong>刻意排除物品侧特征</strong>，从而避免触发下游计算密集的物品排序管线。该设计以微小模型精度损失换取约10倍的计算节省。</p>
+<h3>三、实验效果</h3>
+<h4>3.1 在线A/B测试</h4>
+<p>在抖音推送平台进行了14天在线A/B测试，覆盖超过10亿用户，与当前生产基线（预计划频率方法）对比：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th style="text-align: left;">方法</th>
+<th style="text-align: left;">用户活跃天数 ↑</th>
+<th style="text-align: left;">负面体验 ↓</th>
+<th style="text-align: left;">资源消耗 ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">预计划频率（基线）</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">-</td>
+</tr>
+<tr>
+<td style="text-align: left;">固定间隔触发</td>
+<td style="text-align: left;">-0.0670%</td>
+<td style="text-align: left;">+0.0205%</td>
+<td style="text-align: left;">+6.548%</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>STEPS</strong></td>
+<td style="text-align: left;"><strong>+0.2843%</strong></td>
+<td style="text-align: left;"><strong>-1.9089%</strong></td>
+<td style="text-align: left;"><strong>-79.42%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>消融实验进一步显示，规划Agent贡献了主要增益（UAD +0.1808%，NE -0.9781%），执行Agent锦上添花（UAD +0.1035%，NE -0.6843%），过滤Agent将推送给关闭率额外降低0.2465%，并承担了74.88%的资源削减。</p>
+<h4>3.2 行为模式分析</h4>
+<p>从用户接收推送的间隔分布来看，规划Agent显著改变了发送密度：极短间隔（0-20分钟）推送占比骤降35.93%，而3-6小时的合理间隔推送比例大幅上升179.84%。这从机制上解释了负面体验下降的原因——系统主动抑制了密集推送簇。</p>
+<p><img alt="图6(b)：长期价值对比" src="https://arxiv.org/html/2608.01949v1/figures/trajectory.jpeg" /></p>
+<p>在执行Agent的日内动态分析中，对于晚间仍不活跃的高活跃用户，推送通过率持续为正并在晚间达到峰值；而对于低活跃用户，晚间推送通过率转负。这一对鲜明对比证明了模型对用户轨迹的感知能力。训练后的价值函数同样展现出良好的时间单调性：随着一天时间推移，未激活用户的推送边际价值递减，模型自然降低发送倾向。</p>
+<h3>四、展望</h3>
+<p>STEPS的创新之处在于将“何时决策”本身纳入学习目标，打破了传统推荐系统被动等待激活的范式局限。这种自触发机制在推送场景之外，对广告投放、内容预加载、社交提醒等需要实时响应的系统同样具有迁移价值。当系统不再受限于固定轮询或离线规划，而是学会“在正确的时间思考”，推荐系统才真正拥有了时间智能。一个值得思考的方向是：这种自我调度的Agent架构，将如何重塑更多实时决策系统的设计范式？</p>
+<p><strong>论文标题</strong>：A Self-Triggered Agentic Push Recommendation System</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.01949.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-03_A-Self-Triggered-Agentic-Push-Recommendation-System.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-03_A-Self-Triggered-Agentic-Push-Recommendation-System.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
