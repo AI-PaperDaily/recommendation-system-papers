@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEGR: Dual Exploration-Driven Generative Re-Ranking for Adaptive Cross-Request Context Bridging</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">DEGR: Dual Exploration-Driven Generative Re-Ranking for Adaptive Cross-Request Context Bridging</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-08-07</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>京东发布DEGR双探索生成式重排序：UCTR提升1.22%，如何突破上游供给瓶颈？</h2>
+<p>当用户打开京东首页，一场围绕“下一件商品”的实时博弈就已悄然开启。在这条由召回、粗排、精排到重排序构成的推荐链路中，重排序作为距离用户最近的一环，直接决定了最终呈现在用户面前的商品序列。</p>
+<p>然而，一个长期被忽视的困境正制约着重排序效能的进一步突破——<strong>上游固定供给约束</strong>。当上游精排给出的候选集整体质量偏低时，无论重排序如何打乱序列，其优化空间都极为有限。传统方法在低质量供给下往往陷入局部最优，导致用户失去兴趣、流失浏览。</p>
+<p>针对这一痛点，京东研究者提出<strong>DEGR（Dual Exploration-Driven Generative Re-Ranking）</strong>方法——一种由探索奖励模型引导的混合监督-强化探索优化范式。该方法的独特之处在于：重排序不再只是被动响应上游供给，而是能够主动平衡即时价值与探索价值，在低质量供给下策略性地优先展示探索性商品，从而保留用户的浏览潜力，诱发“意外之喜”的转化。</p>
+<p><img alt="图1：低质量上游供给下的不同重排序序列示例" src="https://arxiv.org/html/2608.04809v1/img/brief_next.png" /></p>
+<h2>一、核心方法</h2>
+<p>DEGR的完整架构如图2所示，其核心由<strong>探索奖励模型</strong>与<strong>双探索驱动生成器</strong>两大模块构成。前者为后者提供清晰的优化信号，后者则通过混合优化范式在序列空间中展开高效探索。</p>
+<p><img alt="图2：DEGR离线训练与在线服务流程" src="https://arxiv.org/html/2608.04809v1/img/all.png" /></p>
+<h3>1. 探索奖励模型：动态平衡即时与探索价值</h3>
+<p>传统重排序奖励模型往往聚焦于最大化即时效用（如CTR、CVR），但在上游供给受限时，这种策略容易让模型陷入局部最优。京东团队通过分析线上数据发现了一个关键现象：<strong>Max-pCTR与序列点击率（sCTR）呈显著正相关，但与下一次请求的点击率（Next Click Ratio）基本无关</strong>。</p>
+<p><img alt="图3：京东推荐场景中Max-pCTR与sCTR、Next Click、Next Expo Ratio的关系" src="https://arxiv.org/html/2608.04809v1/img/online_ab1.png" /></p>
+<p>这一发现揭示了一个重要洞察：当即时收益受限于低质量供给时，可以战略性优先提升“继续浏览概率”（NER），通过更深度的探索来培养潜在的转化机会。基于此，论文设计了一种包含<strong>即时奖励</strong>与<strong>序列级探索奖励</strong>的复合奖励模型：</p>
+$$R_{\theta}(\tau,q)=\alpha\cdot R_{e}+\sum_{j\in\{g_{1},...g_{M}\}}(1-\alpha)\cdot\delta_{j}\cdot R_{j}$$
+
+<p>其中$R_{e}$为序列级探索价值，$R_{j}$为第$j$个商品的即时价值，$\delta_{j}$为位置衰减权重，$\alpha$控制两者平衡。探索奖励模型通过MMoE（多门控专家混合）架构提取用户行为模式，利用上游pCTR作为动态权重，实现对即时与探索价值的自适应调节。</p>
+<h3>2. 双探索驱动生成器：三项目标协同优化</h3>
+<p>DEGR的生成器采用编码器-解码器架构，通过多个解码头协同实现并行序列生成。研究者设计了融合三个目标的混合探索优化范式，让生成器在训练中同时兼顾分布拟合、多样性保持和奖励最大化。</p>
+<p><strong>目标一：有监督学习（SL）</strong>，通过交叉熵损失让生成器对齐在线分布，避免强化学习可能导致的模型能力崩溃。<strong>目标二：探索多样性约束（EDC）</strong>，针对并行解码头生成高相关嵌入的问题，引入类内正则化：</p>
+$$L_{ICR}=\sum_{j=1}^{K-1}\left(\frac{1}{K-j}\sum_{k=j+1}^{K}\left(\frac{\mathbf{emb'}_{i+j}^{\top}\mathbf{emb'}_{i+k}}{\|\mathbf{emb'}_{i+j}\|_{2}\|\mathbf{emb'}_{i+k}\|_{2}}\right)^{2}\right)$$
+
+<p><strong>目标三：自适应奖励加权ORPO（AR-ORPO）</strong>，不同于传统的DPO或ORPO只构建成对偏好，AR-ORPO构建偏好列表，并使用奖励作为可信软权重来优化训练轨迹：</p>
+$$L_{A}=\sum_{i=1}^{S-1}\underbrace{\frac{e^{R_{\theta}(\tau_{i},\ q)/t}}{\sum_{j=1}^{K}e^{R_{\theta}(\tau_{j},\ q)/t}}}_{soft\ \ weights}\cdot\log\sigma\left(\log\frac{odds(\tau_{i}\mid q)}{\sum_{j=i+1}^{S}odds(\tau_{j}\mid q)}\right)$$
+
+<p>最终生成器的总损失为：</p>
+$$L_{gen}=\frac{1}{|Q|}\sum_{q\in Q}\left(L_{CE}+\beta\cdot L_{ICR}+\gamma\cdot L_{A}\right)$$
+
+<p><img alt="图4：DEGR整体架构图" src="https://arxiv.org/html/2608.04809v1/img/arch.png" /></p>
+<p>此外，为了增强强化学习阶段的探索能力，论文还提出了<strong>多机制采样策略</strong>，融合组束搜索与启发式采样，在概率空间中生成多样化候选轨迹，有效防止模型陷入局部最优。</p>
+<h2>二、实验验证</h2>
+<h3>1. 离线性能对比</h3>
+<p>研究者在淘宝公开数据集和京东生产数据集上进行全面评估。结果显示，DEGR在所有指标上均优于现有基线方法，包括DCN、PRM、PIER、GRN、CMR、NAR4Rec、MG-E和GReF。在京东数据集上，DEGR的GAUC达到0.6486，MAP@2达到0.5951，显著领先于最先进的基线方法。</p>
+<h3>2. 在线A/B测试</h3>
+<p>DEGR已在京东首页推荐系统全量部署，实现了<strong>UCTR提升1.22%、PV提升0.20%</strong>。进一步分析显示，在低Max-pCTR场景下（即上游供给质量差时），DEGR通过增强探索性曝光显著提升了NCR和NER，证明其确实在充当“跨请求上下文桥”的角色。而高Max-pCTR场景下，DEGR则直接提升NCR，展现了自适应的平衡能力。</p>
+<p><img alt="图5：Max-pCTR与sCTR、Next Click、Next Expo Ratio相对提升的关系" src="https://arxiv.org/html/2608.04809v1/img/online_ab2.png" /></p>
+<h3>3. 消融实验</h3>
+<p>消融研究验证了各核心组件的有效性：探索奖励的引入使MAP@2提升0.25pp；多机制采样全面优于纯组束搜索；探索多样性约束提升MAP@2达0.11pp；AR-ORPO相比原版ORPO在MAP@2上提升0.16pp，进一步验证了奖励软权重的有效性。</p>
+<h2>三、展望</h2>
+<p>DEGR为推荐系统重排序提供了一种全新的解题思路：当上游供给成为瓶颈时，与其被动接受约束，不如主动通过“探索”来破局。该方法证明了重排序可以跳出单次请求的限制，成为连接用户连续浏览行为的上下文桥梁。未来，如何构建更精准的奖励模型并探索模型参数的扩展规律，或许将进一步释放生成式重排序的潜力——这一问题值得业界持续关注。</p>
+<p><strong>论文标题</strong>：DEGR: Dual Exploration-Driven Generative Re-Ranking for Adaptive Cross-Request Context Bridging</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.04809.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-05_DEGR-Dual-Exploration-Driven-Generative-Re-Ranking-for-Adaptive-Cross-Request-Context-Bridging.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-05_DEGR-Dual-Exploration-Driven-Generative-Re-Ranking-for-Adaptive-Cross-Request-Context-Bridging.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
