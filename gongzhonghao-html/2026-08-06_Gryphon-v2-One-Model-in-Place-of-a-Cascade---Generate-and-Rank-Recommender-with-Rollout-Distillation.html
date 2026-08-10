@@ -463,12 +463,96 @@
             </div>
             <h1 class="article-title">Gryphon-v2: One Model in Place of a Cascade - Generate-and-Rank Recommender with Rollout Distillation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-08-09</span>
+                <span class="meta-item">📅 2026-08-10</span>
             </div>
         </header>
         
         <article class="article-content">
-            <p><strong>论文标题</strong>：Gryphon-v2: One Model in Place of a Cascade - Generate-and-Rank Recommender with Rollout Distillation</p>
+            <h2>Yandex Music发文：统一生成+排序单模型替代级联系统，活跃用户提升1.41%</h2>
+<p>推荐系统领域向来崇尚“大力出奇迹”——候选生成器不够就加数量，排序不够精细就堆模型。Yandex Music团队却反其道而行，用Gryphon-v2将超过15个候选生成器、预排序与最终排序的庞大级联，压缩进一个统一模型。这项技术在在线A/B实验中实现活跃用户数<strong>+1.41%</strong>、总收听时长<strong>+1.62%</strong>，服务延迟与级联系统持平。它是如何做到的？</p>
+<h2>一、从级联到单模型：一个架构的统一</h2>
+<p>工业级推荐系统通常采用多阶段级联架构：候选生成器先生成约10,000个候选项，预排序阶段裁剪至3,000个，最终排序器精排输出。这种设计虽然有效，但每个阶段都需要独立维护、重复编码用户历史，特征管道复杂且资源开销巨大。</p>
+<p>Gryphon-v2的解法是<strong>单模型统一生成与排序</strong>。整个架构包含三个模块：</p>
+<ul>
+<li><strong>历史编码器</strong>：将用户历史行为序列，一次性编码为上下文状态 $E_{u}$。</li>
+<li><strong>SID解码器</strong>：基于语义ID（Semantic ID）自回归生成候选物品，采用目录树约束的束搜索确保解码结果有效。</li>
+<li><strong>排序模块</strong>：对解码出的候选物品重新打分排序，与生成阶段共享编码器状态，无需重新编码用户历史。</li>
+</ul>
+<p>下面是Gryphon-v2的整体架构图：</p>
+<p><img alt="图1：Gryphon-v2整体架构：统一生成与排序，共享编码器" src="https://arxiv.org/html/2608.06213v1/source/images/paper_gryphon_v2_6.png" /></p>
+<p>回顾级联系统中各模块的割裂状态，最大的痛点在于候选生成和排序目标不一致——生成阶段用似然函数挑物品，排序阶段却要优化复杂的多目标指标。Gryphon-v2让两个阶段在同一模型内协同训练，并通过知识蒸馏将生产级排序偏好注入排序模块。</p>
+<h2>二、核心创新：Rollout Distillation</h2>
+<h3>2.1 解决生成与排序的“语言不通”</h3>
+<p>语义ID生成模型虽然能高效检索候选集，但<strong>下一项预测的损失函数无法捕捉排序阶段所需的细粒度偏好</strong>。若只靠生成任务训练排序模块，排序效果难以达到生产要求。</p>
+<p>Gryphon-v2引入一个<strong>训练专用的教师排序器（Teacher Ranker）</strong>。它基于长达8,000条事件的用户历史进行打分，价值已在离线与在线评估中得到验证，但因推理成本过高而无法实际部署。论文通过蒸馏，将教师排序器的排序偏好迁移到轻量级排序模块中，整个过程不需要将教师模型加入服务链路。</p>
+<h3>2.2 从教师到学生的知识迁移</h3>
+<p>蒸馏目标是通过<strong>Rollout Distillation</strong>实现的。其核心思想是让排序模块学习教师打分，且训练数据来自两个互补的候选分布：</p>
+<ol>
+<li><strong>当前解码器rollout产生的候选</strong>：约占总蒸馏候选数的90%以上，这些候选与线上服务时的生成分布完全一致。</li>
+<li><strong>日志记录的真实曝光物品</strong>：弥补rollout候选覆盖不足的问题。</li>
+</ol>
+<p>对于每个候选物品 $i$、每个排序任务 $t$，蒸馏损失采用逐元素<strong>MAE（平均绝对误差）</strong>：</p>
+$$\mathcal{L}_{\mathrm{roll\mbox{-}distill}}=\frac{1}{|\mathcal{T}|}\sum_{t\in\mathcal{T}}\frac{1}{|\mathcal{G}_{u}|}\sum_{i\in\mathcal{G}_{u}}\left|\hat{r}^{t}_{u,i}-r^{T,t}_{u,i}\right|$$
+
+<p>其中 $\hat{r}^{t}_{u,i}$ 是排序模块的预测分数，$r^{T,t}_{u,i}$ 是教师模型的分数。日志曝光候选的损失 $\mathcal{L}_{\mathrm{impr\mbox{-}distill}}$ 形式完全相同，两者相加得到总蒸馏损失。</p>
+<h3>2.3 联合训练：一次编码，两次监督</h3>
+<p>Gryphon-v2的完整训练目标是一个联合损失：</p>
+$$\mathcal{L}=\mathcal{L}_{\mathrm{NTP}}+\mathcal{L}_{\mathrm{distill}}$$
+
+<p>其中 $\mathcal{L}_{\mathrm{NTP}}$ 是语义ID的下一项预测损失。这里最关键的设计是：<strong>排序模块和生成器共享同一个历史编码器</strong>。这意味着模型只需要对用户历史编码一次，排序模块通过交叉注意力直接从编码状态中提取信息，避免了级联系统中重复读取用户历史的开销。</p>
+<h2>三、实验验证</h2>
+<h3>3.1 离线评估：多项指标全面领先</h3>
+<p>在Yandex Music的离线日志评估中，Gryphon-v2与两种基线进行对比：纯生成式检索（按束搜索得分排序）和Gryphon（排序模块使用下一项监督训练）。结果如下：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>R@1000</th>
+<th>T-R@10</th>
+<th>T-R@100</th>
+<th>WPA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>生成式检索</td>
+<td>0.8643</td>
+<td>0.0382</td>
+<td>0.1944</td>
+<td>0.5429</td>
+</tr>
+<tr>
+<td>Gryphon</td>
+<td>0.8593</td>
+<td>0.0392</td>
+<td>0.1701</td>
+<td>0.5528</td>
+</tr>
+<tr>
+<td><strong>Gryphon-v2</strong></td>
+<td><strong>0.8615</strong></td>
+<td><strong>0.5654</strong></td>
+<td><strong>0.7344</strong></td>
+<td><strong>0.5892</strong></td>
+</tr>
+<tr>
+<td>生产排序器（参考）</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0.6141</td>
+</tr>
+<tr>
+<td>教师排序器（参考）</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0.6199</td>
+</tr>
+</tbody>
+</table></div>
+<p>最令人眼前一亮的是<strong>TeacherRecall@10</strong>：Gry</p>
+<p><strong>论文标题</strong>：Gryphon-v2: One Model in Place of a Cascade - Generate-and-Rank Recommender with Rollout Distillation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
         
