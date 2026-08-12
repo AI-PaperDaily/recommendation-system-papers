@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaStrategy: Generative Ranking with Executable LLM Strategies</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">MetaStrategy: Generative Ranking with Executable LLM Strategies</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-08-12</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里淘宝发布MetaStrategy：LLM生成可执行排序策略，点击PV提升2.11%、GMV提升2.83%</h1>
+<h2>一、引言：当大模型遇上工业级推荐系统</h2>
+<p>在淘宝首页的「猜你喜欢」信息流中，商品、内容帖子、短视频、直播和广告在同一屏幕竞争曝光位。这些异构内容拥有不同的预测目标和运营约束，却共享有限的位置资源。工业级推荐系统通常设置一个<strong>策略层</strong>来协调目标权重、内容组成、品类偏好和曝光约束，但传统策略层依赖全局公式，难以表达每个请求特定的权衡——点击导向的权重调整可能被置顶策略覆盖，内容类型提升可能违反密度约束。</p>
+<p>现有生成式推荐方法尝试直接生成商品序列或排列，但在成熟的高流量系统中，这种方式难以与既有的预测模型、运营规则和字段级护栏集成。阿里淘宝技术团队在KDD 2027发表的论文中提出了一种全新思路：<strong>不直接生成排序结果，而是生成可执行的排序策略</strong>。</p>
+<h2>二、核心方法：让LLM生成策略而非序列</h2>
+<h3>1. 可执行的策略Bundle：从「生成序列」到「生成配置」</h3>
+<p>MetaStrategy的核心创新在于将生成式排序重构为<strong>请求条件下的可执行联合策略生成</strong>。给定请求上下文，LLM输出一个受模式约束的JSON Bundle，包含五个有序执行模块：目标权重、内容类型与品类偏好、体验约束、以及Top-CTR策略。这个Bundle不包含任何商品ID或排列信息，而是通过确定性编译器翻译为现有生产排序模块可以执行的参数。</p>
+$$q(i\mid x)=\alpha(x)\,\widehat{v}_{\mathrm{eng}}(i,x)+\beta(x)\,\widehat{v}_{\mathrm{txn}}(i,x)+\gamma(x)\,\widehat{v}_{\mathrm{com}}(i,x)$$
+
+<p>这种设计巧妙地将LLM的表达能力与生产系统的控制面相结合——保留自回归模型的联合决策能力，同时维持排序过程的可验证性、可隔离性与可回退性。</p>
+<p><img alt="图1：MetaStrategy总览——LLM将请求上下文映射为JSON策略，经验证编译后控制隔离的生成器" src="https://arxiv.org/html/2608.09440v1/x1.png" /></p>
+<h3>2. Generator-Evaluator架构下的自博弈课程</h3>
+<p>MetaStrategy运行在Generator-Evaluator架构中。LLM控制一个<strong>隔离的Generator</strong>，与约十个既有生产Generator共享候选集，由列表级Evaluator统一打分选择曝光列表。研究者引入<strong>自博弈课程机制</strong>：将训练中出现频率最高的已编译策略冻结为显式竞争对手加入下一轮Generator池。这使得策略必须不断探索新的、有区分度的配置，而非重复利用几个高奖励的极端组合。</p>
+$$r_{\mathrm{GE}}=w_{\mathrm{sel}}\cdot r_{\mathrm{sel}}+w_{\mathrm{rank}}\cdot r_{\mathrm{rank}}+w_{\mathrm{lift}}\cdot r_{\mathrm{lift}}$$
+
+<p>其中选择奖励$r_{\mathrm{sel}}$衡量是否被Evaluator选中，排序奖励$r_{\mathrm{rank}}$衡量在所有有效Generator中的相对排名，提升奖励$r_{\mathrm{lift}}$衡量相对生产基线的连续改进。</p>
+<h3>3. 评估器路由的奖励增强在线蒸馏</h3>
+<p>为压缩模型规模，研究者提出<strong>评估器路由的奖励增强在线蒸馏</strong>（OPD）方法。多个4B参数的Teacher策略与0.8B的Student策略在相同回放请求上独立生成策略，由共享的Evaluator打分后选出最佳Teacher，其token级信号作为在线蒸馏目标。关键设计在于：蒸馏信号与Student自身的GE奖励以混合优势函数结合，保留了对生产Evaluator的直接优化。</p>
+$$A^{\mathrm{mix}}_{\ell}=A^{\mathrm{RL}}-\lambda_{i^{\star}(x)}d_{\ell}(x)$$
+
+<p>其中$d_{\ell}(x)$为Student与最优Teacher在Student采样的token轨迹上的对数概率差。当所有Teacher均无效时，蒸馏项被掩盖，训练退化为纯RL模式。</p>
+<h2>三、实验：离线增益与在线验证</h2>
+<h3>离线回放评估</h3>
+<p>研究者在淘宝首页猜你喜欢场景构建了生产路径回放环境，包含65,536个真实请求日志。下表展示了不同方法在测试集上的表现：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>Δ Evaluator</th>
+<th>Valid</th>
+<th>Selected</th>
+<th>Δ GE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NAR G（最强基线）</td>
+<td>+2.75%</td>
+<td>–</td>
+<td>13.70%</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Curriculum RL (4B)</td>
+<td>+0.56%</td>
+<td>98.89%</td>
+<td>11.27%</td>
+<td>+0.57%</td>
+</tr>
+<tr>
+<td><strong>Routed OPD (0.8B)</strong></td>
+<td><strong>+2.53%</strong></td>
+<td><strong>98.03%</strong></td>
+<td><strong>16.24%</strong></td>
+<td><strong>+0.73%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>经过路由OPD蒸馏的0.8B Student在选中率和增量GE提升上双双超越4B的Curriculum RL模型——尽管规模仅有其1/5，但互补性更强。</p>
+<p><img alt="图3：策略崩溃消融——路由OPD将ranking_weight_boost策略的Top-1完整元组频率从76.8%降至33.0%" src="https://arxiv.org/html/2608.09440v1/x3.png" /></p>
+<h3>在线A/B测试</h3>
+<p>在七天的用户随机在线实验中，MetaStrategy在治疗侧27.93%的GE调用中获胜。核心业务指标全面正向：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>相对变化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>曝光PV</td>
+<td>+1.49%</td>
+</tr>
+<tr>
+<td>点击PV</td>
+<td>+2.11%</td>
+</tr>
+<tr>
+<td>IPV</td>
+<td>+3.12%</td>
+</tr>
+<tr>
+<td>成交额</td>
+<td>+2.83%</td>
+</tr>
+</tbody>
+</table></div>
+<p>关键架构优势在于：LLM推理完全异步运行在近线分支，同步排序路径仅进行确定性解析，<strong>线上RT零增加</strong>。</p>
+<p><img alt="图2：近线生成与守卫式GE服务架构——上下文差异门异步控制策略刷新，同步解析器仅执行查表" src="https://arxiv.org/html/2608.09440v1/x2.png" /></p>
+<h2>四、展望：生成式排序的新范式</h2>
+<p>MetaStrategy证明了「让LLM生成策略、让生产系统执行策略」这一范式在工业级推荐系统中的可行性与有效性。这种方法既保留了生成式模型处理复杂联合决策的能力，又维持了成熟系统的控制面与安全边界。未来值得探索的方向包括：Evaluator更新时的策略鲁棒性、更广泛的类型化动作空间、以及超越固定候选集回放的长周期用户反馈建模。当大模型的能力边界与工业系统的稳定性要求发生碰撞时，MetaStrategy提供了一个值得参考的解题思路。</p>
+<p><strong>论文标题</strong>：MetaStrategy: Generative Ranking with Executable LLM Strategies</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.09440.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-10_MetaStrategy-Generative-Ranking-with-Executable-LLM-Strategies.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-10_MetaStrategy-Generative-Ranking-with-Executable-LLM-Strategies.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
