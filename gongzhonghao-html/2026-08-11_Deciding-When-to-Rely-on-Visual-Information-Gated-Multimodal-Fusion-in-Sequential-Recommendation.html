@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deciding When to Rely on Visual Information: Gated Multimodal Fusion in Sequential Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Deciding When to Rely on Visual Information: Gated Multimodal Fusion in Sequential Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-08-13</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>IKEA+KTH合著VisGate框架：多模态序列推荐性能提升15.5%的奥秘？</h2>
+<p><strong>多模态数据融合是推荐系统领域的经典难题。不同模态的信息在不同场景下价值各异，但现有方法往往一刀切地对待所有视觉特征。IKEA零售集团与KTH皇家理工学院的研究者提出VisGate框架，通过上下文感知的适应性门控机制，在多模态序列推荐任务上取得最高22.8%的性能提升。</strong></p>
+<h2>一、核心方法：为什么「何时用图」比「怎么用图」更重要</h2>
+<p>在电商场景中，商品图片往往比文字描述包含更丰富的决策信息。一条仅标注为「绿色/多色」的图案被套，一张仅写着「白色」的柜子——这些文字描述完全无法传达影响消费者购买决策的视觉特征。然而，现有推荐系统在融合视觉信号时，要么全量使用、要么完全忽略，缺乏对视觉信息价值的动态判断能力。</p>
+<h3>1. 共现引导的视觉投影：保持模态互补性</h3>
+<p>VisGate框架的第一项创新在于视觉表征的学习方式。不同于将视觉特征直接对齐到协同嵌入空间的常见做法，研究者设计了一个基于序列共现模式的对比学习投影器：$f_{\theta}(v_{i})=\text{Linear}_{2}(\text{GELU}(\text{Linear}_{1}(\phi(v_{i}))))$</p>
+<p>该投影器通过对比学习目标（即时间窗口内共同出现的物品对）进行优化：</p>
+$$\mathcal{L}_{\text{co-occ}}=-\frac{1}{|\mathcal{B}|}\sum_{(i,p)\in\mathcal{B}}\log\frac{\exp(\text{sim}(f_{\theta}(v_{i}),f_{\theta}(v_{p}))/\tau)}{\sum_{j\in\mathcal{N}(i)}\exp(\text{sim}(f_{\theta}(v_{i}),f_{\theta}(v_{j}))/\tau)}$$
+
+<p>这种设计的关键在于：视觉表征被映射到与协同嵌入不同的空间中，从而保持两种模态的互补性，而非强行使它们对齐到共享表征空间。</p>
+<p><img alt="图1：VisGate架构总览" src="https://arxiv.org/html/2608.10700v1/x2.png" /></p>
+<h3>2. 上下文感知的自适应门控：关键创新</h3>
+<p>VisGate的核心突破在于门控机制的设计。传统方法中，门控仅基于物品本身的嵌入做决策，但研究者的洞察是：同一件商品在不同用户、不同交互阶段下的视觉价值是不同的。为此，门控函数的输入不仅包含物品的ID嵌入和视觉嵌入，还引入了Transformer在掩码位置的隐藏状态 $\mathbf{z}$，捕捉用户当前的序列上下文：</p>
+$$g_{i}=\sigma(\text{MLP}_{\text{gate}}([\text{LN}(e_{i});\,\text{LN}(f_{\theta^{*}}(v_{i}));\,\text{LN}(\mathbf{z})]))$$
+
+<p>门控输出一个逐元素的权重向量，决定协同信号和视觉信号各自对最终物品表征的贡献比例：</p>
+$$h_{i}=g_{i}\odot\text{LN}(e_{i})+(1-g_{i})\odot(\alpha\cdot\text{LN}(f_{\theta^{*}}(v_{i})))$$
+
+<h3>3. 两阶段训练策略</h3>
+<p>整个框架采用两阶段训练：视觉投影器先通过对比学习单独预训练，随后被冻结；在第二阶段，Transformer参数、ID嵌入、门控网络和缩放因子联合优化：</p>
+$$\mathcal{L}_{\text{total}}=\mathcal{L}_{\text{MLM}}+\lambda_{1}\mathcal{L}_{\text{sparsity}}+\lambda_{2}\mathcal{L}_{\text{util}}$$
+
+<p>其中，$\mathcal{L}_{\text{sparsity}}$ 鼓励门控做出果断的融合决策，$\mathcal{L}_{\text{util}}$ 防止门控坍缩到单一模态。这种分离训练确保门控的融合决策可归因于模态组合机制，而非视觉投影器在训练过程中的不断漂移。</p>
+<h2>二、实验结果：三个问题的实证检验</h2>
+<p>研究者在IKEA自采数据集、Amazon Scientific、Amazon Video Games和Amazon Health &amp; Household四个数据集上进行了系统实验。结果显示，VisGate在四个数据集上均取得最优性能：在稀疏的IKEA数据集上，Hit@5相对最优基线提升15.5%，NDCG@5提升13.5%；在Amazon Scientific上提升更为惊人，Hit@5达到19.2%的领先幅度。</p>
+<p>围绕「视觉信息何时真正有用」这一核心问题，论文通过门控行为分析给出了三个层面的答案：</p>
+<p><strong>视觉效用确实是物品依赖的</strong>。固定门控值实验显示，任何统一的权重设置都难以匹配自适应门控的性能。门控值的分布广泛而非集中，且存在明显的对角互补模式：图像嵌入强而ID嵌入弱的物品获得较低门控值（即更依赖视觉），反之亦然。</p>
+<p><strong>稀疏性下视觉信号价值提升</strong>。通过对比用户在序列早期的交互（协同信号较弱）与近期交互，研究发现早期交互的门控值显著更低，说明模型在ID嵌入不可靠时更倾向于借助视觉信号。这一效应在稀疏数据集上更为明显。</p>
+<p><strong>视觉显著性与门控决策呈语义性关联</strong>。低门控物品往往是视觉上具有区分度的商品，如图案鲜明的床上用品或品牌特征清晰的商品；高门控物品则多为外观普通的日用品。这表明门控做出的决策与消费者行为研究的发现一致。</p>
+<p><img alt="图2：门控值分布可视化" src="https://arxiv.org/html/2608.10700v1/x3.png" /></p>
+<p><img alt="图3：门控值随ID嵌入强度与图像嵌入强度变化" src="https://arxiv.org/html/2608.10700v1/ikea_gating_reasoning.png" /></p>
+<p>同时，去除门控机制使IKEA数据集的Hit@10从0.2889降至0.2711，去除对比学习损失则跌至0.2311，验证了互补性保留和自适应融合各自的必要性。</p>
+<h2>三、失败案例分析</h2>
+<p>任何模型都有其局限性。VisGate同样存在系统性失败模式：当物品具有视觉显著性但交互次数极少时，门控会错误地推断较强的视觉信号——此时视觉表征因缺乏足够的共现监督而未经充分校准。论文通过门控值与交互次数的二维分析揭示了这一问题，并提出交互次数阈值作为未来的后验修正方向。</p>
+<p><img alt="图4：高门控与低门控物品示例" src="https://arxiv.org/html/2608.10700v1/x4.png" /></p>
+<h2>四、技术价值与展望</h2>
+<p>VisGate的贡献不仅在于提出一个新的推荐模型，更在于提供了一个「测量工具」：通过门控行为来理解和量化模态效用的动态变化。这一思路对多模态系统的设计具有参考价值——无论是在线广告中的创意优选，还是短视频推荐中的封面选择，都可以借鉴这种上下文感知的融合策略。</p>
+<p>研究者也提出了两个值得关注的方向：门控观察到的模式能否直接从数据统计特征中预判？以及如何将门控扩展到更丰富的模态组合。这些问题值得后续持续关注。</p>
+<p><strong>论文标题</strong>：Deciding When to Rely on Visual Information: Gated Multimodal Fusion in Sequential Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.10700.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-11_Deciding-When-to-Rely-on-Visual-Information-Gated-Multimodal-Fusion-in-Sequential-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-11_Deciding-When-to-Rely-on-Visual-Information-Gated-Multimodal-Fusion-in-Sequential-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
