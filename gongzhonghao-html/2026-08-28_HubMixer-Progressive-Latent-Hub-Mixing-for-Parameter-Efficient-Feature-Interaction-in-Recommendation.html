@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-01</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>快手自研HubMixer：简历转化率提升5.48%，参数高效特征交互范式揭秘</h2>
+<p>工业级推荐系统正面临一个核心矛盾：海量异构特征与稀疏交互模式之间的张力。传统方法直接对所有特征Token进行扁平化混合，却忽视了推荐场景中用户画像、行为序列、物品属性等特征在语义空间上的根本差异。快手技术团队最新提出的HubMixer架构，通过一套精巧的<strong>归纳-交互-读出</strong>范式，在减少参数量的同时实现显著效果提升，在线A/B测试中简历提交转化率提升5.48%。</p>
+<h2>一、核心方法</h2>
+<h3>1.1 从扁平混合到潜在枢纽</h3>
+<p>直接对所有特征Token进行混合存在严重问题：原始异构Token空间中，不同语义分组的特征之间交互模式稀疏且高度依赖具体样本。为此，HubMixer引入了 <strong>$H$个可学习的潜在枢纽（latent hubs）</strong>，通过一个输入条件残差增强基础枢纽，使这些枢纽既保持跨样本的共享语义又具备样本自适应能力：</p>
+$$\mathbf{H}^{(l)}=\tilde{\mathbf{H}}^{(l)}+\mathbf{C}^{(l)}$$
+
+<p>其中 $\tilde{\mathbf{H}}^{(l)}$ 是可学习的共享基础枢纽，$\mathbf{C}^{(l)}$ 是由Token全局摘要通过两层MLP生成的输入条件残差。</p>
+<h3>1.2 三段式信息路由：归纳、交互、读出</h3>
+<p><strong>第一阶段：枢纽归纳（Hub Induction）。</strong> 每个枢纽作为查询向量，通过交叉注意力机制从异构特征Token中选择性聚合信息。这一过程让不同枢纽能够自发地 specialize 到不同语义维度，如用户兴趣、物品语义、上下文信号等。</p>
+$$\mathbf{Z}^{(l)}=\mathrm{RMSNorm}(\mathbf{H}^{(l)}+\mathrm{CrossAttn}(\mathbf{Q}=\mathbf{H}^{(l)},\mathbf{K}=\tilde{\mathbf{X}}^{(l)},\mathbf{V}=\tilde{\mathbf{X}}^{(l)}))$$
+
+<p><strong>第二阶段：枢纽交互（Hub Interaction）。</strong> 在紧凑的枢纽空间中执行自注意力操作，建模高层语义之间的依赖关系。由于 $H \ll T$，此阶段计算成本极低，却能够捕捉到有价值的高阶特征交叉模式。</p>
+<p><strong>第三阶段：Token条件读出（Token-Conditioned Readout）。</strong> 每个原始Token作为查询，从交互后的枢纽中检索自定义的全局交互信号，并通过LayerScale参数控制注入强度：</p>
+$$\mathbf{X}^{(l+1)}=\mathbf{X}^{(l)}+\boldsymbol{\gamma}^{(l)}\odot\Delta\mathbf{X}^{(l)}$$
+
+<p>这一设计的关键洞察在于：<strong>保留Token级字段标识符的同时，注入全局交互语义</strong>。相比于将枢纽池化为单一全局向量，Token条件读出让每个特征Token都能根据自身语义选择性吸收交互信息。</p>
+<h3>1.3 计算复杂度优势</h3>
+<p>通过将交互从 $T^2$ 空间压缩到 $TH$ 空间（$H \ll T$），HubMixer绕开了标准注意力中的二次方计算瓶颈。论文指出，这一结构天然适配批量交叉注意力、内核融合和小矩阵优化等工程加速手段，为大规模部署提供了切实可行的优化空间。</p>
+<h2>二、实验效果</h2>
+<h3>2.1 离线性能对比</h3>
+<p>研究者在快手短视频招聘业务的大规模数据集上进行了实验，数据集包含超过10亿样本，覆盖用户画像、行为序列、职位特征、上下文特征等多维信息。实验采用四任务多目标排序框架：点击、有效播放、互动、简历提交。</p>
+<p>从离线结果来看，HubMixer在全部四个目标上取得了最优AUC。</p>
+<h3>2.2 参数效率分析</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>平均AUC</th>
+<th>参数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DCN</td>
+<td>0.8206</td>
+<td>155.3M</td>
+</tr>
+<tr>
+<td>DCNv2</td>
+<td>0.8212</td>
+<td>157.5M</td>
+</tr>
+<tr>
+<td>AutoInt</td>
+<td>0.8210</td>
+<td>162.6M</td>
+</tr>
+<tr>
+<td>Wukong</td>
+<td>0.8208</td>
+<td>154.6M</td>
+</tr>
+<tr>
+<td>RankMixer</td>
+<td>0.8238</td>
+<td>155.1M</td>
+</tr>
+<tr>
+<td>TokenMixer</td>
+<td>0.8241</td>
+<td>156.9M</td>
+</tr>
+<tr>
+<td><strong>HubMixer</strong></td>
+<td><strong>0.8256</strong></td>
+<td><strong>142.4M</strong></td>
+</tr>
+<tr>
+<td><em>数据来源：论文Table 1</em></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>HubMixer以最少的参数量实现了最佳性能，验证了潜在枢纽路由机制在参数利用效率上的显著优势。</p>
+<h3>2.3 表示质量深层分析</h3>
+<p>论文进一步通过余弦距离和线性探针两种方法，对比了HubMixer与最强基线TokenMixer的表示质量。</p>
+<p><img alt="图2：Token级输入输出余弦距离对比" src="https://arxiv.org/html/2608.27991v1/image/cosine_analysis.png" /></p>
+<p>结果显示，HubMixer在每一层的表示更新幅度都显著大于TokenMixer，且更新呈现明显的Token差异分布，说明注入的信息是Token条件化的而非全局均匀扰动。</p>
+<p><img alt="图3：冻结骨干网络下的线性探针对比" src="https://arxiv.org/html/2608.27991v1/image/linear_probing.png" /></p>
+<p>在线性探针实验中，HubMixer在绝大多数Token维度上的预测AUC均优于TokenMixer，证明其增强后的Token表示包含更多任务相关信号，而非简单的随机扰动。</p>
+<h3>2.4 在线A/B测试与部署</h3>
+<p>在线实验覆盖7.2%生产流量，持续7天。在快手短视频招聘业务中，HubMixer实现了<strong>5.48%的简历提交转化率统计显著提升</strong>，并已全量部署至生产环境。</p>
+<p><img alt="图1：HubMixer整体架构" src="https://arxiv.org/html/2608.27991v1/image/architecture.png" /></p>
+<h2>三、未来展望</h2>
+<p>HubMixer提出了一种全新的特征交互组织方式：通过潜在枢纽提供显式的归纳偏置，让模型能力集中于高价值的交叉模式而不是分散到所有Token对上。这一设计思路对于内容推荐、广告投放、招聘匹配等场景具有广泛适用性。未来，动态请求级枢纽生成、任务条件化读出和轻量级枢纽交互算子，都是值得探索的方向。对于工业级推荐系统而言，如何在有限参数预算内最大化交互有效性和可扩展性，HubMixer给出了一个极具参考价值的答案。</p>
+<p><strong>论文标题</strong>：HubMixer: Progressive Latent Hub Mixing for Parameter-Efficient Feature Interaction in Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.27991.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-28_HubMixer-Progressive-Latent-Hub-Mixing-for-Parameter-Efficient-Feature-Interaction-in-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-28_HubMixer-Progressive-Latent-Hub-Mixing-for-Parameter-Efficient-Feature-Interaction-in-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
