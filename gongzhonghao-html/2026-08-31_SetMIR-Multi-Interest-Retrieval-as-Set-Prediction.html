@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SetMIR: Multi-Interest Retrieval as Set Prediction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SetMIR: Multi-Interest Retrieval as Set Prediction</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-02</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>Snap SetMIR多兴趣检索实现33%查询削减：匈牙利匹配破解“兴趣坍缩”，在线CVR提升3.11%</h2>
+<h3>引言</h3>
+<p>在工业级推荐系统中，检索阶段需要在毫秒级延迟内从数亿商品库中筛选出几千个候选。主流双塔架构为每个用户生成单一向量，通过<strong>近似最近邻（ANN）</strong>搜索快速召回。然而，当用户一周内同时浏览街头潮牌、婴儿服装和护肤品时，单一用户向量倾向于被主导品类“平均化”，精准捕捉窄众、短期兴趣几乎成为不可能。</p>
+<p>多兴趣检索通过生成K个用户向量解决了这一矛盾，但现行方法在训练和部署中暴露出两个致命缺陷：一是<strong>兴趣坍缩</strong>——多个嵌入学习到相同兴趣，浪费模型容量；二是<strong>静态调度</strong>——所有K个向量无论是否必要都发起ANN查询，造成预算浪费。论文《SetMIR: Multi-Interest Retrieval as Set Prediction》提出将多兴趣检索重构为<strong>集合预测问题</strong>，通过匈牙利匹配实现查询与目标的<strong>一对一分配</strong>，从训练目标层面消除兴趣坍缩，同时在推理阶段实现<strong>动态自适应调度</strong>。在Snap的动态产品广告（DPA）线上A/B测试中，SetMIR以约<strong>6.70次ANN查询</strong>对基线方法的<strong>10次</strong>，将整体CVR提升<strong>3.11%</strong>，相对物品到物品（I2I）检索源的CTR提升达<strong>44%</strong>。</p>
+<h2>一、核心方法</h2>
+<p>作为首个应用于检索推荐的多兴趣集合预测框架，SetMIR在架构设计上遵循DETR的“可学习查询+匈牙利匹配”范式。如图1所示，用户行为历史经过<strong>冻结的内容嵌入查找</strong>与<strong>Transformer编码器</strong>处理后，由<strong>K个可学习兴趣查询构成的Transformer解码器</strong>交叉注意力读取历史，每个查询输出一个检索嵌入与一个<strong>存在性得分</strong>。</p>
+<p><img alt="图1：SetMIR整体流程框架图：用户历史经过Transformer编码器编码，K个可学习兴趣查询通过解码器交叉注意力生成检索嵌入和存在性得分，训练时使用匈牙利匹配对齐参与目标，推理时存在性门控与NMS筛选有效的ANN查询" src="https://arxiv.org/html/2608.30251v1/framework.png" /></p>
+<h3>1.1 集合预测训练：匈牙利匹配替代argmax</h3>
+<p>传统多兴趣模型的训练目标是让每个目标物品“独立选择”最接近的兴趣查询，即argmax分配。当多个目标同时追逐同一个查询时，未匹配查询收不到任何检索梯度，模型最终收敛到少数有效兴趣——这正是兴趣坍缩的根源。SetMIR将目标分配建模为<strong>最小成本匹配问题</strong>，通过匈牙利算法强制查询与目标之间的一对一约束：</p>
+$$\hat{A}=\argmin_{A\in\mathcal{A}_{K,W}}\sum_{(k,w)\in A}\Gamma_{k,w},\quad\Gamma_{k,w}=-\lambda_{\text{emb}}e_k^{\top}\bar{t}_w-\lambda_{\text{cls}}\log\sigma(\ell_k)$$
+
+<p>匹配结果使得K个查询中恰有$\min(K,W)$个被分配目标，其余查询收到明确的<strong>“无兴趣”监督信号</strong>。存在性损失函数$\mathcal{L}_{\text{Pres}}$为每个查询提供二元标签：</p>
+$$\mathcal{L}_{\text{Pres}}(u)=-\frac{1}{K}\sum_{k=1}^{K}\bigl[y_k\log p_k+(1-y_k)\log(1-p_k)\bigr]$$
+
+<p>这形成了SetMIR消除兴趣坍缩的核心机制：<strong>argmax训练下“未匹配”是隐式的、无监督的；匈牙利匹配下“未匹配”是显式的、有监督的</strong>。研究者同时添加了基于活性掩码的轻量级多样性正则，惩罚高相似度的活跃查询对。</p>
+<h3>1.2 推理动态调度：存在性门控+查询级NMS</h3>
+<p>论文由此构建了完整的推理链路部署方案。如图2所示，在服务阶段，SetMIR单次前向传播同时产出K个检索嵌入与存在性得分，三步轻量筛选将固定查询库转化为<strong>请求自适应的动态查询集合</strong>：</p>
+<ul>
+<li><strong>存在性门控</strong>：仅保留存在性得分高于阈值$\tau$的查询，识别哪些兴趣“当前存在”</li>
+<li><strong>查询级NMS</strong>：对幸存查询按存在性得分降序排列，移除与更高分查询余弦相似度超过$\delta_{\text{NMS}}$的冗余查询</li>
+<li><strong>逐查询ANN与最大得分合并</strong>：每个幸存查询发起一次ANN搜索，返回条目按最大内积得分合并，形成最终候选列表</li>
+</ul>
+<p><img alt="图2：推理阶段查询筛选流程图：K个查询进入存在性门控过滤低分查询，再经NMS去除冗余，每个幸存查询独立发起ANN搜索，最后按最大得分合并" src="https://arxiv.org/html/2608.30251v1/framework.png" /></p>
+<h3>1.3 检索损失的监督信号</h3>
+<p>在匹配对的基础上，SetMIR采用<strong>批内采样InfoNCE损失</strong>进行对比学习。每个匹配查询以其分配目标为正样本，以整个数据并行小批量中收集的所有有效目标嵌入为对比池。只有匹配查询参与检索损失，未匹配查询不会被拉向任何目标方向，而是专注于学习“此刻不应检索”的存在性信号。数学表达为：</p>
+$$\mathcal{L}_{\text{InfoNCE}}(u)=-\frac{1}{|\hat{A}|}\sum_{(k,w)\in\hat{A}}\log\frac{\exp(e_k^{\top}\bar{t}_w/\tau_r)}{\sum_{\bar{t}'\in\mathcal{N}}\exp(e_k^{\top}\bar{t}'/\tau_r)}$$
+
+<p>这种设计令检索损失与存在性损失形成互补监督——匹配查询学习“检索什么”，未匹配查询学习“不检索”——使得在线推理时门控决策具有明确的训练基础。</p>
+<h2>二、实验</h2>
+<p>论文在Snap DPA的约100万测试用户、530万目标商品池上进行了严格对比。所有方法共享相同的训练数据、冻结物品嵌入、优化器和每请求检索预算，仅兴趣提取架构与目标分配方式不同。</p>
+<p>离线对比结果如表1所示。SetMIR在所有指标上全面领先，在排序头部优势尤为显著：<strong>R@1</strong>上最佳基线ComiRec-SA仅达到SetMIR的<strong>67.4%</strong>，<strong>MRR</strong>仅达<strong>80.0%</strong>，而在深度指标R@100上才几乎追平。架构最接近的KuaiFormer（同为Transformer+可学习查询）R@10仅为SetMIR的<strong>52.0%</strong>，有力地证明了差距源于<strong>查询的监督方式</strong>——匈牙利匹配与argmax分配的本质差异。SetMIR以平均<strong>6.70次ANN查询</strong>实现这些收益，较基线节省<strong>33%</strong>预算。</p>
+<p>组件消融揭示了三项机制各自独立的贡献。将匈牙利匹配替换为argmax后，R@10骤降至<strong>63.5%</strong>、MRR降至<strong>56.4%</strong>，平均活跃查询数从<strong>6.70</strong>坍缩至<strong>2.16</strong>——直观呈现了兴趣坍缩的破坏力。移除存在性损失后，门控失效导致平均查询数膨胀至<strong>8.23</strong>却仍损失R@10；移除多样性损失则使查询嵌入平均成对余弦从<strong>0.298</strong>升至<strong>0.321</strong>，冗余增加。</p>
+<p>K扫描实验呈现清晰的饱和曲线：R@10从$K=1$到$K=3$提升最大，$K=7$已达到$K=10$的<strong>99.8%</strong>，而平均活跃查询$\tilde{K}$增长远慢于K，从$K=5$时的<strong>4.72</strong>到$K=15$时仅<strong>7.59</strong>。论文由此指出：<strong>有效兴趣数量由数据决定，而非由K决定</strong>。</p>
+<p>图3的定性分析生动展示了单查询基线的失败模式：一位历史行为横跨上装、裤装、连衣裙、鞋履、裙装、手袋和配饰的用户，单嵌入检索全部坍缩为裤装；而SetMIR的5个活跃查询各自主攻一个品类，近重复的查询被NMS有效抑制。</p>
+<p><img alt="图3：单用户定性检索对比：单嵌入基线全部坍缩为裤装，SetMIR各活跃查询分别专精于上装、连衣裙、裤装、配饰和鞋履，NMS抑制近重复查询" src="https://arxiv.org/html/2608.30251v1/qualitative_final.png" /></p>
+<p>线上A/B测试中，SetMIR作为新增检索源加入生产堆叠，以<strong>+0.10%</strong>曝光、<strong>+0.21%</strong>CTR、<strong>+3.11%</strong>CVR的整体提升验证了其端到端价值。在与共享相同物品嵌入、ANN索引和检索配额的I2I检索源对比中，SetMIR以<strong>+44%</strong>CTR和<strong>+51%</strong>CVR的显著优势，印证了学习式编码器-解码器相对启发式种子派发的核心价值。</p>
+<h2>三、展望</h2>
+<p>SetMIR的贡献不仅在于提出了一个新的多兴趣检索模型，更在于从<strong>训练目标</strong>和<strong>推理调度</strong>两个层面重新审视了多兴趣检索中“多”的本质——真正的多兴趣应该由用户行为动态激活，而非固定发出K个查询。这一框架已扩展至Snap DPA生产环境，其“固定查询库+动态激活”的设计模式天然适配可变计算预算场景，对广告召回、个性化搜索乃至多模态内容推荐均有直接的迁移价值。值得思考的是：当存在性得分被训练为“精准预测当前窗口内是否会出现目标”，那么更激进的动态预算策略——比如根据用户活跃度全局调节$\tilde{K}$——是否会进一步压缩计算成本而不损失覆盖？</p>
+<p><strong>论文标题</strong>：SetMIR: Multi-Interest Retrieval as Set Prediction</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2608.30251.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-08-31_SetMIR-Multi-Interest-Retrieval-as-Set-Prediction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-08-31_SetMIR-Multi-Interest-Retrieval-as-Set-Prediction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
