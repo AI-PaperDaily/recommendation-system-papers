@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-05</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>美团发布UniCon：重新定义CTR建模的上下文单元，AUC提升0.0139的背后逻辑</h2>
+<p>在搜索广告和推荐系统中，点击率（CTR）预测的核心任务是回答一个看似简单的问题：<strong>用户为什么点击了某个商品？</strong> 传统模型往往将用户历史行为序列与当前候选商品视为两类异质信号，分别用序列编码器和特征交互网络处理。然而在真实场景中，用户的每一次点击都发生在特定展示环境中——搜索结果页上，用户选择一家便宜的咖啡店，可能并非因为偏好，而是因为同屏展示的替代选项更贵或更远。</p>
+<p>美团研究团队在KDD 2027论文中提出的 <strong>UniCon</strong>（Unified Context-Centric Modeling Paradigm），正是从这一观察出发，重新构建了CTR预测的输入组织方式。该方法将“上下文单元”（Context Unit）作为基本建模单位，在美团搜索广告场景下实现了离线AUC提升 <strong>0.0139</strong>，在线RPM提升 <strong>3.09%</strong>、CTR提升 <strong>2.07%</strong>、营收提升 <strong>2.95%</strong>。</p>
+<h2>一、核心方法：从“特征组织”到“上下文单元”</h2>
+<h3>上下文单元的统一表达</h3>
+<p>UniCon的核心思想在于消除历史行为与当前请求之间的结构性断裂。论文指出，用户行为本质上是一串<strong>同质的上下文单元序列</strong>：历史曝光列表与当前候选集在结构上共享相同模式，二者的唯一区别仅在于“结果是否已被观测”。</p>
+<p>为此，UniCon定义了一个上下文单元包含三类信息：<strong>物品侧token</strong>（物品ID、展示位置、静态属性）、<strong>上下文token</strong>（搜索意图、查询词、时间、地点、设备等），以及一个<strong>用户token</strong>（聚合的动态统计特征与静态属性）。所有特征经过线性tokenizer映射为统一表示：</p>
+$$\mathbf{z}_{g} = \mathrm{Tokenizer}_{g}\left([\mathbf{e}_{g,1};\ldots;\mathbf{e}_{g,n_{g}}]\right) = \mathbf{W}_{g}[\mathbf{e}_{g,1};\ldots;\mathbf{e}_{g,n_{g}}]+\mathbf{b}_{g}$$
+
+<p>其中 $[\cdot;\cdot]$ 表示拼接，$\mathbf{z}_{g} \in \mathbb{R}^{d}$。一个上下文单元 $C$ 的token序列为：</p>
+$$\mathbf{Z}_{C} = [\mathbf{z}^{item}_{1}, \ldots, \mathbf{z}^{item}_{N_C}, \mathbf{z}^{ctx}_{1}, \ldots, \mathbf{z}^{ctx}_{K_C}, \mathbf{z}^{usr}]$$
+
+<p>对于历史单元，物品token中的反馈分量填入真实点击标签的嵌入；对于目标单元，由于点击结果未知，填入可学习的占位符嵌入。这一设计保证了历史侧与目标侧共享完全相同的token schema，为后续的统一建模奠定基础。</p>
+<p><img alt="图1：上下文局部性与动态性的示意图" src="https://arxiv.org/html/2609.03290v1/intro.png" /></p>
+<h3>层次化上下文建模：Locality与Dynamics</h3>
+<p>UniCon的模型架构由多个堆叠的UniConBlock组成。每个Block内部交替执行两个不同粒度的注意力操作：</p>
+<p><strong>上下文内交互（Intra-Context Attention）</strong> 与<strong>上下文间交互（Inter-Context Attention）</strong>。上下文内层将注意力限制在每个上下文单元的边界内，独立编码其中所有token，捕捉同屏展示物品之间的局部竞争与互补关系。这一层的边界约束确保了相邻展示列表不会被误判为局部竞争者：</p>
+$$\widetilde{\mathbf{H}}_{C}^{\ell} = \mathrm{IntraAttn}^{\ell}(\mathbf{H}_{C}^{\ell-1}), \quad C \in \mathcal{C}$$
+
+<p>随后，上下文间层将各单元的编码结果按时间顺序拼接，执行跨单元的全局注意力，建模用户兴趣和展示环境随时间的动态演化：</p>
+$$\mathbf{H}^{\ell} = \mathrm{InterAttn}^{\ell}\left([\widetilde{\mathbf{H}}_{C_{1}^{h}}^{\ell}, \ldots, \widetilde{\mathbf{H}}_{C_{M}^{h}}^{\ell}, \widetilde{\mathbf{H}}_{C^{t}}^{\ell}]\right)$$
+
+<p>两个层级均采用预归一化的Transformer结构，包含RMSNorm、self-attention和SwiGLU密集MoE前馈层。通过交替堆叠这两个层级，UniCon在不展平上下文边界的前提下，同时保留了局部决策结构和跨上下文的兴趣演化信息。</p>
+<p><img alt="图2：UniCon整体架构图" src="https://arxiv.org/html/2609.03290v1/method.png" /></p>
+<h3>目标侧监督：暴露与位置预测</h3>
+<p>由于排序阶段目标展示列表尚未生成，UniCon用候选集初始化一个“目标潜在上下文单元”。为了让这个潜在单元逼近真实展示列表的上下文结构，论文引入了<strong>暴露预测</strong>和<strong>绝对位置预测</strong>两个辅助任务。暴露头在完整候选集上训练，预测每个候选是否进入最终展示列表；位置头仅对已曝光候选训练，预测其绝对展示位置。点击头的梯度不流回位置头，辅助任务通过共享上下文表示间接影响CTR预测。整体学习目标为：</p>
+$$\mathcal{L} = \mathcal{L}_{clk} + \lambda_{exp}\mathcal{L}_{exp} + \lambda_{pos}\mathcal{L}_{pos}$$
+
+<p>其中 $\mathcal{L}_{exp}$ 覆盖所有目标候选，$\mathcal{L}_{clk}$ 仅在已曝光候选的日志位置上计算，$\mathcal{L}_{pos}$ 为绝对位置预测损失，$\lambda_{exp}$ 和 $\lambda_{pos}$ 控制辅助任务权重。</p>
+<h2>二、高效计算：上下文感知序列压缩</h2>
+<p>随着历史曝光累积，上下文单元数量可能达到数百个。如果每个inter-context层都在完整token序列上执行注意力，计算复杂度将呈 $O(LN^{2})$ 增长。UniCon的解决策略是：在第一个Block中执行完整的inter-context交互，从第二个Block开始，逐步执行<strong>上下文感知的序列压缩</strong>。</p>
+<p>压缩机制在每层利用目标单元的query向量与各历史单元的key向量计算相关性分数：</p>
+$$s_{m}^{\ell} = \frac{(\mathbf{q}_{t}^{\ell})^{\top}\mathbf{k}_{m}^{\ell}}{\sqrt{d}}, \quad C_{m}^{h} \in \mathcal{C}^{\ell-1}$$
+
+$$K_{\ell} = \left\lceil r_{\ell}|\mathcal{C}^{\ell-1}_{h}|\right\rceil, \quad \mathcal{S}^{\ell} = \mathrm{TopK}(\{s_{m}^{\ell}\}, K_{\ell})$$
+
+<p>训练时采用Gumbel-TopK配合直通估计器，推理时直接执行硬TopK选择。论文理论分析表明，当采用固定保留比例 $r = r_1 = r_2 = \cdots = r_{L-1}$ 时，全局注意力成本上界从 $O(LN^{2})$ 降至 $O(N^{2}/(1-r^{2}))$。在实际部署中，序列压缩与可变长注意力算子（基于FlashAttention原理，暴露segment offsets表示上下文边界）结合，使工业场景下的高效推理成为可能。</p>
+<h2>三、实验：离线优势与在线增益</h2>
+<p>离线实验使用美团搜索广告一年期数据，训练集、验证集、测试集按时间顺序切分。表1展示了UniCon与多个基线的对比结果：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>AUC</th>
+<th>GAUC</th>
+<th>LogLoss</th>
+<th>参数量/GFLOPs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base（生产基线）</td>
+<td>0.8558</td>
+<td>0.8076</td>
+<td>0.2084</td>
+<td>0.09B/9.69G</td>
+</tr>
+<tr>
+<td>OneTrans+CIM</td>
+<td>0.8657</td>
+<td>0.8162</td>
+<td>0.2017</td>
+<td>0.21B/208.75G</td>
+</tr>
+<tr>
+<td>RankMixer+DSIN+CIM</td>
+<td>0.8661</td>
+<td>0.8171</td>
+<td>0.2013</td>
+<td>0.40B/171.46G</td>
+</tr>
+<tr>
+<td>UniCon-Small</td>
+<td>0.8683</td>
+<td>0.8184</td>
+<td>0.2001</td>
+<td>0.09B/201.60G</td>
+</tr>
+<tr>
+<td>UniCon-Large（压缩版）</td>
+<td><strong>0.8697</strong></td>
+<td><strong>0.8194</strong></td>
+<td><strong>0.1991</strong></td>
+<td>0.33B/197.14G</td>
+</tr>
+</tbody>
+</table></div>
+<p>UniCon-Small在AUC上已超越所有研究基线，包括增强了CIM和DSIN的版本。压缩版UniCon-Large在生产配置下将计算量从801.29 GFLOPs降至197.14 GFLOPs，AUC几乎无损失（0.8698 vs 0.8697）。</p>
+<p>消融实验进一步验证了核心设计的贡献：移除上下文组织使AUC从0.8697降至0.8687；移除目标侧上下文统一降至0.8690；用参数匹配的全局token级backbone替代层次化上下文建模导致最大退化（降至0.8637）；仅移除intra-context交互也降至0.8673。</p>
+<p><img alt="图3：不同参数规模下UniCon与基线的缩放对比" src="https://arxiv.org/html/2609.03290v1/scaling.png" /></p>
+<p>缩放实验显示，UniCon在约0.05B至0.33B参数范围内保持了对代表性基线的稳定优势，表明上下文单元组织是随容量持续有效的架构选择。压缩比例实验中，$r=0.5$ 的生产配置较 $r=1.0$ 减少75.4%计算量，AUC仅下降0.0001。</p>
+<p><img alt="图4：上下文保留比例与AUC、GFLOPs的权衡" src="https://arxiv.org/html/2609.03290v1/compression.png" /></p>
+<p>七天在线A/B测试中，UniCon-Large在20%流量上实现了 <strong>3.09% RPM</strong>、<strong>2.07% CTR</strong>、<strong>2.95%营收</strong>提升，所有指标在双侧检验下达到 $p \leq 0.01$ 显著水平。</p>
+<h2>四、展望</h2>
+<p>UniCon的价值不止于一组性能数字。它揭示了一个方向：<strong>上下文结构应当从输入组织层面成为模型架构的一部分</strong>，而非作为额外特征附加在既有backbone上。在电商货架、信息流瀑布、搜索结果列表等强上下文感知场景中，这种以展示列表为基本单位的建模范式具有直接的推广潜力。随着上下文序列压缩的计算优势在更大规模模型上进一步放大，上下文中心化建模或许将成为统一CTR架构的新默认设定。</p>
+<p><strong>论文标题</strong>：UniCon: A Unified Context-Centric Modeling Paradigm for CTR Prediction</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.03290.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-03_UniCon-A-Unified-Context-Centric-Modeling-Paradigm-for-CTR-Prediction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-03_UniCon-A-Unified-Context-Centric-Modeling-Paradigm-for-CTR-Prediction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
