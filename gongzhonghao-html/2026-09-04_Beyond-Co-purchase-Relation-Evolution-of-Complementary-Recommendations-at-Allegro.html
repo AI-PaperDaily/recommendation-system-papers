@@ -463,45 +463,101 @@
             </div>
             <h1 class="article-title">Beyond Co-purchase Relation: Evolution of Complementary Recommendations at Allegro</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-09-08</span>
+                <span class="meta-item">📅 2026-09-09</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h2>Allegro互补推荐框架AlleCompanion：购物车GMV提升21%，CTR暴涨450%</h2>
-<p>当消费者将一台专业相机加入购物车时，系统应该推荐匹配的镜头、通用三脚架还是另一台相机机身？互补商品推荐对提升购物篮价值至关重要，但标准模型往往无法区分“一起购买”和“真正协同工作”的商品。来自Allegro的论文《Beyond Co-purchase Relation: Evolution of Complementary Recommendations at Allegro》提出了<strong>AlleCompanion</strong>，一个生产级互补商品检索框架，通过数据过滤与类别约束的Two Tower架构，将嘈杂行为信号转化为精确的语义兼容性，最终实现购物车GMV提升最高21.25%、离线CTR提升450%的显著效果。</p>
-<h3>一、核心方法：从“一起买”到“真配套”</h3>
-<p>互补推荐的核心难点在于：购买记录中充斥着大量噪声——同款多件、同品类替换、完全无关的凑单行为，与真正的互补关系混杂在一起。AlleCompanion的设计目标是将<strong>类别级的粗粒度关联</strong>与<strong>物品级的细粒度兼容</strong>解耦，通过两类机制协同实现。</p>
-<h4>1. Category Adapter：把“互补类别”嵌入查询塔</h4>
-<p>传统Two Tower模型擅长检索相似物品，却难以约束结果落在互补类别。AlleCompanion在查询塔中引入<strong>Category Adapter</strong>模块，将目标互补类别编码为稠密向量，并与查询商品的基向量拼接后投影到特定子空间。训练时，该类别向量由真实目标物品动态生成，使模型学会将商品与其合适的互补类关联。</p>
-<p><img alt="图1：AlleCompanion架构图" src="https://arxiv.org/html/2609.05063v1/figures/figure_allecompanion_v7.png" /></p>
-<p>具体计算中，查询商品特征 $x_q$ 先通过共享商品编码器 $f_\theta$ 得到基向量 $\mathbf{v}_q$，目标互补类别 $x_{comp}$ 经共享类别嵌入表 $\mathbf{E}_{cat}$ 投影为 $\mathbf{e}_{comp}$，最终查询表示为：</p>
-$$\mathbf{q}=\text{Norm}(\mathbf{W}[\mathbf{v}_{q}\parallel\mathbf{e}_{comp}]+\mathbf{b})$$
+            <h2>Allegro发布互补推荐框架AlleCompanion：购物车GMV提升21%，双塔架构破解共购噪声难题</h2>
+<h2>一、引言</h2>
+<p>当用户将一台专业相机加入购物车时，推荐系统应该推荐匹配的镜头、通用的三脚架，还是另一台相机机身？这个看似简单的问题背后，隐藏着互补推荐系统最核心的挑战：<strong>如何区分“一起购买”和“真正配套”</strong>。传统推荐模型依赖于共购行为数据，但共购日志往往混杂着大量噪声——用户购买多种口味的狗粮是替代需求，同时购买狗粮和猫粮是完全独立的需求，这些都不是真正的互补关系。Allegro团队在RecSys 2026上发表的这篇论文中，提出了一个名为 <strong>AlleCompanion</strong> 的生产级检索框架，系统性地解决了这一难题。该框架每月服务超过2000万活跃用户，在有机推荐场景中实现了<strong>8%-9%的GMV提升</strong>，在购物车场景中更是取得了<strong>15%-21%的GMV增长</strong>。</p>
+<h2>二、核心方法：类别约束下的双塔架构</h2>
+<h3>2.1 整体架构：类别适配器驱动的双向编码</h3>
+<p>AlleCompanion的核心创新在于对传统双塔（Two Tower）架构的针对性改造。标准双塔模型擅长捕捉相似性——将查询商品和候选商品映射到共享嵌入空间后，通过内积计算相关性。但互补推荐的逻辑截然不同：手机壳是手机的互补品，二者在特征空间中不应因相似而靠近，而应因“功能匹配”而关联。</p>
+<p><img alt="图1：AlleCompanion架构图，展示了双塔模型扩展了Category Adapter和类别重建损失" src="https://arxiv.org/html/2609.05063v1/figures/figure_allecompanion_v7.png" /></p>
+<p>为引导模型从“相似性检索”转向“互补性检索”，论文提出了<strong>类别适配器（Category Adapter）</strong>模块。该模块的核心操作如下：</p>
+<p>首先，查询商品的特征 $x_q$ 经过共享的产品编码器 $f_\theta$，得到基础查询嵌入 $\mathbf{v}_q = f_\theta(x_q)$。与此同时，目标互补类别 $x_{comp}$ 通过共享的类别嵌入表 $\mathbf{E}_{cat}$ 投影为稠密向量 $\mathbf{e}_{comp} = \mathbf{E}_{cat}(x_{comp})$。随后，两个向量被拼接并通过一个全连接层（权重 $\mathbf{W}$，偏置 $\mathbf{b}$）进行融合，最终经过归一化得到查询表示：</p>
+$$\mathbf{q} = \text{Norm}(\mathbf{W}[\mathbf{v}_q \parallel \mathbf{e}_{comp}] + \mathbf{b})$$
 
-<p>为强化类别判别性，模型引入辅助重构损失，将最终查询向量 $\mathbf{q}$ 经单层全连接映射回互补类别嵌入：</p>
-$$\hat{\mathbf{e}}_{comp}=\mathbf{W}_{aux}\mathbf{q}+\mathbf{b}_{aux}$$
+<p>这一设计的关键在于：类别信息并非作为普通特征输入，而是作为<strong>条件信号</strong>动态投影查询向量。模型在训练时从真实目标商品中动态提取互补类别，从而学会将特定商品与其合理的互补类别空间对齐。在推理阶段，即使目标商品未知，也可以通过预设的类别映射关系为查询商品指定合理的互补类别，实现“定向检索”。</p>
+<h3>2.2 类别重建损失：强化语义约束</h3>
+<p>仅靠架构层面的类别拼接尚不足以确保模型充分利用互补类别信号。为此，论文引入了一个辅助的<strong>类别重建损失函数 $\mathcal{L}_{aux}$</strong>。该损失函数通过一个额外的全连接层，从最终查询嵌入 $\mathbf{q}$ 中重建互补类别的嵌入表示：</p>
+$$\hat{\mathbf{e}}_{comp} = \mathbf{W}_{aux}\mathbf{q} + \mathbf{b}_{aux}$$
 
-<p>总损失为检索损失与辅助重构损失的组合：$\mathcal{L}=\mathcal{L}_{retrieval}+\mathcal{L}_{aux}$。这一设计使得候选生成阶段可以直接通过指定互补类别来定向检索，无需事后硬过滤。</p>
-<h4>2. ComCat：多源互补类别映射层</h4>
-<p>在线推断时没有真实目标物品，模型需要知道“手机应该搭配哪些类别”。AlleCompanion通过<strong>ComCat</strong>映射解决该问题，它融合三类信号，构建有向且可控的类别间互补关系：</p>
-<ul>
-<li><strong>自动共购启发式</strong>：挖掘购买会话中的类别共现，利用Jaccard相似度过滤全局流行性干扰，并施加 taxonomy 距离、周期性、价格比约束。</li>
-<li><strong>人类在环标注</strong>：针对冷启动和低频类别，由LLM辅助生成候选配对，人工标注互补、替代或无关，聚合到类别级。</li>
-<li><strong>规则专家逻辑</strong>：基于细粒度商品参数定义严格技术兼容规则（如品牌、型号、尺寸），独立于购买流量提供高精度映射。</li>
-</ul>
-<p>三类来源按“人工标注 &gt; 规则逻辑 &gt; 自动启发式”优先级合并，并支持同类别映射以扩展替代品推荐。映射与模型解耦，更新类别策略无需重新训练模型。</p>
-<h4>3. 数据构建：过滤噪声而非过度提纯</h4>
-<p>原始会话数据中，互补、替代、无关的比例约为36%、16%、48%。通过<strong>最小配对计数</strong>和<strong>类别对齐启发式</strong>（同部门不同类别），互补占比提升至61%，替代降至4%。但研究发现，在过滤后的交易数据上训练模型，虽然属性一致性最高，但召回率显著下降；完全依赖合成的专家规则数据则性能崩溃。最终，基础交易数据仍是召回率最优的训练来源，专家知识应注入ComCat映射而非训练集。</p>
-<p><img alt="图2：三种模型推荐结果对比" src="https://arxiv.org/html/2609.05063v1/figures/figure_candidates_v2.png" /></p>
-<p>如图2所示，给定一台绿色iPhone 17，Vanilla-TT返回其他颜色的同款手机，Seller-TT+硬过滤虽限于手机壳类别，却错误搭配了iPhone 17 Pro的三摄壳，而AlleCompanion精确检索到适配双摄的iPhone 17手机壳，兼顾类别约束与细粒度兼容性。</p>
-<h3>二、实验：离线全面提升，在线GMV显著增长</h3>
-<p>在离线评测中，AlleCompanion对比了多个基线。如表1所示，基础Vanilla-TT的Recall@20仅为0.0447，加入卖家特征后升至0.1219，但强制品类过滤（Seller-TT+HF）虽提升至0.3782，却需15倍候选池才能勉强维持列表长度。AlleCompanion在不牺牲候选数量的情况下达到Recall@20=0.4567、MRR@20=0.2000，同时保持目标类别一致性82.67%、卖家一致性66.19%。</p>
-<p>在ComCat评估（模拟线上无真实目标类别）中，完整映射配置覆盖42.32%的源类别，却覆盖了<strong>99.8%的实际用户流量</strong>，目标类别数量p95从3扩展到10，离线CTR相对基础配置<strong>+450%</strong>，CVR<strong>+398%</strong>（如表4所示）。</p>
-<p>在线A/B测试进一步验证了生产价值。产品页有机推荐位（“Order in one shipment”）通过扩展同类别映射支持“互补+替代”混合策略，Web端GMV<strong>+8.05%</strong>，App端GMV<strong>+9.35%</strong>；购物车最终结算推荐位GMV提升最高，Web端<strong>+21.25%</strong>，App端<strong>+15.73%</strong>，且统计显著（p&lt;0.005）。赞助位广告收入提升约<strong>50%</strong>，主要来自CTR增长。</p>
-<p>所有在线实验均覆盖100%流量，持续两周，模型已在产品页与购物车共三处推荐位部署，服务超过2000万月活用户。</p>
-<h3>三、展望：向个性化与原生属性学习演进</h3>
-<p>AlleCompanion证明了将类别约束与神经架构解耦的生产可行性。未来方向包括：让模型直接学习原始产品特征而非依赖类别映射颗粒度；在候选生成或下游排序中引入用户个性化；以及设计更可靠的离线指标以评估多物品互补意图。该框架为电商平台提供了从“一起买”到“真配套”的可复用范式。</p>
-<p>当系统不再推荐另一台手机，而是精准推送适配当前机型的手机壳时，购物车价值与用户体验才真正实现了双赢。</p>
+<p>优化目标采用采样softmax损失，最小化重建向量 $\hat{\mathbf{e}}_{comp}$ 与真实互补类别嵌入 $\mathbf{e}_{comp}$ 之间的距离。最终的训练目标由检索损失和辅助重建损失联合构成：</p>
+$$\mathcal{L} = \mathcal{L}_{retrieval} + \mathcal{L}_{aux}$$
+
+<p>这种多任务学习的设计迫使查询嵌入保留关于互补类别的判别性信息，避免在拼接后类别信号被商品特征“淹没”。实验表明，该机制有效提升了模型在目标类别一致性指标上的表现。</p>
+<h3>2.3 ComCat：多源互补类别映射层</h3>
+<p>在线推理时，系统无法获得真实的目标互补类别。为此，论文提出了<strong>ComCat（Complementary Categories Mapping）</strong>，一个独立于模型的多源类别映射层。ComCat融合了三种信号源：<strong>人工标注</strong>、<strong>规则专家逻辑</strong>、<strong>自动共购启发式</strong>。其中，人工标注覆盖冷启动和低频类别，规则专家逻辑确保严格的技术兼容约束（如接口规格、尺寸匹配），自动共购启发式则通过Jaccard相似度和结构过滤（分类学距离、周期信号、价格比约束）从海量交易数据中挖掘类别间的不对称互补关系。</p>
+<p>ComCat的核心价值在于其<strong>解耦设计</strong>：类别映射规则可以独立更新，无需重新训练检索模型。论文通过消融实验证明，完整的多源融合配置（包含同类别映射）相比仅使用共购启发式的基线，在离线流量评估中实现了 <strong>CTR提升450%</strong> 和 <strong>CVR提升398%</strong> 的显著收益。</p>
+<h2>三、实验评估</h2>
+<h3>3.1 离线对比：类别引导优于硬过滤</h3>
+<p>离线实验对比了五种模型配置，核心评估指标包括Recall@20、MRR@20以及三个一致性指标。实验结果如下表所示：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Recall@20</th>
+<th>MRR@20</th>
+<th>目标类别一致性</th>
+<th>卖家一致性</th>
+<th>属性一致性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vanilla-TT</td>
+<td>0.0447</td>
+<td>0.0103</td>
+<td>0.0654</td>
+<td>0.2237</td>
+<td>0.4225</td>
+</tr>
+<tr>
+<td>Seller-TT</td>
+<td>0.1219</td>
+<td>0.0286</td>
+<td>0.0967</td>
+<td>0.9309</td>
+<td>0.3309</td>
+</tr>
+<tr>
+<td>Seller-TT + HF</td>
+<td>0.3782</td>
+<td>0.1789</td>
+<td>1.0000</td>
+<td>0.8334</td>
+<td>0.2320</td>
+</tr>
+<tr>
+<td>AlleCompanion w/o Attr</td>
+<td>0.4537</td>
+<td>0.1947</td>
+<td>0.8283</td>
+<td>0.6605</td>
+<td>0.2155</td>
+</tr>
+<tr>
+<td><strong>AlleCompanion</strong></td>
+<td><strong>0.4567</strong></td>
+<td><strong>0.2000</strong></td>
+<td>0.8267</td>
+<td>0.6619</td>
+<td>0.2181</td>
+</tr>
+</tbody>
+</table></div>
+<p>从数据中可以得出两个关键发现：第一，引入卖家特征的Seller-TT相比Vanilla-TT在Recall@20上提升了<strong>173%</strong>，这与数据集中59%的共购对来自同一卖家的分布高度吻合。第二，虽然硬过滤（Seller-TT + HF）能实现完美的目标类别一致性，但其可扩展性极差——即使过采样15倍候选池，中位成功检索数仍降至7个。相比之下，AlleCompanion通过内在的类别引导机制，在不牺牲检索效率的前提下实现了<strong>0.4567的Recall@20</strong>，较硬过滤基线提升约21%。</p>
+<p><img alt="图2：三类模型的推荐结果对比，AlleCompanion成功检索到适配iPhone 17的手机壳" src="https://arxiv.org/html/2609.05063v1/figures/figure_candidates_v2.png" /></p>
+<p>图2直观展示了框架的优势。给定一台绿色的Apple iPhone 17作为查询商品，目标互补类别为手机壳与保护套：Vanilla-TT仅返回了不同颜色和存储配置的其他iPhone（纯粹的相似性推荐）；Seller-TT + HF虽然限定在手机壳类别，但返回的是iPhone 17 Pro的保护壳（三镜头开孔与双镜头不匹配）；唯有AlleCompanion返回了精准适配iPhone 17的手机壳，同时满足了类别约束和细粒度兼容性要求。</p>
+<h3>3.2 在线A/B测试：场景决定策略</h3>
+<p>在线实验揭示了互补推荐中一个重要的场景差异：<strong>不同页面位置的用户意图差异显著</strong>。在商品详情页的有机推荐位（“同一包裹下单”），纯粹互补推荐过于限制性，用户在此场景中同样需要替代品来丰富选择。通过扩展同类别映射，融合“互补+替代”的混合策略，该场景实现了<strong>App端9.35%、Web端8.05%的GMV提升</strong>。</p>
+<p>而在购物车内推荐位（“从该卖家购买更多以享受免费配送”），同类别映射策略表现出色：<strong>App端GMV提升15.73%，Web端提升21.25%</strong>。这一结果表明，在接近结算的最终阶段，用户对替代品和互补品的需求同时高涨，混合策略更符合实际购买意图。赞助推荐位方面，仅互补策略的配置带来了约<strong>50%的广告收入增长</strong>，同时v-CVR在Web端提升了<strong>0.53%</strong>（统计显著）。</p>
+<h3>3.3 数据集构建：行为噪声过滤的权衡</h3>
+<p>论文对数据集构建策略进行了系统的消融研究。关键的发现是：尽管严格的行为过滤（Filtered Transactions）能够将属性一致性从0.2181提升至0.2433，但代价是Recall@20从0.4567大幅下降至0.3222——<strong>29%的性能损失</strong>。完全基于专家规则的合成数据集表现更差，Recall@20仅0.0818。最优策略是保留完整的共购流量分布，将专家规则和LLM推理的知识转移到ComCat映射层而非训练数据中。</p>
+<h2>四、技术价值与展望</h2>
+<p>AlleCompanion的实践价值不仅体现在性能指标上，更在于其提供了一种<strong>生产环境下可维护的互补推荐范式</strong>。类别适配器与ComCat的解耦设计，使得业务团队可以灵活调整互补策略而不触发昂贵的模型重训练。然而，当前框架的精度受限于底层分类体系的粒度，极端冷启动类别的覆盖仍存在潜在盲区。此外，多商品互补意图的离线评估方法仍不成熟，在线A/B测试在可预见的未来仍将是衡量真实购买动态的金标准。一个值得思考的方向是：当LLM能够更深度地参与类别关系的语义理解时，是否能够构建一个完全脱离人工规则、自适应的互补类别发现系统？</p>
 <p><strong>论文标题</strong>：Beyond Co-purchase Relation: Evolution of Complementary Recommendations at Allegro</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
