@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-15</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>快手×港大发布 OneLA：大 beam 线性注意力解码提速 2.46 倍，如何做到？</h2>
+<p>生成式推荐（GR）正在成为大规模推荐系统的核心范式，但它在部署时面临一个特殊挑战：为了生成数百个候选物品，系统必须依赖大 beam 解码。传统线性注意力虽然能压缩长上下文，但每个 beam 独立维护完整 recurrent state 的做法，让显存和带宽开销随 beam 宽度急剧膨胀。快手与香港大学联合提出 OneLA，通过共享上下文状态与紧凑转换记录，将大 beam 线性注意力解码的端到端速度提升 1.54–2.46 倍，同时大幅降低显存占用。</p>
+<h2>一、核心方法</h2>
+<h3>1. 从“每 beam 一个完整状态”到“共享状态 + 紧凑记录”</h3>
+<p>生成式推荐通常把每个物品表示为一小段离散语义 ID（SID），模型自回归地生成这些 ID。由于需要同时探索大量候选项，系统会在每一步对所有活跃 beam 进行扩展，并保留全局 top-k 候选。这导致所有 beam 共享同一个长 prompt，但各自经过极短的 SID 序列分叉。线性注意力模块（如 Gated DeltaNet, GDN）会把历史压缩为一个固定大小的 recurrent state：$S_t \in \mathbb{R}^{d_v \times d_k}$。在传统服务系统中，每个 beam 都要保存自己的完整 $S_t$，并且随着 beam 的复制、重排、剪枝，状态矩阵也要被频繁拷贝或重建。</p>
+<p>论文观察到，不同 beam 的 recurrent state 均源自相同的 prompt 预填充状态 $S_{\mathrm{ctx}}$，之后只经过很短的 GDN 转换序列。每一步转换都可以用一个紧凑元组完全表示。GDN 的状态更新可以写成：</p>
+$$S_t = \alpha_t S_{t-1} + \delta_t k_t^{\top}$$
+
+<p>其中 $\delta_t = \beta_t(v_t - \alpha_t S_{t-1} k_t)$。OneLA 不再为每个 beam 存储完整的 $d_v \times d_k$ 矩阵，而是只保存一次 $S_{\mathrm{ctx}}$，并为每个生成的候选追加一条 <strong>GDN Transition Record (GTR)</strong>：$r_t = (\alpha_t, \delta_t, k_t)$。每个 GTR 的存储开销仅为 $O(d_v + d_k)$，远小于完整状态矩阵。</p>
+<p><img alt="图3：OneLA 状态表示总览" src="https://arxiv.org/html/2506.12345/figures/fig3.png" /></p>
+<h3>2. 投影重放：不重建矩阵，只重放向量</h3>
+<p>虽然 GTR 消除了每个 beam 的持久矩阵存储，但后续解码仍然需要历史状态与当前 token 的交互。关键观察是，GDN 层与历史状态只有两次向量收缩：key 投影 $S_{t-1} k_t$ 和 query 投影 $S_{t-1} q_t$。OneLA 通过 <strong>投影重放</strong> 直接计算这两个投影，而无需在每一步重建中间矩阵。</p>
+<p>给定当前 beam 的祖先 GTR 序列 $r_0, \ldots, r_{t-1}$，投影重放的递推关系为：</p>
+$$
+\begin{aligned}
+u_q^{(-1)} &= S_{\mathrm{ctx}} q_t, & u_q^{(j)} &= \alpha_j u_q^{(j-1)} + \delta_j (k_j^\top q_t), \\
+u_k^{(-1)} &= S_{\mathrm{ctx}} k_t, & u_k^{(j)} &= \alpha_j u_k^{(j-1)} + \delta_j (k_j^\top k_t), \quad 0 \leq j < t.
+\end{aligned}
+$$
+
+<p>完成重放后，当前 GDN 输出直接由 accumulators 计算：</p>
+$$o_t = \alpha_t u_q^{(t-1)} + \delta_t (k_t^\top q_t)$$
+
+<p>其中 $\delta_t = \beta_t(v_t - \alpha_t u_k^{(t-1)})$。整个过程只需要两个向量累加器，不产生任何中间 recurrent state 矩阵。</p>
+<p><img alt="图4：向量形式的投影重放" src="https://arxiv.org/html/2506.12345/figures/fig4.png" /></p>
+<h3>3. 轻量祖先索引：动态 beam 演化不搬数据</h3>
+<p>大 beam 搜索中，全局选择会不断删除、重排或复制 beam。如果 beam 与物理状态位置绑定，状态拷贝不可避免。OneLA 通过 <strong>祖先索引</strong> 将逻辑 beam 演化与物理 GTR 存储解耦。GTR 一旦写入就不可变，动态 beam 选择只是更新指向历史 GTR 链的索引：</p>
+$$h_t(b,j) = \begin{cases} h_{t-1}(\pi_t(b), j), & 0 \leq j < t-1, \\ \pi_t(b), & j = t-1. \end{cases}$$
+
+<p>每个子 beam 只需继承父 beam 的祖先索引，并记录父 beam 在上一解码步的物理槽位。这样，剪枝只需丢弃引用，重排只改变引用顺序，fan-out 只复制索引，历史 GTR 无需移动或复制。</p>
+<p><img alt="图1：生成式推荐解码工作流" src="https://arxiv.org/html/2506.12345/figures/fig1.png" /></p>
+<h3>4. 融合共享上下文 GPU 内核</h3>
+<p>OneLA 进一步将以上逻辑实现为一个融合 GPU kernel。由于 $S_{\mathrm{ctx}}$ 被所有 beam 共享，如果每个 beam 独立从 HBM 读取它，带宽浪费依然严重。OneLA 让每个线程块加载一次 $S_{\mathrm{ctx}}$ 的 value 维 tile，然后在 on-chip 存储中跨多个 beam 复用。投影重放、当前 GDN 更新和输出计算全部在芯片内完成，中间值不落 HBM。最终内核只将紧凑的 GTR 追加写回，彻底消除每 beam 完整状态的写回开销。</p>
+<p><img alt="图5：共享上下文注意力内核" src="https://arxiv.org/html/2506.12345/figures/fig5.png" /></p>
+<h2>二、实验</h2>
+<p>研究者基于 0.8B Qwen3.5 模型进行端到端评估，其中包含 18 个 GDN 层。prompt 长度设为 1K 和 5K，固定 beam 宽度 $W=256$，输出 token 数从 3 到 7。控制实验表明，OneLA 相对原生 vLLM FullState 路径，端到端 decode-forward GPU 时间减少 <strong>1.54–2.46 倍</strong>，且在所有 prompt 长度和输出长度下均优于 vLLM 的 FullState 与 ReplaySSM 路径。</p>
+<p>在算子级 benchmark 中，OneLA 覆盖 405 种形状，包括 4/8/16 请求、128/256/512 beam 宽度以及九种不同的 recurrent state 几何配置。与 vLLM、SGLang FullState、ReplaySSM、FlashInfer 和 TensorRT-LLM 相比，OneLA 的 GDN attention 延迟中位数加速可达 <strong>17.5–46.3 倍</strong>；在 Qwen 最大几何配置下，算子加速最高达到 <strong>56.5 倍</strong>。同时，数值误差相对 FP32 FullState 控制在 $4.88 \times 10^{-4}$ 以内。</p>
+<p><img alt="图7：算子级加速比与持久状态容量降低" src="https://arxiv.org/html/2506.12345/figures/fig7.png" /></p>
+<p>更细粒度的分析显示，OneLA 的显存收益同样显著。在 $R=4, W=512$ 的设置下，OneLA 的持久 recurrent-state 容量仅为 FullState 的 1/56.5（输出 3）到 1/20.3（输出 7）；状态写回量降低 <strong>127 倍</strong>。物理 DRAM 流量相对 FullState 和 ReplaySSM 分别减少 <strong>76.9 倍</strong> 和 <strong>39.9 倍</strong>。算术强度达到 40.0 FLOP/byte，分别比 FullState 和 ReplaySSM 高 45.6 倍和 20.6 倍。这些数据直接解释了 OneLA 在延迟上的提升来源。</p>
+<p><img alt="图6：端到端累积解码前向 GPU 时间" src="https://arxiv.org/html/2506.12345/figures/fig6.png" /></p>
+<h2>三、展望</h2>
+<p>OneLA 的核心贡献在于识别了大 beam 生成式推荐中 “beam 宽度” 作为 recurrent attention 的新扩展维度，并用共享上下文状态 + 紧凑 GTR + 轻量祖先索引的表示方式，实现了显存与带宽的双重压缩。这一思路不仅适用于 GDN，也可迁移到其他线性注意力变体。随着生成式推荐在工业界的普及，这类面向动态大 beam 的推理优化将成为关键底座。</p>
+<p><strong>论文标题</strong>：OneLA: Scaling Linear-Attention Decoding to Large Beams in Generative Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.12399.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-11_OneLA-Scaling-Linear-Attention-Decoding-to-Large-Beams-in-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-11_OneLA-Scaling-Linear-Attention-Decoding-to-Large-Beams-in-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
