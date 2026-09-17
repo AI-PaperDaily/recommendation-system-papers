@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-17</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>香港浸会大学突破十亿级图检索：K-ASC算法实现Swing相似度毫秒级计算，加速比超5600倍</h2>
+<p>在工业级推荐系统中，Swing相似度凭借对用户间共现关系的精密建模，已成为阿里、快手、Shopee等平台构建item-to-item（i2i）检索的核心利器。然而，其二次方时间复杂度的计算瓶颈长期困扰着大规模部署。香港浸会大学的研究者提出ASC与K-ASC两套算法，在十亿边规模图上将单次查询速度从8.5秒压缩至1.5毫秒，为实时推荐检索扫清了性能障碍。</p>
+<h2>一、Swing相似度：高精度背后的计算困境</h2>
+<p>在推荐系统的多阶段流水线中，检索阶段负责从数十亿物品库中快速筛选出数百个候选。<strong>Swing相似度</strong>通过在用户-物品二部图中枚举“用户-物品-用户”三元结构，有效抑制了传统itemCF中活跃用户的噪声干扰。给定查询物品$v_q$和目标物品$v_t$，其数学定义为：</p>
+$$\textsf{sw}(v_q,v_t)=\sum_{u_i,u_j\in\mathcal{U}(v_q)\cap\mathcal{U}(v_t)}{\frac{1}{\alpha+|\mathcal{I}(u_i)\cap\mathcal{I}(u_j)|}}$$
+
+<p>该公式的含义是：每个共同交互过$v_q$和$v_t$的用户对$(u_i,u_j)$贡献一个权重，该权重与两位用户共同交互过的物品总数成反比。这种精细的权重设计使得偶然共现的用户对被有效降权，而深度关联的用户对则被放大。</p>
+<p>然而，精确计算的代价极其高昂。对于拥有$d(v_q)$个交互用户的查询物品，需要枚举所有$\frac{d(v_q)(d(v_q)-1)}{2}$个用户对，并对每对执行集合交集运算。在幂律分布的真实交互图中，热门物品的用户数可达数十万，单次查询耗时以小时计。业界常用的截断策略虽限制了计算规模，却牺牲了召回质量。</p>
+<p><img alt="图3：Exact与Naïve-MC在Twitch和MAG数据集上的效率分解" src="https://arxiv.org/html/2609.16850v1/ASC.png" /></p>
+<h2>二、ASC：基于成本模型的自适应双引擎架构</h2>
+<p>研究者首先深入剖析了两种基线方法的瓶颈：<strong>Exact方法</strong>在低度物品上极快，但复杂度随度数二次增长；<strong>Naïve-MC方法</strong>虽性能稳定，却因需要大量采样来抑制方差而开销不菲。ASC的核心洞察在于：让两类方法各司其职。</p>
+<h3>分组朴素采样（GNS）</h3>
+<p>GNS针对Naïve-MC的冗余采样问题进行优化：不再对每个采样用户对单独计算集合交集，而是先记录采样频次，再对去重后的用户对统一执行集合运算。采样量$n$由理论推导严格确定：</p>
+$$n=\left\lceil\frac{2(d(v_q)^2-d(v_q))\cdot(\epsilon/3+1)}{(\alpha+2)\cdot\lambda\epsilon^2}\cdot\log\left(\frac{1}{\delta}\right)\right\rceil$$
+
+<p>该公式根据查询物品度数$d(v_q)$、误差阈值$\epsilon$、Swing阈值$\lambda$和失败概率$\delta$计算出满足$(\epsilon,\lambda)$近似保证所需的最小采样数。GNS在最坏情况下仍能保持与Exact相同的复杂度上界，但实际运行中大幅减少了集合交集的调用次数。</p>
+<h3>用户子集采样（USS）</h3>
+<p>USS则从另一个角度切入：当用户对枚举本身可承受时，关键在于降低每次集合交集的代价。USS对度数较小的用户$u_i$仅采样$\gamma\cdot d(u_i)$个邻居物品，通过基数估计而非完整物化来加速判断。采样比例$\gamma$由误差参数控制：</p>
+$$\gamma\leq\min\left\{{\frac{2(\epsilon/3+1)}{(\alpha+2)\cdot\lambda\epsilon^2}\cdot\log\left(\frac{1}{\delta}\right)},1\right\}$$
+
+<p>配合<strong>QFilter++</strong>技术——一种基于Base and State Representation（BSR）的位压缩集合表示——集合交集基数计算可获得最高3倍加速。</p>
+<h3>自适应选择引擎</h3>
+<p>ASC通过分析成本模型在GNS和USS之间动态切换。选择条件权衡了用户对数与所需采样数：</p>
+$$\frac{d(v_q)\cdot(d(v_q)-1)}{2}\cdot\rho\leq n\left(1+\frac{d(v_q)}{D(v_q)}\right)$$
+
+<p>其中$\rho$为两类操作的经验耗时比，在真实数据集上稳定于$[0.22,0.67]$区间，默认值0.5即可实现有效选择。</p>
+<p><img alt="图4：ASC算法框架示意" src="https://arxiv.org/html/2609.16850v1/ASC.png" /></p>
+<h2>三、K-ASC：聚焦边界候选的过滤-精炼范式</h2>
+<p>研究者发现一个关键现象：使用宽松误差阈值（如$\epsilon=0.1$）运行GNS，即可让$K+5$的候选列表达到接近100%的召回率，但要将$K$的列表本身精度提升到同等水平，采样量需增加约100倍。这说明绝大多数top-K物品很易识别，真正消耗采样预算的是少数“边界物品”。</p>
+<p>K-ASC由此将计算分为两步。<strong>候选生成阶段</strong>仅使用总预算的一小部分（默认$\beta=0.1$）运行GNS，然后利用<strong>经验Bernstein不等式</strong>构造紧凑置信区间：</p>
+$$\Phi(n,\overline{\sigma},\zeta,\delta)=\sqrt{\frac{2{\overline{\sigma}}\log{(3/\delta)}}{n}}+\frac{3\zeta\log{(3/\delta)}}{n}$$
+
+<p>基于每个物品的样本均值和方差，计算其上界UB与下界LB。若第$K$位的上界不低于第$K+1$位的下界，说明两者仍属竞争关系，两物品均被标记为“边界候选”。<strong>精炼阶段</strong>则将全部剩余采样预算集中于边界候选，通过对相关用户对的精确枚举或高精度采样完成最终排序。</p>
+<p><img alt="图6：K-ASC工作原理示意" src="https://arxiv.org/html/2609.16850v1/K-ASC.png" /></p>
+<h2>四、实验：十亿边规模上的数量级飞跃</h2>
+<p>研究者在8个真实数据集上进行了系统性评估，其中最大的Yambda（13.4亿边）和MAG（11亿边）代表了工业级部署场景。</p>
+<p><img alt="图11：热门查询物品上的时间-精度权衡" src="https://arxiv.org/html/2609.16850v1/ASC.png" /></p>
+<p>在MAG数据集上，$K$-ASC处理top-100查询的平均耗时仅为<strong>1.5毫秒</strong>，精确率超过99.9%，而Exact方法需要<strong>8.5秒</strong>——加速比超过5600倍。相较于ASC自身，$K$-ASC在保持同等精度水平下进一步提升了约2倍效率。在Yambda上，$K$-ASC在所有$K$值下均达到99.97%以上的精确率，同时将查询时间压缩了两个数量级。</p>
+<p>ASC在近似查询任务中的表现同样亮眼：在MAG上，当$\epsilon=0.02$时，ASC相较于Exact实现了高达<strong>100倍</strong>的加速。QFilter++在所有数据集上均贡献了可观的常数级提升，在MAG上可达2.3倍。</p>
+<p>自适应精炼模块的独立评估显示，在可比精确率（均超99.9%）下，该模块为$K$-ASC带来了Twitch上约<strong>10倍</strong>、Yambda上<strong>4.7至10.5倍</strong>的额外加速。这一增益从根本上改变了高精度top-K检索的计算经济学。</p>
+<h2>五、展望</h2>
+<p>ASC与$K$-ASC的核心方法论价值不仅限于Swing计算本身。其“基于成本模型的自适应估计器选择”与“过滤-精炼范式下的预算聚焦”两条设计原则，可推广至二部图上其他复合相似度的近实时计算场景。随着推荐系统对图结构信号依赖的加深，这类能以理论保证换取实际效率的算法框架，将成为支撑亿级用户实时体验的关键基础设施。当毫秒级延迟与99.9%精度可以兼得时，推荐检索的工程边界正在被重新定义。</p>
+<p><strong>论文标题</strong>：Efficient Swing Computation for Retrieval in Large-Scale Recommender Systems</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.16850.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-15_Efficient-Swing-Computation-for-Retrieval-in-Large-Scale-Recommender-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-15_Efficient-Swing-Computation-for-Retrieval-in-Large-Scale-Recommender-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
