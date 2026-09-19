@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproducing Transparent and Scrutable Recommendations: Exploring Open-Weight Models via Natural-Language User Profiles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Reproducing Transparent and Scrutable Recommendations: Exploring Open-Weight Models via Natural-Language User Profiles</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-19</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>苏黎世大学复现UPR透明推荐：TripAdvisor nDCG@10达0.961，但个性化能力仅相当于随机水平的背后</h2>
+<h2>一、引言</h2>
+<p>推荐系统长期面临一个核心矛盾：<strong>预测精度</strong>与<strong>可解释性</strong>难以兼得。从协同过滤到矩阵分解，经典方法将用户压缩为稠密但不可读的隐向量——用户不知道自己为何被推荐某部电影，更无法直接修正系统的偏好判断。当系统误将一次冲动的差评理解为用户的稳定偏好时，用户只能被动地接受源源不断的错误推荐。</p>
+<p>Ramos等人提出的<strong>用户画像推荐</strong>将LLM引入推荐管线的上游：先将用户的历史评论文本合成为一段简洁的自然语言画像，再由推荐模型基于该画像与候选物品元数据预测评分。用户可以直接阅读、编辑、甚至重写自己的画像，这为推荐系统提供了前所未有的<strong>可审查性</strong>与<strong>可干预性</strong>。</p>
+<p>苏黎世大学的研究者对这一方法进行了系统性复现与深度剖析。复现结果确认了UPR的竞争性表现——在TripAdvisor数据集上nDCG@10达到0.961，MAP达到0.939。然而，机制可解释性分析揭示了一个关键限制：<strong>编辑画像确实会改变模型内部的用户表征，但不会改变推荐的物品排序</strong>。更深层的归因指向评分回归目标本身，而非自然语言画像接口。</p>
+<h2>二、核心方法</h2>
+<h3>2.1 UPR两阶段架构</h3>
+<p>UPR将推荐过程拆解为两个清晰的阶段。第一阶段，LLM合成器将用户的原始评论历史 $E_u$ 压缩为自然语言画像 $P_u$：</p>
+$$P_u = \text{LLM\_Gen}(E_u)$$
+
+<p>第二阶段，微调后的序列分类模型 $f_{\theta}$ 接收用户画像与候选物品元数据 $I_i$，输出预测评分：</p>
+$$\hat{y}_{u,i} = f_{\theta}(\text{Prompt}(P_u, I_i))$$
+
+<p><img alt="图1：UPR架构流程图，包含画像生成与推荐两个阶段" src="https://arxiv.org/html/2609.19831v1/img/user_profile_perturbation.png" /></p>
+<p>这一设计与传统隐向量方法的关键区别在于：$P_u$ 是人类可读的自然语言文本。用户看到的不再是一个300维的浮点数向量，而是一段类似于"该用户偏好经典喜剧与快节奏剧情片"的描述。当用户发现画像中包含错误的偏好推断时，可以直接编辑文本——删除不准确的描述、添加新的偏好约束——而无需重新训练模型。</p>
+<h3>2.2 复现工作的三项扩展</h3>
+<p>复现研究在原始UPR基础上进行了三项关键扩展，使其分析深度远超简单的基准复现。</p>
+<p><strong>上下文消融实验</strong>系统性地比较了三种用户表示（用户画像、原始评论历史、物品评论历史）与两种物品元数据表示（物品标题、标题+描述）的全部组合。这一设计回答了核心问题：自然语言画像是否真正保留了原始评论中的关键信息？</p>
+<p><strong>多种子稳定性验证</strong>在五个随机种子（37-41）上重复训练，结果显示MAP的方差仅为 $\sigma_{\text{MAP}}=0.0009$，nDCG@10的方差为 $\sigma_{\text{nDCG}}=0.0007$。这意味着UPR的性能提升并非来自有利的随机初始化，而是方法本身的稳定性质。</p>
+<p><strong>机制可解释性分析</strong>则借助nnsight框架，直接探测Transformer骨干网络内部对用户画像的表征方式，并通过反事实扰动追踪画像编辑如何（或是否）影响最终预测。</p>
+<h3>2.3 反事实扰动实验设计</h3>
+<p>为检验画像编辑的行为效果，研究者构建了三层递进的画像状态。状态1描述纯浪漫喜剧偏好，状态2引入动作与快节奏元素，状态3则将画像完全改写为犯罪悬疑偏好。每个状态下，模型对330个候选物品（浪漫、动作、犯罪各110个）进行评分与排序。</p>
+<p>方差分解揭示了关键发现：画像解释了预测评分中约47.6%-48.5%的方差，但画像与物品的<strong>交互项</strong>仅占4.1%（仅标题）到16.1%（含描述）。这意味着画像以<strong>用户级别的全局偏移量</strong>形式进入模型——它决定了模型对用户给出多"慷慨"的评分，而不是用户与物品内容之间的精细化匹配。</p>
+<h2>三、实验结果</h2>
+<p>上下文消融实验验证了UPR的核心假设：简洁的画像能够以更短的提示长度，取得与完整原始评论历史高度竞争的性能。在标题+描述配置下，画像的MAP达到0.895，评论历史的MAP为0.891——画像略优。即便在RMSE上画像（1.063）略逊于评论历史（1.055），这一差距远小于两者在提示长度上的差异。</p>
+<p><img alt="图2：UMAP可视化，展示用户画像表征的分布与反事实编辑轨迹" src="https://arxiv.org/html/2609.19831v1/img/user_profile_perturbation.png" /></p>
+<p>在个性化能力的直接测试中，研究者将每个用户的一个留出正样本与99个从未交互的物品混合，测量各排序器将正样本排入前50%的能力。<strong>权重矩阵分解</strong>以0.806的排名百分位遥遥领先，而UPR（标题+描述配置）仅达到0.510，在统计上<strong>与随机水平无显著差异</strong>（$p=0.62$）。</p>
+<p><img alt="图3：单个用户画像的局部特征归因" src="https://arxiv.org/html/2609.19831v1/img/user_profile_attribution.png" /></p>
+<p>文本编辑的实验结果同样发人深省。从状态1到状态2的编辑使所有物品池的预测评分统一上升0.195（$p<10^{-50}$），但三组物品池之间的评分变化没有任何显著性差异（$F=0.24$，$p=0.79$）。即使在最强的犯罪偏好编辑下，犯罪物品的排名提升也仅为3.9个位置，且显著性检验未通过。更关键的是，直接激活干预——在残差流中注入犯罪偏好方向——虽然使内部探针的犯罪概率从0.064跃升至1.000，但犯罪物品的平均评分仅从3.999变为3.984，排名偏移不超过0.2个位置。</p>
+<p><img alt="图4：亚马逊用户群体的全局画像归因分布" src="https://arxiv.org/html/2609.19831v1/img/global_profile_attribution.png" /></p>
+<h2>四、局限与展望</h2>
+<p>这项复现研究揭示了一个深刻的结论：<strong>自然语言画像接口本身并非问题所在，评分回归目标才是瓶颈</strong>。训练数据中不存在用户明确拒绝的物品——每条训练对都是用户消费并评论过的物品——因此模型从未学过"用户不喜欢什么"的信号。评分回归损失的最小化仅需用户偏移量加物品偏移量，这正是方差分解中交互项占比极低的结构性原因。</p>
+<p>将同一接口切换为<strong>排序目标函数</strong>并引入负采样，是最可能让画像编辑行为产生实际意义的改进方向。当模型必须学会区分"用户会选择"与"用户不会选择"的物品时，画像中的偏好描述才可能真正驱动内容条件的个性化排序。这一发现对所有探索LLM驱动推荐系统的研究者而言，是一个值得重视的警示：透明的接口必须配以能够利用该接口信息的训练目标，否则透明性只是一种美学选择而非功能特性。</p>
+<p><strong>论文标题</strong>：Reproducing Transparent and Scrutable Recommendations: Exploring Open-Weight Models via Natural-Language User Profiles</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.19831.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-17_Reproducing-Transparent-and-Scrutable-Recommendations-Exploring-Open-Weight-Models-via-Natural-Langu.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-17_Reproducing-Transparent-and-Scrutable-Recommendations-Exploring-Open-Weight-Models-via-Natural-Langu.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
