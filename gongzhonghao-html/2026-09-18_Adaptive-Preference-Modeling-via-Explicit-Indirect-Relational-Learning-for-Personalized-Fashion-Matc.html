@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Preference Modeling via Explicit Indirect Relational Learning for Personalized Fashion Matching</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Adaptive Preference Modeling via Explicit Indirect Relational Learning for Personalized Fashion Matching</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-22</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>港科大APCL框架让时尚搭配推荐性能飙升：显式间接关系学习带来AUC最高10.1%提升，冷启动不再难</h2>
+<p>在电商平台选购衣物时，用户的核心诉求往往不是“买一件上衣”，而是“买一件和现有裤子搭得上、又符合个人风格的上衣”。这种<strong>个性化时尚搭配推荐</strong>（Personalized Fashion Complementary Recommendation）要求系统同时回答两个问题：这件商品和给定商品是否<strong>兼容</strong>，以及它是否符合该用户的<strong>个人偏好</strong>。然而，时尚产品生命周期短、交互数据极度稀疏，且商品信息天然多模态（图像、文本并存），使得传统推荐方法在冷启动场景下频频失灵。</p>
+<p>香港科技大学研究团队在 <em>Information Sciences</em> 期刊发表的论文中，提出了 <strong>APCL（Adaptive Preference with Contrastive Learning，自适应偏好对比学习）框架</strong>。该框架的核心创新在于：不再让间接关系信号隐式地“藏”在图传播过程中，而是<strong>显式地构建间接用户-物品和物品-物品关系视图</strong>，并通过功能视图对比学习将直接与间接表示对齐。在IQON3000和Polyvore两个基准数据集上，APCL分别实现了<strong>最高10.1%的AUC提升</strong>和<strong>8.2%的HR@10提升</strong>，尤其在稀疏交互和冷启动条件下表现卓越。</p>
+<p><img alt="图1：个性化时尚互补推荐样例，每笔交易包含图像、文本信息、用户ID和产品ID" src="https://arxiv.org/html/2609.21475v1/Figure_1.png" /></p>
+<h2>一、核心方法：把“间接关系”从幕后请到台前</h2>
+<h3>1. 四模块解耦：显式建模的架构基础</h3>
+<p>APCL框架将推荐任务分解为四个协同模块：<strong>个人偏好建模（P）</strong>、<strong>产品兼容性建模（C）</strong>、<strong>间接个人偏好建模（IP）</strong>和<strong>间接产品兼容性建模（IC）</strong>。P和C模块处理直接观测到的交互信号，而IP和IC模块则通过<strong>相关性引导采样</strong>（correlation-guided sampling）显式构造间接关系视图。这一设计使得直接关系与间接关系可以分别表示、分别优化，而非像图神经网络那样混合在统一的传播嵌入中。</p>
+<p><img alt="图3：APCL框架包含四个主要组件——个人偏好模块(P)、产品兼容性模块(C)、间接个人偏好模块(IP)和间接产品兼容性模块(IC)，以及IP和IC中的相关性采样策略" src="https://arxiv.org/html/2609.21475v1/main_2.png" /></p>
+<h3>2. 相关性采样：将稀疏交互转化为显式关系结构</h3>
+<p>间接个人偏好模块的核心在于识别与目标用户具有相似交互模式的“关联用户”。论文提出的相关性采样策略分为五步：首先构建用户-用户共现矩阵 $W_{i,j}$，记录两个用户共同交互过的正样本匹配产品数量；随后计算用户相似度得分矩阵：</p>
+$$C_{i,j}=\frac{W_{i,j}}{\sqrt{|N(i)||N(j)|}}$$
+
+<p>其中 $N(i)$ 和 $N(j)$ 分别表示用户 $i$ 和 $j$ 在整个训练集中的出现次数。基于该得分排序后，为每个目标用户选取Top-K个最相似用户，再通过<strong>跨注意力机制</strong>（cross-attention）从这些相似用户的历史记录中挑选 $n$ 个相关匹配产品。这一过程将原本稀疏的交互矩阵转化为显式的局部关系邻域，为后续的表示学习提供了直接的监督信号来源。</p>
+<p><img alt="图4：IP模块中相关性采样策略的简化示例" src="https://arxiv.org/html/2609.21475v1/user_cf.png" /></p>
+<h3>3. 多模态潜空间细化器：双路径处理视觉与文本特征</h3>
+<p>采样得到的关联产品需要被转化为信息丰富的潜表示。APCL设计了<strong>双路径潜空间细化器</strong>：对于视觉特征，利用<strong>一维卷积</strong>沿空间维度提取模式，配合注意力池化获得统一视觉表示 $\bar{\mathbf{v}}_{ur}^{p}$；对于文本特征，则采用<strong>跨项目 Transformer 架构</strong>（2个注意力头），通过多头自注意力捕捉长程语义依赖，最后以均值-最大池化获得统一文本表示 $\bar{\mathbf{w}}_{nr}^{p}$。这种分而治之的设计充分考虑了视觉特征的<strong>空间局部性</strong>和文本语义的<strong>长程依赖特性</strong>。</p>
+<p><img alt="图5：多模态细化器的实现细节" src="https://arxiv.org/html/2609.21475v1/figure/adaptive.png" /></p>
+<h3>4. 功能视图对比学习：对齐“直接”与“间接”表示</h3>
+<p>APCL在优化层面引入了<strong>功能视图对比学习</strong>（functional-view contrastive learning）。与传统的跨模态对比学习（对齐视觉与文本表示）或图增强对比学习不同，APCL的对比目标是对齐<strong>直接关系视图</strong>与<strong>间接关系视图</strong>在个人偏好和兼容性两个功能空间中的表示。具体而言，P-IP对比损失 $\mathcal{L}_{CL-1}$ 对齐个人偏好模块输出的目标匹配产品表示 $\bar{\mathbf{v}}^{p}_{r}$ 与间接偏好模块输出的 $\bar{\mathbf{v}}^{p}_{nr}$；C-IC对比损失 $\mathcal{L}_{CL-2}$ 则对齐兼容性模块的直接表示与间接表示。总损失函数为：</p>
+$$\mathcal{L}=\gamma_{1}\cdot\mathcal{L}_{\text{BPR}}+\gamma_{2}\cdot(\mathcal{L}_{\text{CL-1}}+\mathcal{L}_{\text{CL-2}})$$
+
+<p>其中 $\mathcal{L}_{\text{BPR}}$ 为贝叶斯个性化排序损失，$\gamma_1$ 和 $\gamma_2$ 为权重系数（实验表明二者相等时性能最佳）。这一设计使间接关系信号不再仅仅是学习过程的“副产品”，而是成为明确的优化目标。</p>
+<h2>二、实验：稀疏场景下的性能碾压</h2>
+<p>研究团队在<strong>IQON3000</strong>（3,236用户，142,737件服装）和<strong>Polyvore</strong>（519用户，33,107件服装）两个公开基准数据集上进行了系统评估。</p>
+<h3>1. 整体性能对比</h3>
+<p>APCL在两种推荐设置（指定上装推荐下装、指定下装推荐上装）下均显著超越代表性基线方法。在指定上装推荐下装的设置中，APCL在IQON3000上取得了<strong>0.9739的AUC</strong>和<strong>0.9509的HR@10</strong>，相比表现最好的图增强方法CP-TransMatch分别提升了10.1%和8.2%；在Polyvore上同样实现了9.2%的AUC提升。值得注意的是，相比直接交互建模方法（如BPR-MF）的提升幅度更为显著，AUC提升可达<strong>17个百分点</strong>以上。</p>
+<h3>2. 稀疏与冷启动场景的鲁棒性</h3>
+<p>为验证模型在长尾场景下的有效性，研究团队按目标匹配商品的交互频率将测试样本划分为四个区间：[0, 2]、(2, 5]、(5, 10]和(10, ∞)。实验结果显示，<strong>超过半数测试样本集中在[0, 2]低交互区间</strong>，而APCL在该区间即快速达到最高预测准确率，且优势随交互频率增加持续保持。这一结果表明，显式间接关系学习有效地补偿了直接交互信号不足时的信息缺口。</p>
+<p><img alt="图8：不同交互频率范围下各方法的预测准确率对比" src="https://arxiv.org/html/2609.21475v1/Figure_8.png" /></p>
+<p>在冷启动实验中，APCL在移除对比学习模块后的性能出现明显下降，证实了<strong>功能视图对比对齐对于冷启动场景的关键作用</strong>。当用户或商品缺乏足够的直接交互历史时，间接关系视图提供的辅助监督信号成为推荐质量的重要保障。</p>
+<h3>3. 消融实验：每个模块都在“干活”</h3>
+<p>完整的消融实验验证了各模块的贡献。移除自适应偏好模块（-w/o-AP）后，Polyvore指定上装场景下HR@10从0.8999下降至0.7741，NDCG@10从0.8343降至0.6166，降幅超过<strong>14个百分点</strong>；移除对比学习模块（-w/o-CL）同样导致全面性能下降。这些数据清晰表明，间接关系视图的显式构建与功能视图对比对齐共同构成了APCL核心竞争力的技术底座。</p>
+<p><img alt="图6：跨模态对比学习(CMCL)与跨IP-IC功能视图对比学习(CL)在两个数据集上的AUC对比" src="https://arxiv.org/html/2609.21475v1/Figure_6.png" /></p>
+<h2>三、展望：从“间接关系”到更广阔的应用空间</h2>
+<p>APCL的提出为个性化时尚推荐开辟了一条不同于图传播范式的技术路径。其核心思想——<strong>将间接关系从隐式建模对象提升为显式学习目标</strong>——不仅适用于时尚搭配场景，对于任何面临严重数据稀疏性的推荐任务都具有借鉴价值。论文也指出了当前框架的局限性：依赖关联用户或产品的可用性，在极端稀疏环境下效果可能减弱；当前仅支持上下装两品类配对，尚未覆盖完整的鞋服配饰组合推荐。未来工作可探索多品类扩展、时间动态信号融入以及与图架构的深度结合。当“间接关系”成为推荐系统的第一等公民，冷启动和长尾问题或许将不再是无解的难题。</p>
+<p><strong>论文标题</strong>：Adaptive Preference Modeling via Explicit Indirect Relational Learning for Personalized Fashion Matching</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.21475.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-18_Adaptive-Preference-Modeling-via-Explicit-Indirect-Relational-Learning-for-Personalized-Fashion-Matc.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-18_Adaptive-Preference-Modeling-via-Explicit-Indirect-Relational-Learning-for-Personalized-Fashion-Matc.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
