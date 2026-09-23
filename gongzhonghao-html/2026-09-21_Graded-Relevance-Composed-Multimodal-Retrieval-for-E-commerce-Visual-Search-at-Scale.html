@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graded-Relevance Composed Multimodal Retrieval for E-commerce Visual Search at Scale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Graded-Relevance Composed Multimodal Retrieval for E-commerce Visual Search at Scale</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-23</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>沃尔玛GradCIR分级训练组合检索：NDCG提升5.9%，FashionIQ刷新至0.6703</h1>
+<h2>一、引言</h2>
+<p>在电商平台的视觉搜索场景中，用户常常不满足于单纯上传图片寻找相似商品，而是希望附加文字指令进行修改——例如“把这款沙发换成灰色”“换成条纹款式”。这类由图像与文本共同构成的查询被称为<strong>组合图像检索</strong>（Composed Image Retrieval, CIR）。然而，学术界主流方法将检索结果简化为二分标签：要么相关，要么不相关。真实目录中的候选商品往往呈现<strong>连续的相关性光谱</strong>：完全匹配、相近匹配、部分匹配、完全无关。将这种分级信息压缩成二分类，会严重损害排序质量。</p>
+<p>沃尔玛研究团队提出的<strong>GradCIR</strong>方法论，正是针对这一痛点：它利用视觉语言模型（VLM）自动生成4级相关性标签，训练早期融合检索器直接建模这种分级排序。在内部测试集上，分级监督带来<strong>4.9%–5.9% 的NDCG@10提升</strong>；在公开基准FashionIQ上，GradCIR微调后达到<strong>0.6703平均召回</strong>，超过此前最强监督基线SPN4CIR（0.6641），并已部署于沃尔玛生产环境。</p>
+<h2>二、核心方法</h2>
+<p>GradCIR由三个核心创新构成：<strong>VLM驱动的分级数据管线</strong>、<strong>早期融合检索架构</strong>、以及<strong>层级感知角度损失</strong>。</p>
+<h3>1. 分级相关性数据生成</h3>
+<p>传统CIR数据集（如FashionIQ、CIRR）每查询仅标注一个正样本，无法反映真实目录中大量部分匹配商品的排序价值。GradCIR采用两阶段自动化流程：</p>
+<ul>
+<li><strong>查询生成</strong>：使用Gemini-2.5-pro对目录图像进行物体检测，裁剪出单个商品生成相似查询；同时提示VLM生成修改属性的文本（如“换成灰色”），形成修饰查询。</li>
+<li><strong>四级标注</strong>：对于每个查询，先用预训练嵌入模型检索Top候选，再由同一VLM法官对每个候选赋予 <code>Exact</code>、<code>NearExact</code>、<code>PartialMatch</code>、<code>Irrelevant</code> 四级标签，无需人工标注。论文明确展示了四个典型例子：</li>
+</ul>
+<p><img alt="图1(a)：Exact: all visual attributes align." src="https://arxiv.org/html/2609.24152v1/figures/figure1_exact.png" /></p>
+<p><img alt="图1(b)：Near Exact: style modifier; core attributes (colour, material) retained but not identical." src="https://arxiv.org/html/2609.24152v1/figures/figure1_near_exact.png" /></p>
+<p><img alt="图1(c)：Partial Match: category and partial attribute (high-top) match, but a major feature (red stripes) is missing." src="https://arxiv.org/html/2609.24152v1/figures/figure1_partial_match.png" /></p>
+<p><img alt="图1(d)：Irrelevant: different product type and attributes." src="https://arxiv.org/html/2609.24152v1/figures/figure1_irrelevant.png" /></p>
+<ul>
+<li><strong>迭代难负样本挖掘</strong>：初始数据由预训练模型检索产生，容易偏向其已擅长的简单负样本。论文采用<strong>相关性反馈循环</strong>：用当前训练的检索器挖掘更难区分的负样本，经VLM标注后加入训练集，循环三轮，最终得到<strong>350万</strong>查询-商品对（其中210万相似查询、140万修饰查询）。</li>
+</ul>
+<h3>2. 模型架构：早期融合PaliGemma2</h3>
+<p>GradCIR选用的骨干是<strong>PaliGemma2</strong>（SigLIP-400M视觉编码器 + Gemma2-2.6B语言模型），属于<strong>早期融合</strong>架构：图像patch token与文本token在Transformer中联合自注意力，能建模“图像是X但文字要求改Y”的跨模态交互。针对检索任务做了三点适配：</p>
+<ul>
+<li><strong>禁用解码</strong>：移除语言建模头，模型仅作编码器。</li>
+<li><strong>末token池化</strong>：取最后一个非填充位置的隐藏态作为序列嵌入，无需额外池化层或[CLS]。</li>
+<li><strong>角色前缀</strong>：在输入文本前添加 <code>[QUERY]</code> 或 <code>[ITEM]</code> 前缀，使共享编码器能学习查询与商品的非对称表示。</li>
+</ul>
+<p>训练采用<strong>Matryoshka嵌套损失</strong>，在128、256、512、1024维同时监督，部署时可按延迟需求截断到256维而不重新训练。</p>
+<h3>3. 层级感知角度损失</h3>
+<p>传统InfoNCE等对比损失将所有非正样本视为同等负样本，无法区分相近匹配与完全无关。GradCIR使用<strong>AngleLoss</strong>，将分级标签转化为嵌入空间中的角度约束：</p>
+$$\mathcal{L}_{\text{angle}}=\log\left[1+\sum_{(a,b):\,r_a>r_b}\exp\left(\frac{\Delta\theta_{q_a,p_a}-\Delta\theta_{q_b,p_b}}{\tau}\right)\right]$$
+
+<p>对于批次中任意两个相关性严格排序不同的配对 $(a,b)$，若 $r_a > r_b$，则要求高相关对的角度 $\Delta\theta_{q_a,p_a}$ 小于低相关对 $\Delta\theta_{q_b,p_b}$。4级标签产生6种有序约束（Exact&gt;NearExact、Exact&gt;PartialMatch、……），而二分损失只保留一种（正&gt;负），这是分级监督提升排序质量的根本机制。</p>
+<h2>三、实验</h2>
+<h3>内部测试集WVST</h3>
+<p>研究团队构建了覆盖家居与时尚两个垂直领域的内部测试集，每个查询的候选池由多个嵌入模型检索结果合并，并由VLM标注四级相关度。对比基线包括FashionCLIP、SigLIP2、GME-Qwen、Qwen3-VL-Embedding，均在冻结与微调两种设置下评估。结果显示：</p>
+<ul>
+<li><strong>GradCIR-PG2在所有指标上取得最佳</strong>：家居垂直相似查询NDCG@10为0.9034，修饰查询为0.8807；时尚垂直相似查询NDCG@10为0.9216，修饰查询为0.8942。</li>
+<li><strong>微调配方独立于骨干</strong>：四个基线应用GradCIR微调后，Adj-R@5(Exact)平均提升24.3%，验证了数据管线与损失函数的通用性。</li>
+<li><strong>修饰查询优势显著</strong>：早期融合模型在修饰查询上对晚期融合（如SigLIP2）的领先幅度更大，与预期一致。</li>
+</ul>
+<h3>公开基准</h3>
+<p>在<strong>FashionIQ</strong>零样本设置下，GradCIR平均召回0.4000，超过所有已发表的CLIP-L类零样本方法（如CIReVL 0.3860、CoLLM-CLIP 0.3980）。监督微调后，GradCIR达到0.6703，超越此前最强的SPN4CIR（0.6641），证实分级监督在二元评估协议下同样有效。在<strong>Street2Shop</strong>相似查询基准上，GradCIR-PG2的R@10为0.8266，接近最强的Qwen3-VL-Emb(+GradCIR)（0.8304），并显著优于FashionCLIP、SigLIP2。</p>
+<h3>消融实验</h3>
+<ul>
+<li><strong>分级 vs 二元</strong>：固定骨干与数据，仅改变相关性粒度。4级对比2级，相似查询NDCG@10从0.8698升至0.9125（+4.9%），修饰查询从0.8376升至0.8875（+5.9%）。3级（合并NearExact与PartialMatch）已有提升，但仍显著弱于4级，说明区分“相近”与“部分”匹配至关重要。</li>
+<li><strong>修饰查询训练</strong>：加入修饰查询后，修饰查询Adj-R@5(Exact)提升92.5%，相似查询也提升6.3%，表明修饰数据能增强细粒度图像-文本理解。</li>
+</ul>
+<h2>四、展望</h2>
+<p>GradCIR首次将分级相关性引入组合检索的训练范式，证明了VLM自动化标注与角度约束损失在生产规模检索中的价值。论文指出未来可扩展至<strong>多物品组合查询</strong>（“找这样的沙发配这样的地毯”）以及<strong>属性级可控性</strong>，进一步提升复杂购物意图的理解能力。当前方法已在沃尔玛视觉搜索系统上线，服务于真实用户流量，其数据与训练配方在各类目录数据上具备良好的可复现性。</p>
+<p><strong>论文标题</strong>：Graded-Relevance Composed Multimodal Retrieval for E-commerce Visual Search at Scale</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.24152.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-21_Graded-Relevance-Composed-Multimodal-Retrieval-for-E-commerce-Visual-Search-at-Scale.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-21_Graded-Relevance-Composed-Multimodal-Retrieval-for-E-commerce-Visual-Search-at-Scale.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
