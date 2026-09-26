@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Country Code-Mixing for Generative Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Cross-Country Code-Mixing for Generative Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-26</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>阿里国际发布CMRec：跨国家码混合生成推荐，广告收入提升1.77%订单增2.64%</h2>
+<h2>一、引言</h2>
+<p>现代电商平台普遍面临一个棘手问题：不同国家的站点各自独立部署，用户与商品的ID空间完全割裂，互动序列也被严格按国家划分。传统跨域推荐依赖共享用户或共享物品，但跨境场景下这些锚点几乎不存在。生成式推荐虽通过统一令牌空间缓解了ID不共享的难题，但训练序列仍按国家隔离，知识迁移只停留在参数层面，数据层面缺少跨国家共现信号。</p>
+<p>受多语言NLP中<strong>代码混合语料</strong>的启发，研究者开始思考：能否合成跨国家混合序列，让来自不同市场的商品出现在同一用户行为序列中？论文提出的<strong>CMRec</strong>框架正是这一思路的落地。它通过共享语义码本与双重约束的代码混合，在数据层面注入跨国家监督，最终在真实电商平台实现<strong>广告收入+1.77%</strong>、<strong>订单量+2.64%</strong>的在线提升。</p>
+<p><img alt="图1：跨国家设置与代码混合挑战" src="https://arxiv.org/html/3799682.3839862v1/figures/fig1.png" /></p>
+<h2>二、核心方法</h2>
+<p>CMRec由三个紧密协同的组件构成：<strong>行为与内容融合的共享码本</strong>、<strong>双重约束的跨国家代码混合</strong>、以及<strong>上下文感知的自适应重加权</strong>。整体流程如图2所示。</p>
+<p><img alt="图2：CMRec框架总览" src="https://arxiv.org/html/3799682.3839862v1/figures/fig2.png" /></p>
+<h3>2.1 共享语义码本：从多模态内容到行为共现</h3>
+<p>统一跨国家推荐的首要任务是构建一个所有市场共用的物品表示空间。论文首先利用预训练多模态模型将商品标题、图片编码为内容向量 $\mathbf{m}_i$。但仅靠内容相似度并不足以刻画商品在用户行为中的角色，因此研究者进一步训练了一个跨国家的行为驱动i2i对齐模型。该模型采用双塔结构，用户塔将行为序列映射为用户向量 $\mathbf{u}_i$，物品塔将内容向量映射为物品向量 $\mathbf{e}_i$，并通过采样softmax进行联合训练：</p>
+$$\mathcal{L}_{\text{i2i}}=-\sum_{i}\log\frac{\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{i^{+}})}{\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{i^{+}})+\sum_{j\in\mathcal{N}_{i}}\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{j})}$$
+
+<p>其中负样本池 $\mathcal{N}_{i}$ 跨国家共享，使得物品嵌入同时对齐内容相似与行为共现模式。随后，论文使用残差量化器（如RQ-VAE）将物品嵌入 $\{\mathbf{e}_i\}$ 离散化为令牌序列 $\mathbf{q}_i=(q_i^{(1)},\dots,q_i^{(M)})$。这个码本既作为生成推荐的tokenizer，也成为跨国家替换的公共语义空间。</p>
+<h3>2.2 双重约束的代码混合：静态内容与动态属性并重</h3>
+<p>有了共享码本，就可以在不同国家间进行物品级替换。但简单的基于码本距离的替换会忽略快速变化的动态属性，例如折扣力度、受众标签与流行度。论文为每个物品构造侧信息向量 $\mathbf{s}_i$，通过对各国数值做分位数分桶，使不同市场的动态属性置于可比尺度。跨国家候选集定义为：</p>
+$$\hat{\mathcal{N}}_{\tau,\tau_{s}}(i)=\Big\{j\in\!\!\bigcup_{c^{\prime}\neq c}\!\!\mathcal{I}^{(c^{\prime})}\,\Big|\,d(\mathbf{q}_{i},\mathbf{q}_{j})\leq\tau\;\land\;\mathrm{sim}(\mathbf{s}_{i},\mathbf{s}_{j})\geq\tau_{s}\Big\}$$
+
+<p>其中 $d$ 为令牌序列间的汉明距离，$\mathrm{sim}$ 为余弦相似度，分别实施静态内容约束与动态属性约束。给定训练对 $(\mathbf{x},y)$，操作符 $\Phi_{\tau,\tau_{s},k}$ 以比例 $k$ 替换原始序列中的物品，生成混合孪生样本 $(\mathbf{x}^{\prime},y^{\prime})$。实际训练时，论文以比例 $p$ 对原始数据集做采样，控制混合强度。</p>
+<h3>2.3 上下文感知重加权：让模型自己评判替换合理性</h3>
+<p>即使物品级过滤通过，替换在具体用户上下文仍可能不合理。例如在苹果设备主导的序列中，用内容相近的安卓平板替换某件物品，语法上可行但语境冲突。论文引入上下文条件可替代性权重：</p>
+$$w(y,y^{\prime}\mid\mathbf{x})=\mathrm{sg}\!\left[\frac{P_{\theta}(y^{\prime}\mid\mathbf{x})}{P_{\theta}(y\mid\mathbf{x})+P_{\theta}(y^{\prime}\mid\mathbf{x})}\right]\in[0,1]$$
+
+<p>该权重由模型自身在原始上下文 $\mathbf{x}$ 下计算替代目标 $y^{\prime}$ 的相对概率，并通过停止梯度 $\mathrm{sg}[\cdot]$ 防止梯度回传。最终训练目标为：</p>
+$$\mathcal{L}(\theta)=-\sum_{(\mathbf{x},y)\in\mathcal{D}}\log P_{\theta}(y\mid\mathbf{x})-\lambda\sum_{(\mathbf{x}^{\prime},y^{\prime})\in\mathcal{D}^{\prime}}w(y,y^{\prime}\mid\mathbf{x})\log P_{\theta}(y^{\prime}\mid\mathbf{x}^{\prime})$$
+
+<p>模型在训练早期对所有替换样本赋予相近权重，随着训练推进，该机制自动降低语境不一致样本的贡献，从而在不引入额外噪声的情况下吸收跨国家共现信号。</p>
+<h2>三、实验</h2>
+<p>论文在两个多国家数据集上验证了CMRec的效果：一个是内部工业广告数据集，覆盖6个国家、19M用户与25M广告；另一个是公开的Amazon M2多语言会话数据集。基线上对比了SASRec、HSTU、TIGER、REG4Rec、GenCDR，以及两个单信号增强变体GenCDR+Cont与GenCDR+CF。</p>
+<p><strong>表1</strong>展示了工业数据集与Amazon M2上的核心指标。CMRec在所有国家上均取得最佳Recall@10/100与NDCG@10/100。在工业数据集的六国平均Recall@100上，CMRec达到0.3613，较最强基线GenCDR提升+5.27%；在Amazon M2的平均Recall@100上提升+6.04%。数据匮乏国家（如ES、FR）收益尤为显著，而数据充足国家也未出现退化。</p>
+<p><img alt="图3：参数敏感度分析" src="https://arxiv.org/html/3799682.3839862v1/figures/fig3.png" /></p>
+<p>消融实验表明，令牌级距离约束贡献最大，移除后Recall@100下降4.59%；移除侧信息相似度约束与上下文重加权也分别导致1.11%与2.27%的退化。参数敏感度分析显示，在替换比例 $p=0.1$、邻域大小 $k=0.1$ 的默认设置下，不同骨干网络均稳定优于基线，验证了方法对超参数与模型选择的鲁棒性。</p>
+<p>在线A/B测试覆盖所有六个国家，持续10天。CMRec在六国聚合上实现<strong>广告收入+1.77%</strong>与<strong>订单量+2.64%</strong>的提升，证实了其在生产环境中的实用价值。</p>
+<h2>四、展望</h2>
+<p>CMRec提供了一种无需ID或用户重叠的跨国家推荐数据增强范式，其核心思想——用代码混合重构域间共现——可推广至更多跨域、跨市场场景。未来可探索动态调整混合强度、引入更细粒度的市场适配机制，以及将上下文感知重加权扩展为在线自适应策略。跨国家数据稀疏问题仍存挑战，但CMRec已指明一条将大市场信号注入小市场的可行路径。</p>
+<p><strong>论文标题</strong>：Cross-Country Code-Mixing for Generative Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.28972.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-24_Cross-Country-Code-Mixing-for-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-24_Cross-Country-Code-Mixing-for-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
