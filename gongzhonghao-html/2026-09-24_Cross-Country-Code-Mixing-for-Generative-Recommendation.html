@@ -463,45 +463,129 @@
             </div>
             <h1 class="article-title">Cross-Country Code-Mixing for Generative Recommendation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-09-26</span>
+                <span class="meta-item">📅 2026-09-27</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h2>阿里国际发布CMRec：跨国家码混合生成推荐，广告收入提升1.77%订单增2.64%</h2>
+            <h2>阿里国际提出跨国家代码混合生成式推荐：广告收入提升1.77%，订单增长2.64%</h2>
+<blockquote>
+<p>在ID空间完全割裂的多国电商场景中，如何让大市场的数据真正“喂养”小市场？CMRec用代码混合的思路给出了答案。</p>
+</blockquote>
 <h2>一、引言</h2>
-<p>现代电商平台普遍面临一个棘手问题：不同国家的站点各自独立部署，用户与商品的ID空间完全割裂，互动序列也被严格按国家划分。传统跨域推荐依赖共享用户或共享物品，但跨境场景下这些锚点几乎不存在。生成式推荐虽通过统一令牌空间缓解了ID不共享的难题，但训练序列仍按国家隔离，知识迁移只停留在参数层面，数据层面缺少跨国家共现信号。</p>
-<p>受多语言NLP中<strong>代码混合语料</strong>的启发，研究者开始思考：能否合成跨国家混合序列，让来自不同市场的商品出现在同一用户行为序列中？论文提出的<strong>CMRec</strong>框架正是这一思路的落地。它通过共享语义码本与双重约束的代码混合，在数据层面注入跨国家监督，最终在真实电商平台实现<strong>广告收入+1.77%</strong>、<strong>订单量+2.64%</strong>的在线提升。</p>
-<p><img alt="图1：跨国家设置与代码混合挑战" src="https://arxiv.org/html/3799682.3839862v1/figures/fig1.png" /></p>
+<p>全球化电商平台的推荐系统面临一个天然困境：每个国家独立部署，用户与商品ID空间完全割裂，行为序列互不重叠。传统跨域推荐依赖共享用户或共享商品作为“锚点”，但跨国场景中这类锚点根本不存在。早期的生成式推荐（GR）虽然通过共享语义Token空间实现了参数层面的知识迁移，但训练序列仍然严格按国家隔离——一个国家的商品从未出现在另一个国家的上下文里，数据层面的跨国家信号始终缺席。</p>
+<p>这类似多语言NLP中曾经面临的挑战：不同语言的语料各自独立训练，模型学不到跨语言的对齐关系。NLP领域的解法是<strong>代码混合语料</strong>——让不同语言的Token在同一训练序列中交错出现。论文《Cross-Country Code-Mixing for Generative Recommendation》将这一思路迁移到推荐系统，提出了 <strong>CMRec框架</strong>，通过受双重约束的上下文感知代码混合，在数据层面注入跨国家监督信号，在广告收入（+1.77%）和订单量（+2.64%）上均取得显著线上收益。</p>
 <h2>二、核心方法</h2>
-<p>CMRec由三个紧密协同的组件构成：<strong>行为与内容融合的共享码本</strong>、<strong>双重约束的跨国家代码混合</strong>、以及<strong>上下文感知的自适应重加权</strong>。整体流程如图2所示。</p>
-<p><img alt="图2：CMRec框架总览" src="https://arxiv.org/html/3799682.3839862v1/figures/fig2.png" /></p>
-<h3>2.1 共享语义码本：从多模态内容到行为共现</h3>
-<p>统一跨国家推荐的首要任务是构建一个所有市场共用的物品表示空间。论文首先利用预训练多模态模型将商品标题、图片编码为内容向量 $\mathbf{m}_i$。但仅靠内容相似度并不足以刻画商品在用户行为中的角色，因此研究者进一步训练了一个跨国家的行为驱动i2i对齐模型。该模型采用双塔结构，用户塔将行为序列映射为用户向量 $\mathbf{u}_i$，物品塔将内容向量映射为物品向量 $\mathbf{e}_i$，并通过采样softmax进行联合训练：</p>
+<p>CMRec由三个关键组件构成：<strong>行为与内容双驱动的共享语义码本</strong>、<strong>双重约束的跨国家代码混合</strong>、<strong>上下文感知的自适应重加权</strong>。整体流程如图2所示。</p>
+<p><img alt="图2：CMRec方法总览" src="https://arxiv.org/html/3799682.3839862/3799682.3839862v1/extracted/placeholder-figure-2-cmrec-overview.png" /></p>
+<h3>2.1 行为与内容双驱动的共享码本</h3>
+<p>要让不同国家的商品在统一Token空间中被比较和替换，首先需要一个共享的语义码本。CMRec用两条信号线共同构建这一码本。</p>
+<p><strong>内容侧</strong>：使用预训练多模态模型将每个商品的标题、图片等编码为内容向量 $\mathbf{m}_i$，使所有国家的商品在内容层面直接可比。</p>
+<p><strong>行为侧</strong>：内容相似不等于行为等价——两个外观相似的商品在不同市场的共现模式可能截然不同。CMRec在内容向量之上训练一个跨国家的双塔i2i对齐模型，用户塔将行为序列映射为用户嵌入 $\mathbf{u}_i$，商品塔将内容向量映射为商品嵌入 $\mathbf{e}_i$，训练目标为：</p>
 $$\mathcal{L}_{\text{i2i}}=-\sum_{i}\log\frac{\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{i^{+}})}{\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{i^{+}})+\sum_{j\in\mathcal{N}_{i}}\exp(\mathbf{u}_{i}^{\top}\mathbf{e}_{j})}$$
 
-<p>其中负样本池 $\mathcal{N}_{i}$ 跨国家共享，使得物品嵌入同时对齐内容相似与行为共现模式。随后，论文使用残差量化器（如RQ-VAE）将物品嵌入 $\{\mathbf{e}_i\}$ 离散化为令牌序列 $\mathbf{q}_i=(q_i^{(1)},\dots,q_i^{(M)})$。这个码本既作为生成推荐的tokenizer，也成为跨国家替换的公共语义空间。</p>
-<h3>2.2 双重约束的代码混合：静态内容与动态属性并重</h3>
-<p>有了共享码本，就可以在不同国家间进行物品级替换。但简单的基于码本距离的替换会忽略快速变化的动态属性，例如折扣力度、受众标签与流行度。论文为每个物品构造侧信息向量 $\mathbf{s}_i$，通过对各国数值做分位数分桶，使不同市场的动态属性置于可比尺度。跨国家候选集定义为：</p>
-$$\hat{\mathcal{N}}_{\tau,\tau_{s}}(i)=\Big\{j\in\!\!\bigcup_{c^{\prime}\neq c}\!\!\mathcal{I}^{(c^{\prime})}\,\Big|\,d(\mathbf{q}_{i},\mathbf{q}_{j})\leq\tau\;\land\;\mathrm{sim}(\mathbf{s}_{i},\mathbf{s}_{j})\geq\tau_{s}\Big\}$$
+<p>负样本池 $\mathcal{N}_i$ 跨国家共享，因此 $\mathbf{e}_i$ 同时对齐了内容相似与用户行为模式相似的商品。最后，通过残差量化器将 $\mathbf{e}_i$ 转换为离散Token序列 $\mathbf{q}_i=(q_i^{(1)},\dots,q_i^{(M)})$，形成GR的Tokenizer与代码混合的统一基底。</p>
+<h3>2.2 双重约束的跨国家代码混合</h3>
+<p>有了共享码本，可以开始“造数据”。朴素做法是仅依据码本距离替换商品，但码本更新频率低，无法捕捉价格折扣、热度、受众标签等快速变化的动态属性。如图1所示，仅看内容相似就替换商品，容易导致静态属性或动态属性失配。</p>
+<p><img alt="图1：跨国家场景示意图与代码混合的挑战" src="https://arxiv.org/html/3799682.3839862/3799682.3839862v1/extracted/placeholder-figure-1-cross-country-setting-and-challenges.png" /></p>
+<p>CMRec采用<strong>双重约束过滤</strong>。每个商品 $i$ 配备一个动态属性侧信息向量 $\mathbf{s}_i$，各维度按国家分位数离散化，使不同市场的数值可比。跨国家候选集定义为：</p>
+$$\hat{\mathcal{N}}_{\tau,\tau_s}(i)=\Big\{j\in\!\!\bigcup_{c^{\prime}\neq c}\!\!\mathcal{I}^{(c^{\prime})}\,\Big|\,d(\mathbf{q}_{i},\mathbf{q}_{j})\leq\tau\;\land\;\mathrm{sim}(\mathbf{s}_{i},\mathbf{s}_{j})\geq\tau_{s}\Big\}$$
 
-<p>其中 $d$ 为令牌序列间的汉明距离，$\mathrm{sim}$ 为余弦相似度，分别实施静态内容约束与动态属性约束。给定训练对 $(\mathbf{x},y)$，操作符 $\Phi_{\tau,\tau_{s},k}$ 以比例 $k$ 替换原始序列中的物品，生成混合孪生样本 $(\mathbf{x}^{\prime},y^{\prime})$。实际训练时，论文以比例 $p$ 对原始数据集做采样，控制混合强度。</p>
-<h3>2.3 上下文感知重加权：让模型自己评判替换合理性</h3>
-<p>即使物品级过滤通过，替换在具体用户上下文仍可能不合理。例如在苹果设备主导的序列中，用内容相近的安卓平板替换某件物品，语法上可行但语境冲突。论文引入上下文条件可替代性权重：</p>
+<p>其中 $d$ 是Token序列间的汉明距离（<strong>静态约束</strong>），$\mathrm{sim}$ 是余弦相似度（<strong>动态约束</strong>）。替换操作 $\Phi_{\tau,\tau_s,k}$ 以比例 $k$ 在序列中替换商品，生成跨国家共现的“孪生样本” $\mathcal{D}'$。</p>
+<h3>2.3 上下文感知的自适应重加权</h3>
+<p>双重约束保证了<strong>商品级别</strong>的合理性，但仍无法判断替换是否与<strong>当前序列上下文</strong>兼容。例如，在苹果设备主导的序列中，用安卓平板替换某个商品，商品本身可能相似，但上下文不协调。CMRec让GR模型自己评估替换合理性：</p>
 $$w(y,y^{\prime}\mid\mathbf{x})=\mathrm{sg}\!\left[\frac{P_{\theta}(y^{\prime}\mid\mathbf{x})}{P_{\theta}(y\mid\mathbf{x})+P_{\theta}(y^{\prime}\mid\mathbf{x})}\right]\in[0,1]$$
 
-<p>该权重由模型自身在原始上下文 $\mathbf{x}$ 下计算替代目标 $y^{\prime}$ 的相对概率，并通过停止梯度 $\mathrm{sg}[\cdot]$ 防止梯度回传。最终训练目标为：</p>
+<p>其中 $P_{\theta}(\cdot\mid\mathbf{x})$ 是原始上下文下的自回归似然，$\mathrm{sg}[\cdot]$ 为stop-gradient，权重只作用于损失不参与梯度计算。最终训练目标为：</p>
 $$\mathcal{L}(\theta)=-\sum_{(\mathbf{x},y)\in\mathcal{D}}\log P_{\theta}(y\mid\mathbf{x})-\lambda\sum_{(\mathbf{x}^{\prime},y^{\prime})\in\mathcal{D}^{\prime}}w(y,y^{\prime}\mid\mathbf{x})\log P_{\theta}(y^{\prime}\mid\mathbf{x}^{\prime})$$
 
-<p>模型在训练早期对所有替换样本赋予相近权重，随着训练推进，该机制自动降低语境不一致样本的贡献，从而在不引入额外噪声的情况下吸收跨国家共现信号。</p>
-<h2>三、实验</h2>
-<p>论文在两个多国家数据集上验证了CMRec的效果：一个是内部工业广告数据集，覆盖6个国家、19M用户与25M广告；另一个是公开的Amazon M2多语言会话数据集。基线上对比了SASRec、HSTU、TIGER、REG4Rec、GenCDR，以及两个单信号增强变体GenCDR+Cont与GenCDR+CF。</p>
-<p><strong>表1</strong>展示了工业数据集与Amazon M2上的核心指标。CMRec在所有国家上均取得最佳Recall@10/100与NDCG@10/100。在工业数据集的六国平均Recall@100上，CMRec达到0.3613，较最强基线GenCDR提升+5.27%；在Amazon M2的平均Recall@100上提升+6.04%。数据匮乏国家（如ES、FR）收益尤为显著，而数据充足国家也未出现退化。</p>
-<p><img alt="图3：参数敏感度分析" src="https://arxiv.org/html/3799682.3839862v1/figures/fig3.png" /></p>
-<p>消融实验表明，令牌级距离约束贡献最大，移除后Recall@100下降4.59%；移除侧信息相似度约束与上下文重加权也分别导致1.11%与2.27%的退化。参数敏感度分析显示，在替换比例 $p=0.1$、邻域大小 $k=0.1$ 的默认设置下，不同骨干网络均稳定优于基线，验证了方法对超参数与模型选择的鲁棒性。</p>
-<p>在线A/B测试覆盖所有六个国家，持续10天。CMRec在六国聚合上实现<strong>广告收入+1.77%</strong>与<strong>订单量+2.64%</strong>的提升，证实了其在生产环境中的实用价值。</p>
+<p>随着训练推进，模型对上下文失效替换的权重自然降低，形成一种<strong>自适应去噪机制</strong>。</p>
+<h2>三、实验结果</h2>
+<p>CMRec在工业广告数据集（6国、19M用户、25M广告、10亿+交互）和公开Amazon M2多语言基准上进行了充分验证。骨干模型采用GenCDR。</p>
+<h3>3.1 主结果：六个国家全面领先</h3>
+<p><img alt="图3：参数p与k的敏感性分析" src="https://arxiv.org/html/3799682.3839862/3799682.3839862v1/extracted/placeholder-figure-3-sensitivity-p-k.png" /></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: center;">工业数据集Avg6 Recall@10</th>
+<th style="text-align: center;">工业数据集Avg6 NDCG@10</th>
+<th style="text-align: center;">Amazon M2 Avg6 Recall@100</th>
+<th style="text-align: center;">Amazon M2 Avg6 NDCG@100</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SASRec</td>
+<td style="text-align: center;">0.1882</td>
+<td style="text-align: center;">0.0941</td>
+<td style="text-align: center;">0.4823</td>
+<td style="text-align: center;">0.2653</td>
+</tr>
+<tr>
+<td>HSTU</td>
+<td style="text-align: center;">0.2117</td>
+<td style="text-align: center;">0.1058</td>
+<td style="text-align: center;">0.5584</td>
+<td style="text-align: center;">0.3070</td>
+</tr>
+<tr>
+<td>TIGER</td>
+<td style="text-align: center;">0.2261</td>
+<td style="text-align: center;">0.1131</td>
+<td style="text-align: center;">0.5926</td>
+<td style="text-align: center;">0.3258</td>
+</tr>
+<tr>
+<td>REG4Rec</td>
+<td style="text-align: center;">0.2372</td>
+<td style="text-align: center;">0.1187</td>
+<td style="text-align: center;">0.6124</td>
+<td style="text-align: center;">0.3369</td>
+</tr>
+<tr>
+<td>GenCDR</td>
+<td style="text-align: center;">0.2423</td>
+<td style="text-align: center;">0.1212</td>
+<td style="text-align: center;">0.6266</td>
+<td style="text-align: center;">0.3446</td>
+</tr>
+<tr>
+<td>GenCDR+Cont</td>
+<td style="text-align: center;">0.2404</td>
+<td style="text-align: center;">0.1202</td>
+<td style="text-align: center;">0.6291</td>
+<td style="text-align: center;">0.3463</td>
+</tr>
+<tr>
+<td>GenCDR+CF</td>
+<td style="text-align: center;">0.2384</td>
+<td style="text-align: center;">0.1182</td>
+<td style="text-align: center;">0.6271</td>
+<td style="text-align: center;">0.3443</td>
+</tr>
+<tr>
+<td><strong>CMRec</strong></td>
+<td style="text-align: center;"><strong>0.2496</strong></td>
+<td style="text-align: center;"><strong>0.1236</strong></td>
+<td style="text-align: center;"><strong>0.6671</strong></td>
+<td style="text-align: center;"><strong>0.3637</strong></td>
+</tr>
+<tr>
+<td>相对提升</td>
+<td style="text-align: center;"><strong>+3.01%</strong></td>
+<td style="text-align: center;"><strong>+1.98%</strong></td>
+<td style="text-align: center;"><strong>+6.04%</strong></td>
+<td style="text-align: center;"><strong>+5.03%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>在小数据量国家（如C国），CMRec的Recall@10提升达<strong>+5.32%</strong>，NDCG@100提升达<strong>+7.03%</strong>，验证了知识从大国向小国迁移的有效性。同时，大市场（如A国）也有稳定提升，说明迁移并非“牺牲大市场补小市场”。单信号增强基线（GenCDR+Cont、GenCDR+CF）在某些国家有提升但也存在退化，而CMRec在所有国家上实现了一致增益。</p>
+<h3>3.2 消融与线上验证</h3>
+<p>消融实验表明，<strong>Token级距离约束</strong>贡献最大（去掉后Recall@100下降4.59%），侧信息相似度约束与上下文重加权分别贡献约1%和2%的增益，三者缺一不可。参数敏感性分析（图3）显示，$p=0.1$、$k=0.1$ 的默认设置在两个骨干上均接近最优，且所有组合都优于未增强基线。</p>
+<p>线上A/B测试在10%直播流量下进行，覆盖全部六个国家，CMRec实现了<strong>广告收入+1.77%</strong>、<strong>订单量+2.64%</strong> 的聚合增长。</p>
 <h2>四、展望</h2>
-<p>CMRec提供了一种无需ID或用户重叠的跨国家推荐数据增强范式，其核心思想——用代码混合重构域间共现——可推广至更多跨域、跨市场场景。未来可探索动态调整混合强度、引入更细粒度的市场适配机制，以及将上下文感知重加权扩展为在线自适应策略。跨国家数据稀疏问题仍存挑战，但CMRec已指明一条将大市场信号注入小市场的可行路径。</p>
+<p>CMRec为跨国家推荐场景提供了一条务实的解决路径：不依赖ID重叠，不强行引入人工锚点，而是通过<strong>语义Token空间的代码混合</strong>在数据层面打开知识迁移的通道。其双重约束+上下文重加权的设计思路，对任何需要合成跨域训练数据的生成式建模任务都有参考价值。随着多模态商品理解能力的持续提升，这类基于语义空间的跨域迁移方法有望在更多全球化电商和内容平台中落地。</p>
 <p><strong>论文标题</strong>：Cross-Country Code-Mixing for Generative Recommendation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
