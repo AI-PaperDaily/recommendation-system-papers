@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-09-29</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Meta推出组件级性能剖析系统CB：递归拆解千亿级推荐模型，单模块优化带来34% QPS提升</h1>
+<blockquote>
+<p>当算子级trace遇到模块级语义，推荐系统性能分析终于有了正确的分辨率。</p>
+</blockquote>
+<h2>一、为什么推荐模型的性能分析如此困难？</h2>
+<p>大语言模型已经收敛到Transformer等少数几种骨干架构，与之形成鲜明对比的是，推荐系统模型的架构至今仍处于活跃探索期。从FM、DCN到DHEN、Interformer、HSTU，业界尚未形成统一范式。</p>
+<p>这种架构多样性带来了独特的性能剖析挑战。一个典型的推荐模型往往混合了<strong>内存带宽受限的Embedding查找</strong>、<strong>计算受限的小型稠密层</strong>、<strong>由稀疏类别特征驱动的动态形状算子</strong>，以及<strong>低算术强度操作</strong>。更棘手的是，推荐模型迭代极快，建模工程师频繁实验新的模块组合，却缺乏对硬件执行特性的可见性。</p>
+<p>现有工具陷入了一个尴尬的两难境地：端到端吞吐量指标能告诉你"整个模型快不快"，但无法回答"哪个子模块是瓶颈"；而Kineto等算子级trace虽然详尽，却把性能数据打散成了数千个底层算子的碎片，让建模工程师难以将其映射到他们真正关心的模型组件上。PyTorch Profiler虽然提供了<code>with_modules</code>选项，但它在完整模型执行的上下文中进行归因，无法隔离跨模块效应（如kernel调度重叠、缓存热度、编译器融合），而且在PyTorch 2编译机制下，模块边界被进一步擦除，算子到模块的映射变得更加不可靠。</p>
+<p>这个问题的规模远超学术兴趣。Meta的推荐训练系统以TB级模型参数、数千GPU集群、日均千亿级样本的规模运行。<strong>即便只是个位数的吞吐量提升，在整个集群上也会转化为实质性的容量效率增长。</strong></p>
+<h2>二、核心方法：递归剖析，让每个子模块的性能独立可测</h2>
+<p>CB的核心设计理念可以用一句话概括：<strong>与其在全模型执行中被动归因，不如主动把每个子模块取出来单独跑一遍</strong>。</p>
+<p>它利用PyTorch的hook机制，在前向传播过程中捕获每个子模块的运行时输入，然后对这些子模块<strong>独立执行性能剖析</strong>。这意味着某个Linear层的MFU不会受到前一个Embedding查找的缓存污染影响，也不会被编译器融合到其他模块中而丢失测量精度。</p>
+<p><img alt="图1：Component Benchmark架构与端到端工作流" src="https://arxiv.org/html/2609.30656v1/fig/cb_arch.png" /></p>
+<p>系统的核心组件包括四个可扩展接口：</p>
+<ul>
+<li><strong>Component Provider</strong>：适配不同的训练框架，负责提取顶层模型和代表性输入批次。CB已集成到Meta的推荐训练栈中，通过缩减Embedding哈希大小和批量大小，使得TB级模型也能在单GPU上完成局部剖析。</li>
+<li><strong>Preprocessor Plugin</strong>：在剖析前对子模块和输入进行预处理，如批量大小调整、混合精度配置等。</li>
+<li><strong>Profiler Plugin</strong>：核心剖析逻辑，内置FLOPs计数器、内存快照捕获、Kineto trace收集和kernel级分析。</li>
+<li><strong>Result Plugin</strong>：对剖析结果进行后处理和聚合，生成交互式可视化报告。</li>
+</ul>
+<p>CB采用<strong>广度优先的递归剖析策略</strong>：首先枚举所有子模块，按层次深度排序，从顶层模型逐步向底层组件推进。如果某个父模块因过大而无法在单GPU上运行，CB会跳过该模块并继续剖析其子模块，然后通过聚合子模块结果来估计父模块的性能。</p>
+<p>模型FLOPs利用率（MFU）的计算是CB的核心指标之一：</p>
+$$MFU = \frac{\text{Achieved TOPS}}{\text{Theoretical Peak TOPS}} \times 100\%$$
+
+<p>其中子模块的带宽利用率通过测量实际的HBM读写数据量与峰值带宽的比值确定：</p>
+$$BW_{util} = \frac{\text{Bytes Transferred}}{\text{Peak Bandwidth} \times \text{Measured Time}} \times 100\%$$
+
+<p>整个工作流程虽精巧但简洁——论文披露，CB的核心代码仅约1000行。这种极简主义设计使其能够作为通用PyTorch剖析框架运行，不局限于推荐系统。</p>
+<h2>三、实验：DLRM与NanoGPT的层次化性能剖析</h2>
+<p>研究者在单张NVIDIA H100 GPU上对两个代表性模型进行了基准测试：一个基于Deep FM的开源DLRM模型，以及一个标准的LLM骨干NanoGPT。</p>
+<h3>DLRM模型的Icicle视图揭示</h3>
+<p>DLRM模型由四个顶层模块构成：<code>sparse_arch</code>（稀疏特征Embedding查找）、<code>dense_arch</code>（稠密特征MLP）、<code>inter_arch</code>（特征交互）和<code>over_arch</code>（输出投影）。CB的Icicle视图以树状结构展示了每个子模块的性能指标，通过颜色编码直观呈现MFU的高低分布。</p>
+<p><img alt="图4：DLRM Benchmark Icicle可视化" src="https://arxiv.org/html/2609.30656v1/dlrm_top.png" /></p>
+<p>从图中可以看到，<code>sparse_arch</code>几乎完全受内存带宽限制，算术强度极低；而<code>dense_arch</code>和<code>inter_arch</code>中的Linear层则表现出相对较高的MFU。这种直观的可视化让工程师无需深入trace就能初步定位瓶颈模块。</p>
+<p><img alt="图5：Zoom-in on the inter-arch module" src="https://arxiv.org/html/2609.30656v1/inter_arch.png" /></p>
+<p>进一步放大<code>inter_arch</code>模块时，一个有趣的对比浮现出来：<code>deep_fm</code>子模块达到27.06%的MFU，而其兄弟模块<code>fm</code>仅有0.06%。原因很直接——<code>deep_fm</code>执行的是大规模矩阵乘法，而<code>fm</code>模块计算因子分解机交叉项时，仅涉及三次小规模逐元素操作和归约，FLOPs极低但内存传输量很大。</p>
+<p>在<code>dense_arch</code>内部，两个Linear层之间的MFU差异（25.91%对20.74%）被归因于形状而非类型：<code>dense_module.0</code>执行1024×4096的矩阵乘法，而<code>dense_module.2</code>面临的是更窄的4096×512。</p>
+<h3>扩展到LLM：验证模型无关性</h3>
+<p>CB的Provider抽象仅要求两样东西：一个顶层<code>nn.Module</code>和一个代表性输入批次。为验证其通用性，研究者将CB原封不动地应用于NanoGPT，一个结构与推荐架构截然不同的解码器语言模型。</p>
+<p><img alt="图7：Top-level icicle plot of nanoGPT" src="https://arxiv.org/html/2609.30656v1/nano_gpt.png" /></p>
+<p>顶层Icicle视图展示了LLM的标志性特征：12个同质的transformer block占据了运行时的绝大部分，且彼此无法区分。<code>lm_head</code>是唯一的深绿色单元，承载了总FLOPs的很大份额，同时占用较小的宽度占比——这是高算术强度的视觉签名。在transformer block内部，注意力块的MFU（10%）仅为MLP块（20%）的一半，这一观察自然引导工程师检查具体使用的注意力kernel是否在给定Q、K、V维度下存在次优实现。</p>
+<h3>实际应用中的性能收益</h3>
+<p>论文分享了四个实际案例，展示了CB在真实生产环境中的价值：</p>
+<ul>
+<li>
+<p><strong>局部优化反直觉决策</strong>：CB发现某个Attention模块中的低利用率GEMV kernel，工程师将其替换为逐元素kernel——尽管这些kernel单看比厂商库的GEMM更慢——却扩大了PT2融合区域，最终带来<strong>3%的净吞吐提升</strong>。这是全模型trace永远无法验证的假设。</p>
+</li>
+<li>
+<p><strong>编译收益的预先量化</strong>：在将PT2编译扩展至整个模型之前，CB对孤立模型的对比测量显示编译可将迭代时间从83ms降至50ms，预先论证了投入价值。最终实现的收益是<strong>34%的QPS增长</strong>。</p>
+</li>
+<li>
+<p><strong>跨模型回归定位</strong>：一个生成式推荐排序模型比前代消耗2.8倍内存和39%更多FLOPs，CB的逐模块分解将增长精确定位到更重的event模型和扩大的set-transformer块，恢复基线维度后回收了<strong>10% QPS和22%内存</strong>。</p>
+</li>
+<li>
+<p><strong>定向子模块压缩</strong>：在资源重新分配的约束下，CB的TFLOPS与延迟联合视图识别出两个特定的低性能子模块，仅对这两个子模块进行缩减后，计算停顿几乎完全消除。</p>
+</li>
+</ul>
+<h2>四、展望</h2>
+<p>Component Benchmark的价值不在于它发明了某种全新的测量技术，而在于它找到了正确的<strong>剖析粒度</strong>——将性能数据组织到工程师真正思考和行动的模块层级。这种设计理念对推荐系统之外的工作负载同样适用。论文提到，CB已经在数值等价验证和新硬件bring-up等未预期场景中被复用。</p>
+<p>当模型规模持续增长、架构迭代不断加速，让性能洞察以正确的分辨率呈现给正确的人，或许比测量本身的精度更为重要。</p>
+<p><strong>论文标题</strong>：Component Benchmark: Hierarchical Model Profiling for Large-scale Recommendation Systems</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2609.30656.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-09-25_Component-Benchmark-Hierarchical-Model-Profiling-for-Large-scale-Recommendation-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-09-25_Component-Benchmark-Hierarchical-Model-Profiling-for-Large-scale-Recommendation-Systems.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
