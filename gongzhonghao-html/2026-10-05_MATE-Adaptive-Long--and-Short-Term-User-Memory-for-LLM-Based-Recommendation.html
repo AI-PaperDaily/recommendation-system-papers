@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-07</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>MATE框架重塑LLM推荐：双时间证据驱动记忆自适应，NDCG@10最高提升13.2%</h2>
+<p>推荐系统长期面临一个根本性难题：用户行为序列中，哪些交互代表稳定偏好，哪些只是短期兴趣的瞬时波动？传统方法通常按时间远近一刀切——早期交互归入长期记忆，近期交互归入短期记忆。这种粗粒度划分忽略了一个关键事实：<strong>同一行为可能同时具备长期偏好和短期兴趣的双重属性</strong>。例如，一位用户多年前购买过OPI指甲油，最近又频繁浏览essie产品，当再次出现OPI相关互动时，这既是对历史偏好的回归，也可能只是近期美妆兴趣的延伸。</p>
+<p>论文提出的MATE（Memory Adaptation with Temporal Evidence）框架，通过时间证据驱动的双记忆自适应机制，为这一问题提供了新解法。在MovieLens-10M、Amazon Luxury Beauty和KuaiRec三个数据集上，MATE的NDCG@10指标相对最强外部基线提升7.0%–13.2%。</p>
+<p><img alt="图1：MATE动机示意图——用户偏好同时包含持久偏好与新近兴趣，需要在保留长期记忆与快速适应近期行为之间取得平衡" src="https://arxiv.org/html/2610.06050v1/figures/motivation.png" /></p>
+<h2>一、核心方法：时间证据如何驱动记忆更新</h2>
+<p>MATE的设计核心是将用户建模视为<strong>持续自适应过程</strong>，而非对历史序列的固定编码。框架包含三个阶段：时间证据计算、双记忆更新、上下文感知推荐。</p>
+<h3>1. 时间证据：从行为模式中识别偏好属性</h3>
+<p>论文摒弃了按时间戳硬性划分用户行为的方式，转而从两个独立维度评估每次交互的“时间角色”。</p>
+<p><strong>短期证据</strong>衡量当前交互与近期行为的语义一致性。给定最近窗口 $\mathcal{R}_{u,t}$，计算窗口内与当前物品语义相似的比例：</p>
+$$C^{S}_{u,t}=\frac{\sum_{j\in\mathcal{R}_{u,t}}\mathbb{I}\left[\mathbf{e}_{u,t}^{\top}\mathbf{e}_{u,j}\geq\delta\right]}{|\mathcal{R}_{u,t}|}$$
+
+<p>最终短期证据 $w^{S}_{u,t}=\epsilon+(1-\epsilon)C^{S}_{u,t}$，其中 $\epsilon>0$ 保证新涌现的兴趣即使没有相似历史也能获得最低写入强度。这一设计体现了对“冷启动兴趣”的包容——用户突然转向新品类时，短期记忆仍能响应。</p>
+<p><strong>长期证据</strong>则关注跨时间段重复出现的行为模式。论文将历史交互按日历月分组，统计有多少个月份包含与当前物品语义相关的交互。只有当支持月份数达到阈值 $K_L$ 且时间跨度超过 $\Delta_L$ 时，才赋予非零长期证据：</p>
+$$w^{L}_{u,t}=\begin{cases}\displaystyle\frac{N^{L}_{u,t}}{|\mathcal{M}_{u,t}|},&N^{L}_{u,t}\geq K_{L}\text{ and }\operatorname{span}_{u,t}\geq\Delta_{L},\\ 0,&\text{otherwise},\end{cases}$$
+
+<p>这一设计的精妙之处在于：<strong>密集爆发式的相似行为不会立即被视为长期偏好</strong>，只有跨时间段的重复出现才能触发长期记忆写入。理论分析（定理1）进一步证明，在稀疏月度匹配条件下，长期写入的期望强度受二次上界约束，有效抑制了偶发行为的过度写入。</p>
+<h3>2. 双记忆自适应：差异化动力学分离记忆职责</h3>
+<p>MATE为用户维护两个独立的快速权重矩阵：长期记忆 $\mathbf{M}^{L}_{u,t}$ 和短期记忆 $\mathbf{M}^{S}_{u,t}$。两者的更新遵循同一数学形式，但采用截然不同的动力学参数：</p>
+$$\mathbf{M}^{L}_{u,t}=(1-\eta_{L}\gamma_{L})\mathbf{M}^{L}_{u,t-1}+\eta_{L}w^{L}_{u,t}\mathbf{e}_{u,t}\mathbf{k}_{u,t-1}^{\top}$$
+
+$$\mathbf{M}^{S}_{u,t}=(1-\eta_{S}\gamma_{S})\mathbf{M}^{S}_{u,t-1}+\eta_{S}w^{S}_{u,t}\mathbf{e}_{u,t}\mathbf{k}_{u,t-1}^{\top}$$
+
+<p>两个记忆的差异化体现在 $\eta$ 和 $\gamma$ 的取值上。论文设定 $(\eta_L,\gamma_L)=(0.03,0.001)$ 和 $(\eta_S,\gamma_S)=(0.15,0.1)$，意味着长期记忆的衰减因子 $\rho_L=1-0.03\times0.001\approx0.99997$ 接近完美保留，而短期记忆的衰减因子 $\rho_S=1-0.15\times0.1=0.985$ 则允许更快速的遗忘。定理2给出了记忆更新的稳定性保证：单次写入对后续状态的影响被保留因子 $\rho$ 的幂次所控制，长期记忆的影响衰减远慢于短期记忆。</p>
+<p><img alt="图2：MATE框架总览——新观察到的交互首先通过时间证据评估，决定其更新长期记忆和短期记忆的强度；下一项预测根据当前上下文从两个记忆中动态读取" src="https://arxiv.org/html/2610.06050v1/figures/MATE_overview.png" /></p>
+<h3>3. 上下文感知读取：动态分配记忆贡献</h3>
+<p>记忆写入解决“存什么”的问题，而记忆读取解决“用多少”的问题。MATE通过一个轻量门控网络，根据当前上下文动态决定两个记忆的读取权重：</p>
+$$\left[\alpha^{L}_{u,t},\alpha^{S}_{u,t}\right]=\sigma\left(\operatorname{MLP}(\mathbf{q}_{u,t})\right)$$
+
+<p>两个权重独立估计，不受总和为1的约束约束。这意味着模型可以同时强调两个记忆、仅激活其中一个，或在两者相关性较低时同时降低贡献。最终用户表示为：</p>
+$$\mathbf{h}_{u,t}=\operatorname{Norm}\left(\mathbf{W}_{\mathrm{down}}\mathbf{k}_{u,t}+\alpha^{L}_{u,t}\mathbf{M}^{L}_{u,t}\mathbf{k}_{u,t}+\alpha^{S}_{u,t}\mathbf{M}^{S}_{u,t}\mathbf{k}_{u,t}\right)$$
+
+<p><strong>写入与读取的分离</strong>是MATE的关键设计：时间证据决定写入强度，上下文门控决定读取强度，两类信号互不干扰。</p>
+<h2>二、实验：三数据集验证与消融分析</h2>
+<h3>整体效果</h3>
+<p>在MovieLens-10M、Luxury Beauty和KuaiRec三个数据集上，MATE在所有报告指标上均取得最佳均值表现。相对最强外部基线，NDCG@10分别提升约8.6%、13.2%和7.0%。值得注意的是，最强基线在不同数据集上并不固定——TTT4Rec在MovieLens-10M领先，PCTM在Luxury Beauty占优——MATE的优势并非针对单一弱者。</p>
+<p>与共享骨干网络的Base相比，MATE的NDCG@10提升幅度达93.8%（MovieLens-10M）、46.6%（Luxury Beauty）和28.1%（KuaiRec），验证了自适应记忆机制的实质性贡献。</p>
+<h3>消融实验</h3>
+<p>表3揭示了各组件的重要性排序。移除时间证据（$w^{L}=w^{S}=1$）导致NDCG@10下降4.4%–19.0%；移除时间监督损失（$\lambda=0$）下降6.6%–25.4%；<strong>固定读取权重</strong>（$\alpha^L=\alpha^S=0.5$）造成最严重的性能损失，NDCG@10下降32.5%–56.3%。这表明上下文感知的动态读取是MATE最关键的机制。</p>
+<p>一个值得关注的发现是：Frozen Online Memory（测试阶段冻结记忆更新）与MATE在报告精度上完全一致。这意味着<strong>已适配的记忆状态本身已足够支撑推荐质量</strong>，测试期的持续写入未带来额外的Top-10收益。论文对此保持客观态度，明确指出“这些实验并未建立持续测试时写入的额外益处”。</p>
+<h3>效率与存储</h3>
+<p>MATE每用户使用1.0 MiB浮点32自适应记忆，相对Base增加约1.25–1.32 ms/事件的处理开销。候选评分时间变化不超过3.0%，额外成本主要来自事件处理阶段的记忆更新计算。</p>
+<p><img alt="图3：MovieLens-10M上的计算与存储成本分析——包括每事件延迟分解、端到端训练时间和每用户自适应记忆占用" src="https://arxiv.org/html/2610.06050v1/figures/rq4_efficiency_movielens.png" /></p>
+<h2>三、用户适应验证：找回“被遗忘的偏好”</h2>
+<p>论文通过“继续B”和“返回A”两个场景检验适应与保留的平衡。当用户历史中存在主题A（跨月重复出现）和主题B（近期连续出现）时，MATE在预测B的延续和A的实际回归两类目标上均超越Base和Single。在MovieLens-10M上，MATE对“返回A”的NDCG@10达到0.0049，相对Base提升53.1%。</p>
+<p>表5的诊断统计揭示了数据集间的行为差异：MovieLens-10M和Luxury Beauty中，62–65%的测试事件触发了长期写入，而KuaiRec仅有6.1%。然而，所有数据集上短期记忆的读取贡献均显著大于长期记忆，表明短期信号在排序中的主导地位。</p>
+<p>定性案例进一步说明了双记忆的协作方式。在Luxury Beauty的一个真实用户场景中，2016年的OPI和essie交互后，2018年再次出现的OPI交互触发了完整长期写入（$w^L=1.0$）。在后续预测中，短期读取贡献（3.242）是长期读取贡献（0.157）的20.7倍，但两者同时激活，使目标物品的排名从Base的第18位提升至MATE的第2位。</p>
+<h2>展望</h2>
+<p>MATE的时间证据驱动双记忆架构为推荐系统中的用户建模提供了新思路：<strong>将记忆更新从固定规则中解放出来</strong>，让行为本身的时间模式决定其应有的持久性。这一框架的潜在应用不仅限于推荐系统，任何需要维护用户状态并根据行为调整的交互式系统——如对话系统、个性化搜索、自适应学习平台——都可能从中受益。</p>
+<p>论文也留下了一个值得思考的问题：在离线训练已充分适配的情况下，在线持续写入的增量价值究竟有多大？这一问题的答案，可能取决于真实场景中用户偏好的演化速度是否超过了训练数据所能覆盖的范围。</p>
+<p><strong>论文标题</strong>：MATE: Adaptive Long- and Short-Term User Memory for LLM-Based Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.06050.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-05_MATE-Adaptive-Long--and-Short-Term-User-Memory-for-LLM-Based-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-05_MATE-Adaptive-Long--and-Short-Term-User-Memory-for-LLM-Based-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
