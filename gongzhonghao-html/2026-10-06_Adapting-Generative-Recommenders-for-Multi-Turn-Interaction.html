@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adapting Generative Recommenders for Multi-Turn Interaction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Adapting Generative Recommenders for Multi-Turn Interaction</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-08</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>生成式推荐迎来多轮对话革命：INTEGER模型Hit@10提升13.3%解锁交互新范式</h2>
+<h2>引言</h2>
+<p>传统生成式推荐系统依赖固定的历史交互序列预测物品，但用户无法在推荐不准时直接表达纠正意图。对话式交互天然适合表达复杂偏好，然而将对话能力注入生成式推荐面临历史到物品映射被覆盖的风险——一旦模型学会聊天，就可能遗忘原有的推荐行为。来自台湾大学与约翰霍普金斯大学的研究者提出INTEGER（Interactive Generative Recommendation），通过路由令牌、历史重锚定和行为回放三管齐下，使生成式推荐模型既能流畅对话又保持推荐精度。在Amazon Beauty基准上，INTEGER的Hit@10相比最强基线提升13.3%，显著超越初始生成式推荐器TIGER。这一工作首次证明生成式推荐与多轮对话可以无损融合。</p>
+<h2>核心方法</h2>
+<p>生成式推荐将物品表示为离散编码，模型从用户历史$H$生成ItemID的条件概率为：</p>
+$$p_{\theta}(\boldsymbol{z}\mid H)=\prod_{\ell=1}^{L}p_{\theta}(c_\ell\mid \boldsymbol{c}_{<\ell},H)$$
+
+<p>INTEGER从该模型出发，引入三个关键设计。首先，推荐被视为一种<strong>解码动作</strong>：模型词汇表新增路由令牌<code>&lt;hist&gt;</code>，当模型预测下一个token为<code>&lt;hist&gt;</code>时即触发推荐，否则继续聊天。该机制使推荐时机由模型自主决定，无需外部分类器。推理时，一旦发出<code>&lt;hist&gt;</code>，系统自动插入用户历史$H$和<code>&lt;rec&gt;</code>标记，再以<strong>前缀树约束</strong>解码ItemID。图1展示了整体架构。</p>
+<p><img alt="图1：INTEGER整体架构" src="https://arxiv.org/html/2610.08136v1/ConvGR.png" /></p>
+<p>其次，<strong>历史重锚定</strong>通过将交互历史$H$复制到推荐位置附近，恢复生成式推荐器训练时的局部格式。模型在系统提示中保留历史用于理解对话，在推荐时再次插入历史用于生成物品。图3显示，INTEGER在推荐时刻对历史提示的注意力比聊天时刻高2.11倍，而对话微调模型该比例仅为0.86倍，说明聚焦历史是训练习得的行为。</p>
+<p><img alt="图3：推荐时刻与聊天时刻的注意力对比" src="https://arxiv.org/html/2610.08136v1/attention.png" /></p>
+<p>再次，<strong>行为回放与指令数据排练</strong>防止灾难性遗忘。对话微调使用三个数据源混合：多轮推荐对话、原始顺序推荐样本、通用指令数据。行为回放在参数层面持续训练历史到物品的映射，指令排练则恢复被行为数据抑制的语言能力。训练损失为：</p>
+$$\mathcal{L}_{\mathrm{SFT}}(\theta)=-\mathbb{E}_{(x,y)\sim\mathcal{D}_{\mathrm{mix}}}\sum_{i=1}^{|y|}\log p_\theta(y_i\mid x,y_{<i})$$
+
+<p>模型在推荐回合仅对<code>&lt;hist&gt;</code>、ItemID和后续回复计算损失，重锚定的历史和<code>&lt;rec&gt;</code>不参与损失。此外，INTEGER通过DPO进行物品精炼，用户拒绝或请求相似物品时模型可生成修订推荐。DPO损失为：</p>
+$$\mathcal{L}_{\mathrm{DPO}}(\theta)=-\log\sigma\left[\beta\left(\log\frac{\pi_\theta(y^{+}\mid x)}{\pi_{\mathrm{ref}}(y^{+}\mid x)}-\log\frac{\pi_\theta(y^{-}\mid x)}{\pi_{\mathrm{ref}}(y^{-}\mid x)}\right)\right]$$
+
+<p>图2展示了路由令牌的概率分布，INTEGER在推荐回合的中位概率0.88，聊天前0.09，聊天后0.00，AUC达到0.94；而仅行为回放（bare replay）的AUC仅0.51，几乎无法区分聊天与推荐时机。</p>
+<p><img alt="图2：路由令牌概率分布与ROC曲线" src="https://arxiv.org/html/2610.08136v1/routing.png" /></p>
+<h2>实验</h2>
+<p>在Amazon Beauty和Toys &amp; Games两个数据集上，INTEGER与三类基线对比：顺序推荐器SASRec和TIGER，端到端对话推荐器GCRS和PECRS，以及模块化管线。Beauty数据集上，INTEGER取得三项指标全部最优：Hit@10为0.051，NDCG@10为0.027，对话质量4.77。相较最强基线Modular (Tool-call)，Hit@10提升13.3%，NDCG@10提升8%，对话质量提升0.19（p&lt;0.001）。Toys数据集上，INTEGER与PECRS并列最高Hit@10（0.057），但对话质量高出0.20。值得注意的是，INTEGER相比初始生成式推荐器TIGER，在两个数据集上Hit@10和NDCG@10均显著提升，证明对话适应不仅没破坏推荐，反而利用对话偏好提升了精度。</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Beauty Hits@10</th>
+<th>Beauty NDCG@10</th>
+<th>Beauty Conv.Q</th>
+<th>Toys Hits@10</th>
+<th>Toys NDCG@10</th>
+<th>Toys Conv.Q</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SASRec</td>
+<td>0.040</td>
+<td>0.018</td>
+<td>–</td>
+<td>0.034</td>
+<td>0.015</td>
+<td>–</td>
+</tr>
+<tr>
+<td>TIGER</td>
+<td>0.038</td>
+<td>0.020</td>
+<td>–</td>
+<td>0.036</td>
+<td>0.020</td>
+<td>–</td>
+</tr>
+<tr>
+<td>GCRS</td>
+<td>0.004</td>
+<td>0.002</td>
+<td>4.07</td>
+<td>0.002</td>
+<td>0.001</td>
+<td>4.53</td>
+</tr>
+<tr>
+<td>PECRS</td>
+<td>0.043</td>
+<td>0.019</td>
+<td>3.92</td>
+<td>0.057</td>
+<td>0.032</td>
+<td>4.05</td>
+</tr>
+<tr>
+<td>Modular (Classic)</td>
+<td>0.045</td>
+<td>0.024</td>
+<td>4.40</td>
+<td>0.051</td>
+<td>0.021</td>
+<td>4.52</td>
+</tr>
+<tr>
+<td>Modular (Tool-call)</td>
+<td>0.044</td>
+<td>0.025</td>
+<td>4.58</td>
+<td>0.049</td>
+<td>0.020</td>
+<td>4.55</td>
+</tr>
+<tr>
+<td><strong>INTEGER</strong></td>
+<td><strong>0.051</strong></td>
+<td><strong>0.027</strong></td>
+<td><strong>4.77</strong></td>
+<td><strong>0.057</strong></td>
+<td>0.028</td>
+<td>4.25</td>
+</tr>
+</tbody>
+</table></div>
+<p>消融实验证实每个组件不可或缺。移除历史重锚定或行为回放，Hit@10从0.049骤降至0.033和0.034，精度损失约33%。移除指令数据使对话质量从4.77跌至4.14，但Accuracy基本不变。仅用对话数据微调则全面崩塌：Hit@10仅0.029，对话质量2.39。图4展示指令数据比例的影响：对话质量在10%后进入平台期，推荐准确率无系统性趋势，最佳配比依赖数据集。</p>
+<p><img alt="图4：不同指令数据比例下的推荐性能与对话质量" src="https://arxiv.org/html/2610.08136v1/instruction.png" /></p>
+<h2>展望</h2>
+<p>INTEGER首次证明生成式推荐可以无缝扩展至多轮交互，同时保持甚至提升推荐精度。其路由令牌机制可应用于任何生成式推荐器，历史重锚定与行为回放提供了一套防止遗忘的通用方案。未来工作需解决属性级反馈（如“太贵了”“要黑色的”）的精细化处理，目前模型学习的物品替换操作是意图无关的，仅在嵌入邻域内移动。基于属性的条件精炼有望成为下一步突破方向。</p>
+<p><strong>论文标题</strong>：Adapting Generative Recommenders for Multi-Turn Interaction</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.08136.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-06_Adapting-Generative-Recommenders-for-Multi-Turn-Interaction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-06_Adapting-Generative-Recommenders-for-Multi-Turn-Interaction.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
