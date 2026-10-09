@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-09</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>生成式推荐训练的隐忧：追加遗漏目标为何反伤排序？7.8%-22.2%性能回升揭示概率竞争陷阱</h2>
+<p>生成式推荐系统正在重塑大规模Web推荐的架构。当语义ID解码引擎在毫秒级预算内只能返回有限候选集时，漏掉用户可能点击的目标几乎是必然事件。一个直观的补救方案是<strong>候选补全</strong>：训练时把漏掉的目标追加到重排序器的列表中，让模型“见过”这些本该排序的物品。但《WWW 2027》的一篇论文揭示了一个反直觉的发现——<strong>这个看似无害的操作，可能恰恰在伤害推理时真正可服务的物品排序</strong>。更关键的是，论文通过三个精心匹配的损失函数，把“追加监督”与“概率竞争”两个纠缠的效应剥离开来，定位了真正的元凶。</p>
+<h2>一、问题聚焦</h2>
+<p>生成式推荐器通过生成<strong>语义ID</strong>（semantic IDs）来检索物品。一旦生成器和候选路由固定，推理时重排序器只能看到生成器返回的候选集$N(x)$，而被漏掉的观测目标$A(x) = (Y_x \cap \mathcal{I}) \setminus N(x)$将永远失去排序机会。</p>
+<p>候选补全的做法是：训练时保留所有返回物品，将漏掉的目标追加进列表，形成扩充集$C(x) = N(x) \cup A(x)$。但论文指出，这个操作同时改变了三件事——<strong>改变了已检索目标的权重、增加了对追加目标的监督、让两组物品在同一个softmax中争夺概率</strong>。一个简单的“追加/不追加”对比实验，根本无法解释推理排序变化究竟来自哪一项因素。</p>
+<p><img alt="图1：候选补全与三种训练损失。图(a)展示了一个来自公开数据集RecIF-Ads的实际训练组：生成器返回126个物品，其中仅包含1个目标T1，另有2个漏掉的目标T2和T3仅在训练时追加。尽管T2和T3初始只占softmax总概率的0.011%，均匀监督却要求它们获得总目标权重的66.7%。图(b)比较了WN、Cond和Full三种损失，从返回组内部排序逐步引入追加组监督与跨组概率竞争，完整呈现了三个训练损失之间的逻辑递进关系。" src="https://arxiv.org/html/2505.08566v1/x1.png" /></p>
+<h2>二、方法核心</h2>
+<h3>三阶段损失分解：从“全部混杂”到“逐项分离”</h3>
+<p>论文的核心洞察是将完整列表损失$\mathcal{L}_{\text{append}}$分解为三个独立项。设返回组的目标数为$r = |N \cap Y|$，追加组的目标数为$k = |A|$，则目标分布中返回组占比$\alpha = r/(r+k)$，追加组占比$\gamma = k/(r+k)$。两组内部的归一化损失分别记为：</p>
+$$\mathcal{L}_N = -\frac{1}{r}\sum_{i \in N \cap Y}\log p_N(i), \qquad \mathcal{L}_A = -\frac{1}{k}\sum_{i \in A}\log p_A(i)$$
+
+<p>其中$p_N(i) = e^{s_i}/Z_N$，$p_A(i) = e^{s_i}/Z_A$分别是两组内部的softmax概率。完整列表损失的三部分分解公式为：</p>
+$$\mathcal{L}_{\text{append}} = \mathcal{T}_N + \mathcal{T}_A + \mathcal{T}_{\text{mass}}$$
+
+<p>其中$\mathcal{T}_N = \alpha \mathcal{L}_N$是返回组加权排序损失，$\mathcal{T}_A = \gamma \mathcal{L}_A$是追加组内部排序损失，而$\mathcal{T}_{\text{mass}}$则是论文所称的<strong>组间竞争项</strong>：</p>
+$$\mathcal{T}_{\text{mass}} = -\alpha\log\frac{Z_N}{Z_N + Z_A} - \gamma\log\frac{Z_A}{Z_N + Z_A}$$
+
+<h3>条件训练：用临时偏移量“拆掉”概率竞争</h3>
+<p>为了单独研究追加目标监督的效果，论文提出了<strong>条件训练</strong>（Conditional Training, Cond）。构造思路是：给每个训练列表中所有追加目标的得分加上同一个标量$\delta$，将追加组的概率质量调整到目标值$\gamma$，而不改变组内排序。通过解析最小化得到最优偏移量：</p>
+$$\delta^* = \log(k/r) + \log Z_N - \log Z_A$$
+
+<p>图2直观展示了这一构造如何将Full中的跨组竞争项剥离，只保留两个组内损失。Cond不存储偏移量，推理时仍只对$s_\phi(i|x) = \ell(i|x) + h_\phi(x,i)$在返回组上应用。</p>
+<p><img alt="图2：去除两组之间的概率竞争。图(a)展示Full将返回组N和追加组A放在同一个softmax中，产生跨组竞争。图(b)展示临时偏移量δ仅改变追加组的总概率而不改变任一组内部的排序。图(c)展示对δ最小化后，Full退化为T_N+T_A加一个仅依赖目标数量的常数项H(α,γ)，常数项无梯度，正是Cond损失。推理时只对N排序，δ不保存。" src="https://arxiv.org/html/2505.08566v1/x2.png" /></p>
+<h3>三个损失函数的因果链</h3>
+<p>论文设计的三阶段训练损失分别是：</p>
+<ul>
+<li><strong>WN</strong>（Weighted-native）：仅保留返回组内部排序，且权重与Full中一致，$\mathcal{L}_{WN} = \alpha \mathcal{L}_N$。</li>
+<li><strong>Cond</strong>：在WN基础上增加追加组的独立归一化监督，$\mathcal{L}_{Cond} = \mathcal{T}_N + \mathcal{T}_A$。</li>
+<li><strong>Full</strong>：在Cond基础上加入跨组概率竞争，$\mathcal{L}_{Full} = \mathcal{T}_N + \mathcal{T}_A + \mathcal{T}_{\text{mass}}$。</li>
+</ul>
+<p>从WN到Cond只增加一项要求，从Cond到Full也只增加一项要求，这使得差异归因具备严格的因果解释力。为说明竞争项确实会影响推理排序，论文给出竞争项梯度的解析表达式：</p>
+$$\nabla_\phi \mathcal{T}_{\text{mass}} = (\pi_A - \gamma)(\mu_A - \mu_N)$$
+
+<p>其中$\pi_A = Z_A/(Z_N + Z_A)$是追加组的预测概率与目标份额的差距，$\mu_B = \sum_{i \in B} p_B(i)\nabla_\phi s_i$是两组平均得分梯度。该梯度更新的是同一个评分器参数，因此即便追加物品在推理时消失，训练中的竞争仍会改变返回物品的排序。</p>
+<h2>三、实验验证</h2>
+<h3>主实验设置</h3>
+<p>论文在RecIF-Ads和Amazon Video Games (A-Games)两个数据集上进行了严格的对照实验。<strong>所有损失共享相同的候选集、训练列表、特征、初始化、优化器和推理池</strong>，只改变训练损失的目标函数。评测指标采用全目标归一化折损累计增益（FT-NDCG@20），其分母包含用户的完整目标集，因此漏掉目标仍会被惩罚。</p>
+<h3>核心发现：竞争造成损害，监督可能有益</h3>
+<p>在RecIF-Ads数据集上训练60个epoch后，Cond在七次独立训练运行中<strong>全部超过Full</strong>。Cond相对于Full的FT-NDCG提升为+0.007423（95%区间[+0.004978, +0.009744]）。同时，Cond相对于WN的提升为+0.001877（[+0.000343, +0.003455]），七次运行方向一致。这些结果表明：<strong>组间概率竞争是性能下降的主要来源，而追加目标监督本身可能有益</strong>。</p>
+<p><img alt="图3：实验设计。上图展示RQ1和RQ2的对照流程：分别训练WN、Cond和Full三个损失，在相同的候选路由、评分器和随机种子上报告排序指标差异。Cond与WN的差值回答追加监督是否有用，Cond与Full的差值回答竞争是否有害。下图展示RQ3的规则选择流程：在开发用户上分别选出最优的无追加损失和有追加损失，仅在调整后的增益下界为正时切换使用追加训练。" src="https://arxiv.org/html/2505.08566v1/x3.png" /></p>
+<h3>关键确认：A-Games预注册实验</h3>
+<p>在A-Games数据集上，论文预先固定了所有设置后开启测试。MLP重排序器上，Cond相对于Full的FT-NDCG增益为+9.177（95%区间[+6.709, +11.651]）；注意力重排序器上，增益为+3.234（[+1.848, +4.651]）。对应的相对提升分别为<strong>22.23%和7.83%</strong>。即便不保留追加损失，WN相对于WN+Mass（即只加入竞争项不加追加监督）的增益也达到+5.834（MLP）和+5.470（Attention）。</p>
+<h3>概率偏移实验：竞争的直接证据</h3>
+<p>为进一步验证竞争项的作用，论文对每个训练列表给所有追加得分加上同一常数，使其初始概率精确匹配目标份额。<strong>Cond的训练路径和参数保持数值完全一致，证明其对概率划分不敏感；而Full则显著改变</strong>——在A-Games注意力模型上变化幅度为+0.004407（[+0.001591, +0.007177]）。这直接证实了竞争项在训练中发挥着独立且实质性的影响。</p>
+<h3>开发集规则的应用</h3>
+<p>论文固定了一个保守的切换规则：<strong>只有当追加目标训练的调整后增益下界在开发用户上为正时，才采用该训练方式</strong>。在A-Cell类别上，三个生成器中的两个被允许切换，总体FT-NDCG增益为+0.000319（[-0.000077, +0.000720]），效果不确定。在A-Health类别上，三个生成器全部拒绝追加训练，避免了<strong>1.7%的FT-NDCG损失</strong>（强制追加的损失为-0.000644，[-0.000881, -0.000412]）。</p>
+<h2>四、展望</h2>
+<p>这项研究的深层启示在于：<strong>训练时“帮助”模型的额外信息，可能通过参数共享在推理时产生不可预见的负面效应</strong>。概率竞争并非目标监督本身的问题，而是监督机制设计中的陷阱。对于工程实践，论文给出的建议明确且可操作：候选补全应针对每个生成器单独评估，而非作为默认策略自动应用。未来，类似的损失分解思路或许可以推广到多源候选融合、辅助任务学习等更广泛的训练场景中——当多个目标共享同一组参数时，<strong>如何界定“共享”的边界，可能比增加更多监督信号更重要</strong>。</p>
+<p><strong>论文标题</strong>：Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.10124.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-07_Training-with-Missed-Targets-in-Generative-Recommendation-Separating-Supervision-from-Probability-Co.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-07_Training-with-Missed-Targets-in-Generative-Recommendation-Separating-Supervision-from-Probability-Co.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
