@@ -463,98 +463,51 @@
             </div>
             <h1 class="article-title">Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-10-11</span>
+                <span class="meta-item">📅 2026-10-12</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h2>生成式推荐训练新突破：分离概率竞争后FT-NDCG最高提升22.2%，训练目标误区有多深？</h2>
-<h3>一、引言</h3>
-<p>大模型时代的推荐系统正在经历从“判别式打分”到“生成式检索”的范式迁移。生成式推荐器通过为商品编码语义ID（semantic ID），将召回任务转化为Token序列的生成过程，大幅降低了遍历海量商品目录的计算成本。但当生成器的候选池固定后，一个隐蔽的工程问题浮出水面：<strong>被生成器遗漏的观测目标，在推理阶段永远无法进入候选集</strong>，这意味着服务链路上的精排器根本没有机会为这些真实点击目标排序。</p>
-<p>为了“利用”这些被遗漏的标签，业界常用的补救策略是<strong>候选补全</strong>：在精排器训练时，将漏检目标直接追加到训练列表中。然而，论文通过严谨的损失函数分解揭示，这个看似无害的操作同时混入了三种效应——<strong>权重替换、监督信号叠加、概率质量竞争</strong>。单一的前后对比实验无法解释究竟是哪种效应在改变返回候选的排序。研究者通过构建三个匹配的损失函数，首次将<strong>附加目标监督</strong>与<strong>组间概率竞争</strong>解耦开来，发现后者在特定条件下可以显著损害返回候选的排序质量。在Amazon Video Games数据集上，移除组间竞争后四个预设对比的FT-NDCG相对提升达到<strong>7.8%至22.2%</strong>。</p>
-<h3>二、核心方法：从概率竞争视角解构候选补全</h3>
-<h4>2.1 候选补全的三重效应拆解</h4>
-<p>对于一个训练用户，生成器返回的候选集为 $N$，其中包含 $r$ 个检索到的目标；被遗漏但可表示的观测目标构成追加集 $A$，大小为 $k$。靶标概率分为两部分：检索组权重 $\alpha = r/(r+k)$，追加组权重 $\gamma = k/(r+k)$。两组各自的组内概率分布分别定义为 $p_N(i) = e^{s_i}/Z_N$ 和 $p_A(i) = e^{s_i}/Z_A$，其中 $Z_N$、$Z_A$ 为各组归一化因子。</p>
-<p>研究者推导出完整的追加损失三项分解：</p>
-$$\mathcal{L}_{\mathrm{append}} = \mathcal{T}_N + \mathcal{T}_A + \mathcal{T}_{\mathrm{mass}}$$
-
-$$\mathcal{T}_N = \alpha\mathcal{L}_N,\quad \mathcal{T}_A = \gamma\mathcal{L}_A$$
-
-$$\mathcal{T}_{\mathrm{mass}} = -\alpha\log\frac{Z_N}{Z_N+Z_A} - \gamma\log\frac{Z_A}{Z_N+Z_A}$$
-
+            <h2>一、核心方法</h2>
+<p>生成式推荐（Generative Recommendation）采用<strong>语义ID</strong>（Semantic ID）直接生成候选物品序列，已逐渐成为大规模推荐系统替代传统级联架构的关键路径。然而，一个根本性矛盾始终存在：生成器在推理阶段只能返回有限候选集，而训练阶段的交互反馈则覆盖完整物品目录。当生成器遗漏用户真实交互过的目标物品时，这些“被错过的目标”（Missed Targets）无法进入后续重排器，造成训练-推理失配。</p>
+<p>一种常见的工程应对策略是<strong>候选补全</strong>（Candidate Completion）：训练时保留所有生成器返回的候选，并将错过的目标物品直接追加到重排器的训练列表中。但这一看似自然的设计，实际上同时引入了三种效应：</p>
 <ul>
-<li>$\mathcal{T}_N$：检索组内部的排序损失，等同于原生损失乘以权重 $\alpha$，权重降低是补全的直接代价；</li>
-<li>$\mathcal{T}_A$：追加组内部的排序损失，鼓励漏检目标之间得分均衡；</li>
-<li>$\mathcal{T}_{\mathrm{mass}}$：<strong>跨组概率竞争项</strong>，要求两组按 $\alpha:\gamma$ 的比例瓜分softmax总概率质量。</li>
+<li><strong>权重变化</strong>：被检索目标的监督权重从原来的全域权重降为 <code>&lt;!-- LATEX_FORMULA_3 --&gt;</code>（<code>&lt;!-- LATEX_FORMULA_4 --&gt;</code> 为被检索目标数，<code>&lt;!-- LATEX_FORMULA_5 --&gt;</code> 为被追加目标数）</li>
+<li><strong>新增监督</strong>：追加目标自身也需要被正确排序</li>
+<li><strong>概率竞争</strong>：追加目标与返回候选在同一softmax内分享概率空间</li>
 </ul>
-<p><img alt="图1：候选补全与三种训练损失对比" src="https://arxiv.org/html/2501.00001/figure1.png" /></p>
-<h4>2.2 条件训练：剥离概率竞争的关键操作</h4>
-<p>论文的核心创新在于通过<strong>临时偏移量</strong>构造了中间损失Cond。具体做法是：对每个训练列表的追加组分数统一加上标量 $\delta$，该操作不改变组内排序，只改变两组之间的概率分配。最小化Full损失关于 $\delta$ 的解析解为：</p>
-$$\delta^{*} = \log\frac{k}{r} + \log Z_N - \log Z_A$$
+<p>论文提出的核心方法通过一个<strong>三分分解</strong>（Three-part Decomposition）公式拆解了这一复合效应。训练列表上的完整损失可以写成：</p>
+$$\mathcal{L}_{\mathrm{append}} = \mathcal{T}_{N} + \mathcal{T}_{A} + \mathcal{T}_{\mathrm{mass}}$$
 
-<p>将 $\delta^{*}$ 代回后，组间竞争项被压缩为仅依赖计数比例的常数 $H(\alpha,\gamma) = -\alpha\log\alpha - \gamma\log\gamma$，其梯度为零。由此得到条件训练损失：</p>
-$$\mathcal{L}_{\mathrm{Cond}} = \mathcal{T}_N + \mathcal{T}_A$$
+<p>其中，<code>&lt;!-- LATEX_FORMULA_6 --&gt;</code> 是返回组的加权排序损失，<code>&lt;!-- LATEX_FORMULA_7 --&gt;</code> 是追加组内部的排序损失，而 <code>&lt;!-- LATEX_FORMULA_8 --&gt;</code> 则是两个组之间为争夺总概率而产生的竞争项：</p>
+$$\mathcal{T}_{\mathrm{mass}} = -\alpha\log\frac{Z_{N}}{Z_{N}+Z_{A}} - \gamma\log\frac{Z_{A}}{Z_{N}+Z_{A}}$$
 
-<p>Cond保留了检索组排序和追加组排序两个任务，但<strong>阻止了训练专属目标与推理候选在概率空间中争夺总质量</strong>。图2展示了这一推导过程的几何直觉：移动到最小化位置后，竞争项消失。</p>
-<p><img alt="图2：移除组间竞争的条件训练推导" src="https://arxiv.org/html/2501.00001/figure2.png" /></p>
-<h4>2.3 为什么组间竞争能污染推理排序？</h4>
-<p>虽然追加目标在推理阶段不可见，但训练时组间竞争项的梯度仍会更新共享的评分器参数。梯度表达式为：</p>
+<p>这一分解是论文的逻辑支点。它表明，候选补全并非简单地“增加监督”，而是在监督权重不变的前提下，额外引入了一个从未在推理阶段存在的<strong>组间概率竞争</strong>。</p>
+<p><img alt="图1：候选补全示例与三种训练损失对比，展示返回组与追加组在WN、Cond、Full三种损失下的训练行为差异" src="https://arxiv.org/html/2027/Figure1.png" /></p>
+<p>基于这一分解，研究者设计了三种严格匹配的训练损失，构成一个受控对比路径：</p>
+<ul>
+<li><strong>WN (Weighted Native)</strong>：仅训练返回组内部排序，权重固定为 <code>&lt;!-- LATEX_FORMULA_9 --&gt;</code></li>
+<li><strong>Cond (Conditional Training)</strong>：加入追加组内部排序损失 <code>&lt;!-- LATEX_FORMULA_10 --&gt;</code>，但两个组分别归一化，不共享概率空间</li>
+<li><strong>Full (Full Append)</strong>：将两个组放入同一个softmax，同时包含 <code>&lt;!-- LATEX_FORMULA_11 --&gt;</code>、<code>&lt;!-- LATEX_FORMULA_12 --&gt;</code> 和 <code>&lt;!-- LATEX_FORMULA_13 --&gt;</code></li>
+</ul>
+<p>从WN到Cond，唯一新增的变量是追加目标的监督信号；从Cond到Full，唯一新增的变量是组间概率竞争。这一设计使得研究者能够<strong>独立地回答两个问题</strong>：追加监督是否本身有益？以及竞争是否本身有害？</p>
+<p><img alt="图2：三种训练损失的受控分离路径，展示WN→Cond→Full各阶段所引入的唯一训练要求" src="https://arxiv.org/html/2027/Figure2.png" /></p>
+<p>Cond的构造方式极具技巧性。研究者设想在Full损失中对所有追加组得分同时加一个常数偏移 <code>&lt;!-- LATEX_FORMULA_14 --&gt;</code>，该偏移只改变组间概率分配，不改变组内排序。通过解析地最小化Full关于 <code>&lt;!-- LATEX_FORMULA_15 --&gt;</code> 的表达式，可以得到一个仅包含两个组内损失与一个依赖目标计数的常数项的结果。该常数项对模型参数没有梯度贡献，因此Cond的训练实现中既不需要计算也不需存储这个偏移。这一构造在数学上严格地证明了——<strong>移除组间竞争可以被实现为一个独立的训练损失</strong>。</p>
+<p>进一步，梯度分析揭示了竞争效应如何渗透到推理阶段。对 <code>&lt;!-- LATEX_FORMULA_16 --&gt;</code> 求梯度可得：</p>
 $$\nabla_{\phi}\mathcal{T}_{\mathrm{mass}} = (\pi_A - \gamma)(\mu_A - \mu_N)$$
 
-<p>其中 $\pi_A$ 是追加组的预测概率，$\mu_A$ 和 $\mu_N$ 分别为两组得分的平均梯度。第一因子的符号由概率缺口方向决定，第二因子是两组特征的梯度差。<strong>参数更新指向两组概率重新分配的方向，但推理时只有 $N$ 组还在场</strong>，这导致排序函数在训练中持续被一个推理阶段无法观察的目标所扭曲。图3的实验设计验证了这一因果链。</p>
-<p><img alt="图3：实验设计线路图" src="https://arxiv.org/html/2501.00001/figure3.png" /></p>
-<h3>三、实验：组合效应被拆解后的真实图景</h3>
-<p>实验遵循<strong>三损失配对协议</strong>：$V_C - V_W$ 衡量追加监督的净收益，$V_C - V_F$ 衡量移除竞争后的反弹幅度，$V_F - V_W$ 则是两者的组合效应。所有损失使用相同的用户、候选池、评分器架构、优化器和推理候选。</p>
-<h4>3.1 RecIF-Ads：竞争损伤被精确量化</h4>
-<p>使用公开的OneRec-1.7B-Pro生成器在RecIF-Ads数据集上，经过60轮训练后，Cond相比Full的FT-NDCG绝对提升为<strong>+0.00742</strong>（95% CI: $[+0.00498, +0.00974]$），且在所有七个训练运行中方向一致。平均效应贯穿训练全程，达到<strong>+0.01241</strong>。而Cond相对WN（仅追加监督）的提升为<strong>+0.00188</strong>，方向虽正但幅度明显小于竞争项。</p>
-<p>更直接的验证是：当训练初始将追加组概率初始化到目标比例 $\gamma$ 时，Full的FT-NDCG提升了<strong>+0.00923</strong>，而Cond和WN不变。<strong>这证明Full对概率分配高度敏感，而Cond对概率分配完全免疫</strong>。</p>
-<h4>3.2 A-Games：预注册实验的独立确认</h4>
-<p>在Amazon Video Games的预注册对比中，移除竞争项在四种配对下均带来正向增益，相对提升幅度为<strong>22.23%、12.84%、7.83%、13.16%</strong>。所有四个用户级置信区间和四个中的三个训练运行区间排除了零。下表中的具体数字显示：MLP重排器的Cond 相对于Full增益为<strong>+9.177×10⁻³</strong>，WN 相对于 WN+Mass 增益为 <strong>+5.834×10⁻³</strong>；注意力重排器分别为<strong>+3.234×10⁻³</strong>和<strong>+5.470×10⁻³</strong>。</p>
-<div class="table-wrapper"><table>
-<thead>
-<tr>
-<th style="text-align: left;">重排器</th>
-<th style="text-align: left;">损失比较</th>
-<th style="text-align: left;">增益（×10⁻³）</th>
-<th style="text-align: left;">用户级95% CI</th>
-<th style="text-align: left;">训练运行级95% CI</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;">MLP</td>
-<td style="text-align: left;">Cond − Full</td>
-<td style="text-align: left;"><strong>+9.177</strong></td>
-<td style="text-align: left;">[+6.709, +11.651]</td>
-<td style="text-align: left;">[+8.202, +10.152]</td>
-</tr>
-<tr>
-<td style="text-align: left;">MLP</td>
-<td style="text-align: left;">WN − WN+Mass</td>
-<td style="text-align: left;"><strong>+5.834</strong></td>
-<td style="text-align: left;">[+4.284, +7.386]</td>
-<td style="text-align: left;">[+3.462, +8.206]</td>
-</tr>
-<tr>
-<td style="text-align: left;">Attention</td>
-<td style="text-align: left;">Cond − Full</td>
-<td style="text-align: left;"><strong>+3.234</strong></td>
-<td style="text-align: left;">[+1.848, +4.651]</td>
-<td style="text-align: left;">[+1.275, +5.192]</td>
-</tr>
-<tr>
-<td style="text-align: left;">Attention</td>
-<td style="text-align: left;">WN − WN+Mass</td>
-<td style="text-align: left;"><strong>+5.470</strong></td>
-<td style="text-align: left;">[+3.886, +7.111]</td>
-<td style="text-align: left;">[−0.824, +11.764]</td>
-</tr>
-</tbody>
-</table></div>
-<h4>3.3 部署决策：何时使用追加训练？</h4>
-<p>实验还给出了一个保守的部署规则：<strong>仅在开发集上通过调整后置信下界判断追加训练确实带来正向增益时才切换</strong>。在A-Health数据集上的验证显示，强制使用追加训练会导致FT-NDCG下降<strong>0.00064</strong>（95% CI: $[0.00041, 0.00088]$），即<strong>1.7%的相对损失</strong>；而选择规则成功避免了这一退化，保持全部三个生成器使用无追加训练。在A-Cell上，规则切换了两个生成器，获得<strong>+0.00032</strong>的增益，虽然置信区间未完全排除零，但方向为正。<strong>结论清晰：候选补全对每个生成器应当单独评估，不能一刀切地默认使用。</strong></p>
-<h3>四、展望</h3>
-<p>生成式推荐系统的训练与推理部署之间存在微妙但后果严重的错位。论文的价值在于将候选补全这一常见工程实践拆解为可独立评测的损失组件，并揭示<strong>训练期概率竞争会通过共享参数污染推理期排序</strong>。这启发了后续研究不应只关注“补全多少目标”，更应关注“补全目标如何进入损失函数”。当大模型推荐系统逐渐走向多候选源混合、多阶段协作的架构时，类似的条件独立训练策略或许能成为平衡训练信号丰富性与推理一致性之间张力的通用工具。</p>
+<p>该梯度通过共享的模型参数更新排序器，而这些参数在推理时同样用于对返回候选进行打分。追加目标在推理阶段消失，但其在训练期间参与的竞争梯度仍然改变了返回候选的排序结果。</p>
+<h2>二、实验与验证</h2>
+<p>研究者设计了多组对照实验以验证上述理论框架。在Amazon Video Games（A-Games）数据集上，使用Transformer生成器（seed 42）和MLP重排器，移除组间竞争（即Cond减去Full）使<strong>FT-NDCG@20</strong>提升了 <code>&lt;!-- LATEX_FORMULA_17 --&gt;</code>，相对增益达 <strong>22.2%</strong>。当使用Attention重排器时，同方向增益为 <code>&lt;!-- LATEX_FORMULA_18 --&gt;</code>，相对增益 <strong>7.8%</strong>。四项预注册比较中，四组用户区间和四组训练运行区间中的三组均排除了零值，方向一致性显著。</p>
+<p><img alt="图3：A-Games数据集中移除组间竞争的FT-NDCG增益，覆盖MLP与Attention两种重排器下的用户重采样和训练运行重采样区间" src="https://arxiv.org/html/2027/Figure3.png" /></p>
+<p>在RecIF-Ads数据集上，使用OneRec-1.7B-Pro生成器，七个新训练运行在epoch 60时Cond超过Full的幅度为 <code>&lt;!-- LATEX_FORMULA_19 --&gt;</code>，95%区间为 <code>&lt;!-- LATEX_FORMULA_20 --&gt;</code>，同样方向一致。值得注意的是，当训练策略的检查点通过开发集选择时，该优势的区间跨过了零点（<code>&lt;!-- LATEX_FORMULA_21 --&gt;</code>），说明竞争效应的大小对训练时长和检查点选择敏感。</p>
+<p>在涉及“是否应采纳候选补全”的实践问题上，研究者提出了一条保守规则：<strong>当且仅当追加目标训练的调整后开发集增益下界为正时，才对给定生成器启用候选补全</strong>。该规则在A-Cell数据集上允许对三个生成器中的两个启用追加训练，整体FT-NDCG变化为 <code>&lt;!-- LATEX_FORMULA_22 --&gt;</code>，但区间未排除零值（<code>&lt;!-- LATEX_FORMULA_23 --&gt;</code>）；在A-Health数据集上则拒绝了所有三个生成器的追加训练，避免了在强制追加情况下 <code>&lt;!-- LATEX_FORMULA_24 --&gt;</code>——即 <strong>1.7%</strong>——的FT-NDCG损失。</p>
+<h2>三、方法与对比</h2>
+<p>论文在实验设计上尤为突出的是其<strong>受控分离的严谨性</strong>。与直接对比“追加 vs 不追加”的传统思路不同，该研究通过三个匹配损失将附加监督和组间竞争各自独立出来，解决了以往混合效应无法归因的根本缺陷。在架构维度上，研究者验证了MLP和Attention两种重排器、Transformer和GRU两种生成器、以及多个数据类别上的稳健性。</p>
+<p>与<strong>DKD（解耦知识蒸馏）</strong>的对比具有启发性。DKD将目标类与非目标类的知识分离，而该研究拆分的是<strong>存在于推理阶段与仅存在于训练阶段</strong>的两组物品。与LUPI（使用特权信息学习）的差异也清晰可辨：前者利用训练阶段特有的特征，而该方法处理的对象是训练阶段特有的对比物品。在“为什么使用三个损失”的说明上，研究者指出，Full与WN的比较混合了两种变化，只有通过Cond的中介，才能分解出 <code>&lt;!-- LATEX_FORMULA_25 --&gt;</code> 的因果结构。</p>
+<h2>四、结语与展望</h2>
+<p>该论文为生成式推荐中的候选补全提供了一套理论基础与工程准则。其核心贡献不在于提出一个新的模型结构，而在于通过分解公式揭示了实践中一个隐蔽而关键的问题：<strong>训练时存在于列表中的物品，可能通过共享参数持续地扭曲推理时的排序结果</strong>。这一发现对任何使用固定候选池+重排架构的推荐系统均具有直接的参考意义。</p>
+<p>那么，在工业级推荐系统中，是否应当对<strong>每一个生成器-重排器组合</strong>都执行这样的开发集对比？对于资源受限的场景，是否存在更轻量的代理指标来判断组间竞争的风险？这两个问题值得进一步探索。</p>
 <p><strong>论文标题</strong>：Training with Missed Targets in Generative Recommendation: Separating Supervision from Probability Competition</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
