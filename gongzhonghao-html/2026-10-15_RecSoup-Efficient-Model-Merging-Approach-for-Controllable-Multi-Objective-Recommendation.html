@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecSoup: Efficient Model Merging Approach for Controllable Multi-Objective Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">RecSoup: Efficient Model Merging Approach for Controllable Multi-Objective Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-17</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>RecSoup：人大高瓴突破可控推荐效率瓶颈，模型合并实现165-228倍推理提速</h2>
+<p><img alt="图2：TiSASRec中准确率与多样性任务向量的PCA投影，PC1与PC2分别解释25.7%和15.8%的方差" src="https://arxiv.org/html/2610.21220v1/Figures/TiSASRec_original_task_vector_pca_v2.png" /></p>
+<p>推荐系统常被置于多目标拉扯的张力之中：平台既要推得准，又要推得多样，还要兼顾公平。当偏好权重随用户或运营策略实时变化时，传统思路是“每个偏好训一个模型”，成本高到不现实。可控多目标推荐（CMOR）应运而生，它要求在推理阶段动态调节目标权衡，无需重新训练。人大高瓴人工智能学院的这篇论文提出了一个尖锐的质疑：为什么非要费尽力气从头生成新参数，而不是直接复用现成的专家模型？带着这个问题，研究者将模型融合引入推荐系统，构建了RecSoup框架。该框架在MovieLens-1M与Amazon等多个基准上取得了更高的Pareto前沿质量，推理延迟比参数生成范式最多降低228倍。</p>
+<h2>一、为什么直接合并行不通：线性区域假设的坍塌</h2>
+<p>模型融合的经典路线是任务算术：把不同任务专门化模型的参数差——即任务向量——做线性加权。这套方法在CLIP等视觉模型中效果不错，背后依赖一个核心假设——模型微调处于线性区域，任务向量落在共享的线性子空间内，叠加即可取长补短。</p>
+<p>然而推荐任务并非如此。</p>
+<p><img alt="图3：推荐系统中冗余参数的示意图" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_redundant_params.png" /></p>
+<p>对TiSASRec中分别针对准确率和多样性优化的任务向量做PCA投影，结果显示PC1仅解释约26%的方差，前两个主成分合计不足45%，且向量散布在互不相交的区域。这意味着参数变化分散在远超二维的高维空间中，不存在一个主导的公共线性子空间。准确率和多样性的更新方向在结构上是异构的。若直接把两组更新线性插值，相当于在一条“断裂”的路上强行并轨，精度与多样的更新相互倾轧。</p>
+<p>任务向量的幅值与敏感度也高度不对称。实验显示大约30%的参数可以被移除而不显著损害性能，但准确率导向的更新极为敏感，删错一点指标就塌方；多样性导向则相对稳健。这说明全密度合并必然携带冗余干扰，合并后的模型容易被噪声主导。</p>
+<h2>二、RecSoup的破局思路：先剪枝，再自适应合并</h2>
+<p><img alt="图4：RecSoup整体架构" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_architecture.png" /></p>
+<p>RecSoup将合并过程分解为两个阶段。第一阶段解决“该保留哪些参数”，第二阶段解决“该怎么加权”。</p>
+<h3>2.1 并发重要性与跨目标相关性剪枝</h3>
+<p>评价一个参数是否值得保留，只看任务内部的重要性会漏掉“单目标强、但与其他目标强耦合”的冲突参数。RecSoup对每个任务向量位置$j$计算两个指标：</p>
+<p>目标内重要性：</p>
+$$T_{\mathrm{self},\,i,j}=\frac{T_{i,j}^{2}}{\|\mathbf{T}_{i,:}\|_{2}^{2}}$$
+
+<p>其中$T_{i,j}$为第$i$个任务向量在位置$j$上的值，分母为整个向量的$L_2$范数平方。该指标刻画的是单一参数对该任务内部总能量涨落的相对贡献。</p>
+<p>跨目标相关性：</p>
+$$T_{\mathrm{align},\,i,j}=\left|T_{i,j}\cdot\bar{T}_{i,j}\right|$$
+
+<p>其中$\bar{T}_{i,j}$是除任务$i$外其他所有任务在同一位置的平均参数值。取绝对值而非保留符号，意味着算法不要求方向一致性。推荐场景里两个目标的更新方向可能正好相反，例如提升准确率的同时必然压制多样性，这种方向上“冲突”的参数恰恰承载着核心的权衡信息，不应被误删。</p>
+<p>综合评分是两者的加权融合：</p>
+$$S_{i,j}=\beta T_{\mathrm{self},\,i,j}+(1-\beta)T_{\mathrm{align},\,i,j}$$
+
+<p>其中$\beta$控制专业化强度与跨目标敏感度之间的取舍。随后按综合评分降序排列，动态选取恰好能保留$\rho$比例目标内总能量的最小参数集。这样既不过度稀疏，又有效过滤了看似幅度大但纯属噪声的更新。</p>
+<h3>2.2 偏好到合并系数的学习映射</h3>
+<p>合并模型参数按以下公式构造：</p>
+$$\bar{\theta}(\boldsymbol{\mu})=\theta_{\mathrm{base}}+\sum_{i=1}^{N}\lambda_{i}\boldsymbol{\tau}_{i}$$
+
+<p>其中$\boldsymbol{\mu}$为用户偏好向量，位于$N-1$维单纯形上；$\lambda_i$为第$i$个任务向量的合并系数。关键设计在于，$\lambda$并不被强制等同于$\mu$。一个轻量门控网络将偏好向量映射为近最优的合并系数：</p>
+$$\boldsymbol{\lambda}=f_{\phi}(\boldsymbol{\mu})$$
+
+<p>训练时只更新门控网络参数$\phi$，专家模型和任务向量全部冻结。损失函数为多目标损失的偏好加权求和，在小批量数据上评估即可。与先前PWE-MoE不同，RecSoup的门控网络面对的是经过剪枝净化的任务向量基底，无需额外担当“参数冲突调解员”，只需专注学习Pareto流形上的精确坐标。</p>
+<h2>三、实验结果：更好的Pareto前沿，更快的响应</h2>
+<p><img alt="图5：RecSoup剪枝下任务向量的结构分析，包含参数解耦、几何保持、特征锐化与Pareto前沿扩展" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_pruning_analysis.png" /></p>
+<p>研究者为准确率和多样性各训练一个专家模型，准确率用BPR损失，多样性用可微的$\alpha$-NDCG代理损失驱动类别新颖性。在SASRec、GRU4Rec和TiSASRec三种主流序列推荐主干上，三个基准数据集的评估显示：RecSoup在超体积（HV）指标上普遍优于基于超网络的参数生成方法（如CMR），尤其在Amazon的稀疏与噪声反馈环境中，HV提升幅度约20%至50%。与同样采用合并路线的Soup和TATR相比，RecSoup在MovieLens-1M上最大HV提升分别达8.5%和7.3%，且保留了0.89以上的可控性得分。</p>
+<p>分析实验还揭示了剪枝的独特效果：任务向量之间的参数重叠显著下降，更新的主要能量集中到更少数量的关键参数上，同时奇异谱与主方向整体保持不变。也就是说，剪枝在不摧毁任务向量骨架的前提下，锐化了任务的“信号”。</p>
+<p><img alt="图7：RecSoup与TIES的超体积对比" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_HV_vs_TIES.png" /></p>
+<p>剪枝策略的有效性在对比TIES的基础实验中进一步得到验证。TIES只看目标内重要性，删掉了被RecSoup用跨目标相关性识别出的关键耦合参数，因而在全部三个数据集上HV均低于RecSoup，在Amazon（Food）数据集上相对提升达9.02%。</p>
+<p>推理延迟对比更加直观。RecSoup在推理时只需做一次线性合并和一个极小的门控网络前向，参数构建耗时仅0.04毫秒级；基于超网络的方法需要跑完一个完整MLP来生成全部适配器参数，耗时在7至10毫秒区间。扩散模型生成方法由于需要迭代去噪，单偏好平均参数构建时间高达87.79秒，比RecSoup慢三个数量级以上。</p>
+<h2>四、展望</h2>
+<p>RecSoup将模型合并正式引入可控多目标推荐，用剪枝削减冲突、用轻量门控应对非线性偏好映射，在Pareto质量、可控性和推理效率之间找到了一个切实有效的平衡点。它不依赖复杂的生成架构，工业界已有的多专家训练管道可以直接复用，部署成本极为友好。在三个目标的准确率-多样性-公平性场景中，RecSoup同样给出了最高的HV和整体可控性。如果未来进一步探索模型合并与在线学习的结合方式，或许能让推荐系统在持续变化的偏好和环境面前更加游刃有余，这是整个方向值得关注的下一步。</p>
+<p><strong>论文标题</strong>：RecSoup: Efficient Model Merging Approach for Controllable Multi-Objective Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.21220.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-15_RecSoup-Efficient-Model-Merging-Approach-for-Controllable-Multi-Objective-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-15_RecSoup-Efficient-Model-Merging-Approach-for-Controllable-Multi-Objective-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
