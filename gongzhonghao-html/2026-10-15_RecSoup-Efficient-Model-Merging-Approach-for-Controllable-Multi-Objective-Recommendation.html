@@ -463,54 +463,56 @@
             </div>
             <h1 class="article-title">RecSoup: Efficient Model Merging Approach for Controllable Multi-Objective Recommendation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-10-17</span>
+                <span class="meta-item">📅 2026-10-18</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h2>RecSoup：人大高瓴突破可控推荐效率瓶颈，模型合并实现165-228倍推理提速</h2>
-<p><img alt="图2：TiSASRec中准确率与多样性任务向量的PCA投影，PC1与PC2分别解释25.7%和15.8%的方差" src="https://arxiv.org/html/2610.21220v1/Figures/TiSASRec_original_task_vector_pca_v2.png" /></p>
-<p>推荐系统常被置于多目标拉扯的张力之中：平台既要推得准，又要推得多样，还要兼顾公平。当偏好权重随用户或运营策略实时变化时，传统思路是“每个偏好训一个模型”，成本高到不现实。可控多目标推荐（CMOR）应运而生，它要求在推理阶段动态调节目标权衡，无需重新训练。人大高瓴人工智能学院的这篇论文提出了一个尖锐的质疑：为什么非要费尽力气从头生成新参数，而不是直接复用现成的专家模型？带着这个问题，研究者将模型融合引入推荐系统，构建了RecSoup框架。该框架在MovieLens-1M与Amazon等多个基准上取得了更高的Pareto前沿质量，推理延迟比参数生成范式最多降低228倍。</p>
-<h2>一、为什么直接合并行不通：线性区域假设的坍塌</h2>
-<p>模型融合的经典路线是任务算术：把不同任务专门化模型的参数差——即任务向量——做线性加权。这套方法在CLIP等视觉模型中效果不错，背后依赖一个核心假设——模型微调处于线性区域，任务向量落在共享的线性子空间内，叠加即可取长补短。</p>
-<p>然而推荐任务并非如此。</p>
-<p><img alt="图3：推荐系统中冗余参数的示意图" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_redundant_params.png" /></p>
-<p>对TiSASRec中分别针对准确率和多样性优化的任务向量做PCA投影，结果显示PC1仅解释约26%的方差，前两个主成分合计不足45%，且向量散布在互不相交的区域。这意味着参数变化分散在远超二维的高维空间中，不存在一个主导的公共线性子空间。准确率和多样性的更新方向在结构上是异构的。若直接把两组更新线性插值，相当于在一条“断裂”的路上强行并轨，精度与多样的更新相互倾轧。</p>
-<p>任务向量的幅值与敏感度也高度不对称。实验显示大约30%的参数可以被移除而不显著损害性能，但准确率导向的更新极为敏感，删错一点指标就塌方；多样性导向则相对稳健。这说明全密度合并必然携带冗余干扰，合并后的模型容易被噪声主导。</p>
-<h2>二、RecSoup的破局思路：先剪枝，再自适应合并</h2>
-<p><img alt="图4：RecSoup整体架构" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_architecture.png" /></p>
-<p>RecSoup将合并过程分解为两个阶段。第一阶段解决“该保留哪些参数”，第二阶段解决“该怎么加权”。</p>
-<h3>2.1 并发重要性与跨目标相关性剪枝</h3>
-<p>评价一个参数是否值得保留，只看任务内部的重要性会漏掉“单目标强、但与其他目标强耦合”的冲突参数。RecSoup对每个任务向量位置$j$计算两个指标：</p>
-<p>目标内重要性：</p>
-$$T_{\mathrm{self},\,i,j}=\frac{T_{i,j}^{2}}{\|\mathbf{T}_{i,:}\|_{2}^{2}}$$
+            <h2>人大RecSoup模型合并框架：多目标推荐推理提速228倍，Pareto前沿质量提升8.5%</h2>
+<h2>引言</h2>
+<p>现代推荐系统往往需要在准确性、多样性、公平性等多个相互冲突的目标之间取得平衡。可控多目标推荐（CMOR）允许在推理阶段动态调整目标权重，无需重新训练，以适应实时变化的用户需求。然而，现有方案要么受限于重排序的候选集范围，要么依赖昂贵的参数生成模块（如超网络或扩散模型），带来训练成本高、推理延迟大等问题。</p>
+<p>近期模型合并（Model Merging）技术为CMOR提供了全新思路：直接复用多个目标专用子模型，通过参数组合实现动态权衡。但将这一范式迁移到推荐系统并非易事——推荐模型的任务向量不具备大语言模型中常见的“共享线性子空间”，直接线性插值会引发严重的跨目标干扰。</p>
+<p>针对这一难题，中国人民大学的研究者提出了<strong>RecSoup</strong>：一个轻量级两阶段框架，通过<strong>冲突感知剪枝</strong>与<strong>自适应系数学习</strong>，在不重新训练的情况下高效逼近多目标Pareto前沿，推理速度比超网络方法最快提升<strong>228.8倍</strong>，且Pareto前沿质量在多个基准上超越现有方法。</p>
+<h2>一、核心方法：剪枝+自适应合并</h2>
+<h3>1. 问题定义与线性假设失效</h3>
+<p>在模型合并范式中，每个目标的专用模型$\theta_i$与基础模型$\theta_{\text{base}}$的差定义为任务向量：</p>
+$$\boldsymbol{\tau}_{i}=\operatorname{vec}(\theta_{i})-\operatorname{vec}(\theta_{\mathrm{base}})$$
 
-<p>其中$T_{i,j}$为第$i$个任务向量在位置$j$上的值，分母为整个向量的$L_2$范数平方。该指标刻画的是单一参数对该任务内部总能量涨落的相对贡献。</p>
-<p>跨目标相关性：</p>
-$$T_{\mathrm{align},\,i,j}=\left|T_{i,j}\cdot\bar{T}_{i,j}\right|$$
-
-<p>其中$\bar{T}_{i,j}$是除任务$i$外其他所有任务在同一位置的平均参数值。取绝对值而非保留符号，意味着算法不要求方向一致性。推荐场景里两个目标的更新方向可能正好相反，例如提升准确率的同时必然压制多样性，这种方向上“冲突”的参数恰恰承载着核心的权衡信息，不应被误删。</p>
-<p>综合评分是两者的加权融合：</p>
-$$S_{i,j}=\beta T_{\mathrm{self},\,i,j}+(1-\beta)T_{\mathrm{align},\,i,j}$$
-
-<p>其中$\beta$控制专业化强度与跨目标敏感度之间的取舍。随后按综合评分降序排列，动态选取恰好能保留$\rho$比例目标内总能量的最小参数集。这样既不过度稀疏，又有效过滤了看似幅度大但纯属噪声的更新。</p>
-<h3>2.2 偏好到合并系数的学习映射</h3>
-<p>合并模型参数按以下公式构造：</p>
+<p>给定用户偏好向量$\boldsymbol{\mu}\in\Delta_{N-1}$，合并模型参数可表示为：</p>
 $$\bar{\theta}(\boldsymbol{\mu})=\theta_{\mathrm{base}}+\sum_{i=1}^{N}\lambda_{i}\boldsymbol{\tau}_{i}$$
 
-<p>其中$\boldsymbol{\mu}$为用户偏好向量，位于$N-1$维单纯形上；$\lambda_i$为第$i$个任务向量的合并系数。关键设计在于，$\lambda$并不被强制等同于$\mu$。一个轻量门控网络将偏好向量映射为近最优的合并系数：</p>
+<p>其中$\boldsymbol{\lambda}=[\lambda_1,\dots,\lambda_N]^\top$为合并系数，通常由偏好$\boldsymbol{\mu}$通过映射函数$\mathcal{F}$得到。</p>
+<p>传统任务算术（如线性插值）依赖<strong>线性区域假设</strong>：不同任务的参数更新应集中在共享的低维线性子空间内。然而，论文对TiSASRec模型分别优化准确性与多样性所得的任务向量进行PCA分析（见图2），发现两者散布在高维空间中，PC1仅解释25.7%的方差，前两个主成分累计解释不足45%。这表明准确性更新与多样性更新依赖根本不同质的参数方向，无法通过线性组合有效统一。</p>
+<p><img alt="图2：TiSASRec中准确性与多样性优化任务向量的PCA投影。轴对应第一主成分（PC1）和第二主成分（PC2），分别解释25.7%和15.8%的方差。" src="https://arxiv.org/html/2610.21220v1/Figures/TiSASRec_original_task_vector_pca_v2.png" /></p>
+<h3>2. 阶段一：冲突缓解剪枝</h3>
+<p>RecSoup首先对任务向量矩阵$\mathbf{T}\in\mathbb{R}^{N\times D}$执行精细剪枝，以降低跨目标参数干扰。针对每个任务$i$的每个参数位置$j$，计算<strong>综合重要性分数</strong>：</p>
+$$S_{i,j}=\beta T_{\mathrm{self},\,i,j}+(1-\beta)T_{\mathrm{align},\,i,j}$$
+
+<p>其中，$T_{\mathrm{self},\,i,j}=\frac{T_{i,j}^{2}}{\|\mathbf{T}_{i,:}\|_{2}^{2}}$衡量参数对所在任务的相对贡献；$T_{\mathrm{align},\,i,j}=\left|T_{i,j}\cdot\bar{T}_{i,j}\right|$度量参数与其他任务平均更新的耦合强度。这里使用绝对值而非符号，是为了保留那些方向相反但对多目标都关键的参数（如提升准确性通常会降低多样性），避免因方向冲突而误剪。</p>
+<p>随后采用<strong>动态范数保留</strong>策略：按分数排序后，选取前$k_i$个参数，使得保留的自重要性之和达到预设比例$\rho$：</p>
+$$k_i=\min\left\{k\;\bigg|\;\frac{\sum_{m=1}^{k}T_{\mathrm{self},\,i,\,\pi(m)}}{\sum_{j=1}^{D}T_{\mathrm{self},\,i,\,j}}\geq\rho\right\}$$
+
+<p>剪枝后的任务向量为$\tilde{\mathbf{T}}_{i}=\mathbf{T}_{i}\odot\mathbb{I}_{\mathcal{K}_i}$。这一过程有效解耦了不同目标间的参数重叠，为后续合并提供了干净的子空间。</p>
+<h3>3. 阶段二：可学习系数的自适应合并</h3>
+<p>第二阶段引入一个轻量级门控网络（即模型合并器）$f_\phi$，将用户偏好向量映射为合并系数：</p>
 $$\boldsymbol{\lambda}=f_{\phi}(\boldsymbol{\mu})$$
 
-<p>训练时只更新门控网络参数$\phi$，专家模型和任务向量全部冻结。损失函数为多目标损失的偏好加权求和，在小批量数据上评估即可。与先前PWE-MoE不同，RecSoup的门控网络面对的是经过剪枝净化的任务向量基底，无需额外担当“参数冲突调解员”，只需专注学习Pareto流形上的精确坐标。</p>
-<h2>三、实验结果：更好的Pareto前沿，更快的响应</h2>
-<p><img alt="图5：RecSoup剪枝下任务向量的结构分析，包含参数解耦、几何保持、特征锐化与Pareto前沿扩展" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_pruning_analysis.png" /></p>
-<p>研究者为准确率和多样性各训练一个专家模型，准确率用BPR损失，多样性用可微的$\alpha$-NDCG代理损失驱动类别新颖性。在SASRec、GRU4Rec和TiSASRec三种主流序列推荐主干上，三个基准数据集的评估显示：RecSoup在超体积（HV）指标上普遍优于基于超网络的参数生成方法（如CMR），尤其在Amazon的稀疏与噪声反馈环境中，HV提升幅度约20%至50%。与同样采用合并路线的Soup和TATR相比，RecSoup在MovieLens-1M上最大HV提升分别达8.5%和7.3%，且保留了0.89以上的可控性得分。</p>
-<p>分析实验还揭示了剪枝的独特效果：任务向量之间的参数重叠显著下降，更新的主要能量集中到更少数量的关键参数上，同时奇异谱与主方向整体保持不变。也就是说，剪枝在不摧毁任务向量骨架的前提下，锐化了任务的“信号”。</p>
-<p><img alt="图7：RecSoup与TIES的超体积对比" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_HV_vs_TIES.png" /></p>
-<p>剪枝策略的有效性在对比TIES的基础实验中进一步得到验证。TIES只看目标内重要性，删掉了被RecSoup用跨目标相关性识别出的关键耦合参数，因而在全部三个数据集上HV均低于RecSoup，在Amazon（Food）数据集上相对提升达9.02%。</p>
-<p>推理延迟对比更加直观。RecSoup在推理时只需做一次线性合并和一个极小的门控网络前向，参数构建耗时仅0.04毫秒级；基于超网络的方法需要跑完一个完整MLP来生成全部适配器参数，耗时在7至10毫秒区间。扩散模型生成方法由于需要迭代去噪，单偏好平均参数构建时间高达87.79秒，比RecSoup慢三个数量级以上。</p>
-<h2>四、展望</h2>
-<p>RecSoup将模型合并正式引入可控多目标推荐，用剪枝削减冲突、用轻量门控应对非线性偏好映射，在Pareto质量、可控性和推理效率之间找到了一个切实有效的平衡点。它不依赖复杂的生成架构，工业界已有的多专家训练管道可以直接复用，部署成本极为友好。在三个目标的准确率-多样性-公平性场景中，RecSoup同样给出了最高的HV和整体可控性。如果未来进一步探索模型合并与在线学习的结合方式，或许能让推荐系统在持续变化的偏好和环境面前更加游刃有余，这是整个方向值得关注的下一步。</p>
+<p>合并后的任务向量为$\boldsymbol{\tau}_{\mathrm{merged}}=\sum_{i=1}^{N}\lambda_i\tilde{\mathbf{T}}_{i,:}$，再与基础模型相加得到最终模型。训练时仅更新门控网络参数$\phi$，剪枝后的任务向量和基础模型均冻结。损失函数为偏好加权的多目标损失$\mathcal{L}(\theta_{\mathrm{merged}},\boldsymbol{\mu})=\sum_{i=1}^{N}\mu_i\cdot\mathcal{L}_i(\theta_{\mathrm{merged}})$。</p>
+<p>这种两阶段解耦设计，使得门控网络只需在“净化后”的参数子空间中学习坐标，无需同时处理干扰与权衡，大幅减轻优化负担。论文在理论分析中（定理5.1）进一步证明，模型合并范式不受参数生成映射的Lipschitz平滑性限制，可以完全导航Pareto前沿，而参数生成方法可能无法覆盖全部凸组合解。</p>
+<h2>二、实验：全面验证性能优势</h2>
+<p>论文在MovieLens-1M、Amazon Grocery和Amazon Toys三个数据集上，使用SASRec、GRU4Rec、TiSASRec三种骨干模型进行了系统评估，对比了重排序（MMR）、参数生成（CMR、Paragon）、基础合并（Soup、TATR、TIES）等方法。</p>
+<p><strong>主要结果（表1）显示：</strong></p>
+<ul>
+<li><strong>Pareto前沿质量</strong>：RecSoup在超体积（HV）指标上一致超越所有合并类基线。例如在MovieLens-1M上，相比Soup，HV提升最高达<strong>8.5%</strong>（SASRec）；在Amazon Grocery上，相比Paragon等参数生成方法，HV提升约<strong>20-50%</strong>。</li>
+<li><strong>可控性</strong>：RecSoup的Controllability平均接近0.9以上，与最佳方法相当，表明其能精确响应偏好变化。</li>
+<li><strong>推理效率</strong>：表2展示了参数构造延迟对比。超网络方法平均需7.5-9.4毫秒，而RecSoup仅需0.04-0.05毫秒，加速<strong>165.9-228.8倍</strong>；扩散模型（Paragon）需约87.79秒，差距更为悬殊。</li>
+<li><strong>多目标扩展</strong>：在准确率-公平性以及准确率-多样性-公平性三目标设置中，RecSoup同样获得最高的HV和均衡的可控性，证明其良好泛化能力。</li>
+</ul>
+<p><img alt="图5：RecSoup剪枝下任务向量的结构分析。(a)参数解耦：剪枝降低了目标间支持集重叠。(b)几何保持：奇异谱和主方向几乎不变，整体结构未破坏。(c)特征锐化：支持集中度上升，噪声更新被移除。(d)Pareto前沿：剪枝后可达解范围扩大。" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_pruning_analysis.png" /></p>
+<p><img alt="图7：RecSoup与TIES的超体积对比。柱状图显示绝对HV，折线显示相对提升。RecSoup在SASRec、GRU4Rec、TiSASRec上均持续优于TIES，其中在Food数据集相对提升最高达9.02%。" src="https://arxiv.org/html/2610.21220v1/Figures/RecSoup_vs_TIES_HV.png" /></p>
+<p>消融实验进一步表明，剪枝与自适应合并缺一不可：移除系数学习器（w/o MLP）导致HV显著下降；移除剪枝（w/o Prune）在任务向量干扰较强时性能恶化明显，验证了剪枝对鲁棒性的贡献。</p>
+<h2>三、技术价值与展望</h2>
+<p>RecSoup成功地将模型合并思想引入可控多目标推荐，其轻量级设计不仅大幅降低了推理延迟，还避免了参数生成方法的训练不稳定和架构复杂度，为工业界复用已有的多目标专用模型提供了高效路径。未来，该框架有望扩展到更广泛的目标集合（如新颖性、覆盖率等），并探索与LoRA等参数高效微调技术的结合，进一步提升多目标推荐的灵活性与实用性。</p>
 <p><strong>论文标题</strong>：RecSoup: Efficient Model Merging Approach for Controllable Multi-Objective Recommendation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
