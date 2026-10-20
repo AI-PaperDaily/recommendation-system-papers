@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Recommendation for Multi-Step Agents: Finding Every Tool a Task Needs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Tool Recommendation for Multi-Step Agents: Finding Every Tool a Task Needs</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-20</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>Arcade推出工具推荐系统：8千工具一网打尽，检索完整率提升57%</h2>
+<h3>引言</h3>
+<p>在多步智能体（Agent）任务中，缺少任何一个所需工具都可能导致整个任务失败。然而，企业级Agent需要调用的工具数量庞大——以Arcade平台为例，其公共目录包含约8,200个工具，定义总长度高达176万Token，远超任何主流大模型的上下文窗口。传统做法是精心挑选一个静态工具列表，但这要么限制了Agent的能力范围，要么让每次请求的成本不堪重负。更棘手的是，企业工具集并非静态，每天都会新增或变更，静态列表和微调模型都难以跟上变化。面对这一困境，Arcade提出并部署了<strong>Tool Recommendation</strong>系统，通过一个仅包含三个工具的固定接口，让Agent能够动态检索并调用整个目录中的8,200个工具，在提升能力覆盖的同时显著降低了成本和输入Token。</p>
+<h3>一、核心方法：三工具接口与两阶段检索</h3>
+<p>Tool Recommendation的核心思路是：<strong>Agent不再直接持有工具列表，而是通过一个固定的发现接口按需获取工具</strong>。该系统位于Agent与Arcade工具目录之间的网关层，通过以下三个工具实现全目录覆盖：</p>
+<ul>
+<li><strong>SelectTools</strong>：接收一个或多个自然语言任务描述，返回每个任务对应的排名前5的工具定义（含完整输入Schema）。</li>
+<li><strong>UseTool</strong>：执行返回的工具调用。</li>
+<li><strong>ListApps</strong>：列出网关背后可用的应用程序及其连接状态。</li>
+</ul>
+<p>整个接口的四个工具定义（含网关自身的授权工具）仅占993个Token，相比全目录的176万Token缩减了约1,800倍。</p>
+<p><img alt="图1：两种工具提供方式对比" src="https://arxiv.org/html/2509.xxxxx/figures/fig1.png" /></p>
+<p>在系统架构上，Tool Recommendation嵌入在Arcade的执行运行时内部，确保每个推荐的工具都遵守网关的允许列表和访问策略，并使用最终用户自身的凭据授权执行，凭证不会进入Agent的上下文。</p>
+<p><img alt="图2：系统概览" src="https://arxiv.org/html/2509.xxxxx/figures/fig2.png" /></p>
+<p><strong>两阶段检索与重排</strong>。推荐过程分为两个阶段：第一阶段从合格范围内融合<strong>BM25词法检索</strong>和<strong>稠密检索</strong>，召回候选工具；第二阶段使用<strong>交叉编码器</strong>对排名靠前的候选进行重排，读取任务描述和工具定义的配对来精确排序。当顶部候选得分接近时触发重排，论文指出这一情况在生产中占比超过99.9%。融合公式如下：</p>
+$$\text{score}(q, t) = \theta \cdot \text{BM25}(q, t) + (1-\theta) \cdot \text{dense}(q, t)$$
+
+<p>其中 $\theta$ 为融合权重，论文中设置为 $0.5$。</p>
+<p><strong>执行层的双重授权</strong>。每个工具调用在执行前都会经过两次检查：用户必须已对该工具所属服务授予同意，且该工具必须在网关的合格范围内。若需要用户尚未授予的权限，模型会收到授权链接，用户批准后可重试调用。</p>
+<h3>二、实验：检索质量与端到端成本</h3>
+<p>研究者在两个维度上对Tool Recommendation进行了评估：<strong>公开检索基准上的准确性</strong>和<strong>真实多步工作流下的会话成本</strong>。</p>
+<p><strong>检索质量</strong>。ToolRet基准包含7,961个查询、44,453个工具，覆盖Web API、代码函数和自定义应用三类。论文提出了<strong>Completeness@10</strong>指标——即所有必需工具都出现在前10名的查询比例，因为多步任务中任何一个工具缺失都会导致链路失败。结果显示：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>Tool Recommendation</th>
+<th>BM25</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Completeness@10（总体）</td>
+<td>45.2%</td>
+<td>28.8%</td>
+<td>+57%</td>
+</tr>
+<tr>
+<td>Recall@10（总体）</td>
+<td>55.2%</td>
+<td>37.0%</td>
+<td>+49%</td>
+</tr>
+</tbody>
+</table></div>
+<p>在各类别上，Completeness@10的提升均大于Recall@10，尤其在代码类工具上，绝对分领先BM25达79%。论文强调，Completeness比Recall更能反映实际任务的成功率，因为“缺少一个工具就失败”的场景在真实链路中极为常见。</p>
+<p><img alt="图3：输入Token随搜索次数的变化" src="https://arxiv.org/html/2509.xxxxx/figures/fig3.png" /></p>
+<p><strong>会话成本</strong>。在30个多步企业工作流（涵盖Gmail、Slack、Google Drive、Salesforce等）上，研究者对比了推荐网关与100工具静态列表的表现。结果显示：</p>
+<ul>
+<li><strong>Codex (gpt-5.6-luna)</strong>：输入Token降低17.2%，总账单降低5.5%，11次运行全部更便宜。</li>
+<li><strong>Claude Code (Sonnet 5)</strong>：输入Token降低39.6%，总账单降低21.8%，3次运行全部更便宜。</li>
+<li><strong>总体</strong>：总账单降低13.6%（95% CI: 7.4%至18.4%，$p=0.006$），14次运行全部更便宜。</li>
+</ul>
+<p>任务完成率无显著差异（Codex：276/327 vs. 273/327；Claude Code：74/81 vs. 76/81）。进一步分析表明，每个工作流中的SelectTools调用次数是决定节省幅度的关键：搜索一次时中位输入减少28.2%，而搜索三次以上时反而增加32%以上。这意味着<strong>单次搜索足以覆盖所需工具链的Agent是推荐系统的理想适用场景</strong>。</p>
+<p><strong>成本模型</strong>。基于生产流量校准的成本模型显示，推荐系统在九种模型上的典型会话输入成本可节省18%至21%，对于单消息会话可高达37%。静态列表仅在工具数低于约25-28个，或搜索频率超过每次工具调用0.63次时才更便宜——后者是观测到生产速率的五倍。</p>
+<h3>三、展望</h3>
+<p>Tool Recommendation证明了<strong>“全目录+智能检索”可以同时实现能力覆盖和成本控制</strong>。对于拥有大量动态工具的企业，该方案避免了静态列表的局限性，也不会像微调那样因目录变化而过时。然而，该方法目前仅通过Arcade平台可用，且其在短任务或极小工具集上并不占优。未来的挑战在于如何进一步降低搜索次数的影响，以及如何引导Agent更高效地一次性请求完整工具链。可以预见，随着企业工具生态持续膨胀，这类网关级的推荐系统将成为多步智能体基础设施的标配。</p>
+<p><strong>论文标题</strong>：Tool Recommendation for Multi-Step Agents: Finding Every Tool a Task Needs</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.23707.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-16_Tool-Recommendation-for-Multi-Step-Agents-Finding-Every-Tool-a-Task-Needs.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-16_Tool-Recommendation-for-Multi-Step-Agents-Finding-Every-Tool-a-Task-Needs.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
