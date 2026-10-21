@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Don't Rewrite the SID Map: Topology Preservation for Generative Retrieval in Dynamic E-Commerce Search</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Don't Rewrite the SID Map: Topology Preservation for Generative Retrieval in Dynamic E-Commerce Search</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-21</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>阿里天猫+淘宝发布生成式检索更新新范式：冻结SID拓扑后GMV提升1.16%，新商品召回翻倍</h2>
+<p>生成式检索在动态电商搜索系统中面临一个隐形陷阱：<strong>SID语义漂移</strong>。当商品价值排序更新时，重写商品语义标识符（SID）会使模型已学习的解码路径大规模失效。论文基于67天超大规模电商搜索日志的受控实验，提出了一条极简部署原则——<strong>「新商品插入、旧商品冻结」</strong>，在TmallAPP三周线上A/B测试中实现UCTCVR +0.29%、GMV +1.16%，新商品HitRate提升约109%。</p>
+<h2>一、引言：SID漂移是一个被宽束搜索掩盖的致命问题</h2>
+<p>生成式检索将商品检索转化为序列生成任务：给定用户查询，语言模型自回归地生成离散的语义标识符（SID），再通过SID-to-Item映射表解析为目标商品。该范式自可微分搜索索引（DSI）提出以来，凭借端到端训练、免向量索引维护、自然融合多目标排序信号等优势，在电商搜索场景中获得广泛关注。</p>
+<p>然而，<strong>动态更新</strong>使问题的复杂度急剧上升。电商商品集每日扩张，价格和转化率持续波动，SID编码中往往包含业务价值维度。一种常见做法是周期性刷新映射表——用最新价值排序重写旧商品的SID。但是，模型已经在历史映射上刻入了SID空间的隐式拓扑结构，当映射被重写后，模型在推理时所期望的解码路径不再指向正确的商品。更隐蔽的是，<strong>大束宽搜索会掩盖漂移的真实破坏性</strong>：束宽1000时模型可以通过冗余探索恢复部分失效路径，但延迟受限的生产环境往往只能使用窄束宽，此时性能断崖式下跌。</p>
+<p>论文以67天电商搜索日志为实验基础，系统性地将映射策略作为独立实验变量，覆盖从完全重映射到完全冻结的全谱系，独立控制训练策略，从而清晰分离了映射损伤与训练修复的因果关系。</p>
+<h2>二、核心方法：三维SID构造与拓扑保持更新</h2>
+<h3>2.1 三级SID构造与混合碰撞感知设计</h3>
+<p>每个商品被赋予一个三token语义标识符：</p>
+$$\operatorname{SID}(i)=[s_{1},s_{2},s_{3}]$$
+
+<p>其中前两个token由RQ-VAE对商品内容嵌入进行残差量化得到，并通过查询-商品对比学习（QI objective）使码本捕获搜索相关的语义聚类。第三个token编码业务价值先验：</p>
+$$v(i)=\frac{0.1\cdot\mathrm{Click}(i)+0.3\cdot\mathrm{Cart}(i)+1.0\cdot\mathrm{Buy}(i)}{\mathrm{Exp}(i)+\epsilon},\quad\epsilon=10$$
+
+<p>在动态商品入库场景下，每个语义前缀下的商品数量单调增长，维护完全无碰撞的双射映射在有限词汇表下不可行。论文采用<strong>混合碰撞感知（HC）设计</strong>：每个前缀下按价值排序，前K=100个商品获得唯一第三级token，其余商品落入固定大小的共享桶。实验证明，HC在全部束宽下均优于完全稀疏（FS）设计，且没有导致模型无差别偏向大簇。</p>
+<p><img alt="图1：总体框架概览。顶部：三级SID构造，两个语义层来自带QI对比学习的RQ-VAE，生成前缀(s1,s2)；业务价值层通过参与度信号排序商品追加s3。底部：从嵌入到SID构造、LLM自回归生成、束搜索以及SID-to-Item映射解析的检索流程。存在两条分叉的更新路径：红色路径重写旧商品SID并使用模型汤策略（混合新旧模型），导致指标下降；绿色路径冻结旧SID、插入新商品、直接使用从旧模型微调的新模型，在新旧商品上均能提升性能。" src="https://arxiv.org/html/2610.26105v1/fig_frame.png" /></p>
+<h3>2.2 语义漂移的形式化刻画</h3>
+<p>当训练时映射 $M_{t_0}$ 与推理时映射 $M_{t_1}$ 不一致时，漂移事件发生。漂移程度用旧商品中被重新映射的比例衡量：</p>
+$$\gamma=\delta(M_{t_{0}},M_{t_{1}})=\frac{1}{|\mathcal{I}|}\sum_{i\in\mathcal{I}}\mathbb{I}\!\left[M_{t_{0}}^{-1}(i)\neq M_{t_{1}}^{-1}(i)\right]$$
+
+<p>核心张力在于稳定性与新鲜度的权衡。论文的关键洞察是：生成式检索模型中每个SID的关联并非单一标签，而是<strong>树结构输出空间中的一条完整解码路径</strong>。模型先选择 $s_1$，再条件于 $s_1$ 选择 $s_2$，直至生成完整标识符。映射更新若重写SID，不仅改变了训练数据的标签，更从根本上重新分布了已学习路径上的输出概率，可能使整个解码树分支失效。</p>
+<h3>2.3 拓扑保持的增量更新策略</h3>
+<p>论文提出三种映射策略：<strong>完全重映射（Full-Re）</strong>按最新价值排序重写所有第三级token；<strong>冻结映射（Frozen）</strong>保持所有旧商品SID不变，仅为新商品插入可用token；<strong>阈值重映射</strong>按排名位移超过阈值来选择性重写。训练策略上分为不重训和从上一checkpoint进行warm-start续训两类。两个维度独立组合，形成完整的实验矩阵。冻结+Warm-start路径的核心逻辑是：<strong>绝不对模型已学习过的SID进行任何修改</strong>，新商品以零侵入方式插入现有SID空间。</p>
+<h2>三、实验：重映射的单调破坏效应与不可修复性</h2>
+<h3>3.1 宽束掩盖真实的漂移损伤</h3>
+<p>实验首先固定商品集不变，仅更新第三级SID token。对于HC设计，同时刷新映射表和特征序列时，HR@1从0.0584暴跌至0.0340，降幅达41.78%；MRR从0.1164降至0.0706，降幅39.35%。然而<strong>在束宽1000下，HR@1000的降幅仅为8.33%</strong>。窄束宽与宽束宽之间的降幅差距高达5倍以上，这构成了一个危险的评估陷阱：生产系统若只用宽束做离线评估，可能长期在错误的信心下运行。</p>
+<p><img alt="图2：单调重映射效应。随着重映射阈值变得更加激进，指标相对于冻结基线的下降率(%)。" src="https://arxiv.org/html/2610.26105v1/fig_monotonic.png" /></p>
+<h3>3.2 重映射比例与检索质量的严格单调关系</h3>
+<p>通过调整重映射阈值控制 $\gamma$ 从0%到72.75%。结果表明，<strong>检索质量严格单调下降</strong>：$\gamma$ 从0%增加到72.75%时，HR@1从0.0579降至0.0332，降幅42.66%。中等阈值（t=10，$\gamma$=29.08%）仍比完全冻结低12.4%——不存在一个“有用的中间地带”。冻结局部的插入新商品甚至使旧商品HR@1000从0.7035微升至0.7043，说明新商品信号对旧商品检索也有正向帮助。</p>
+<h3>3.3 Warm-Start不可修复拓扑破坏</h3>
+<p>在完全相同的初始化与训练数据条件下，Frozen在旧商品HR@1上优于Full-Re 36.70%，在新商品上优于13.94%。<strong>Full-Re在warm-start训练后仍弱于不重训的Frozen基线</strong>（HR@1000: 0.6923 vs 0.7043，MRR: 0.0941 vs 0.1160）。这一发现否定了默认修复策略的有效性：模型已经内化了SID空间的隐式拓扑，有限续训预算无法重建被破坏的路径结构。论文称这一修复失效的机制为“拓扑不可修复性”。</p>
+<p><img alt="图3：Warm-start训练相对于冻结基线的改进（Day-30）。Full-Re与Frozen相对于冻结（不重训）策略的相对变化(%)。" src="https://arxiv.org/html/2610.26105v1/fig_warmstart.png" /></p>
+<h3>3.4 模型汤策略无增益</h3>
+<p>对于Frozen策略，将旧checkpoint $\theta_{old}$ 与新checkpoint $\theta_{new}$ 进行权重插值：</p>
+$$\theta(\alpha)=\alpha\theta_{\mathrm{old}}+(1-\alpha)\theta_{\mathrm{new}}$$
+
+<p>实验表明，<strong>纯新checkpoint（$\alpha=0$）在所有测试束宽和MRR上均为最优或近最优</strong>。在Day-30周期中，$\alpha=0.5$ 的中间插值相比纯新模型导致HR@1下降1.41%（旧商品）和38.03%（新商品）。Day-37的短周期重复实验中，$\alpha=0.1$ 时个别旧商品指标有微小提升，但幅度接近于噪声水平，不改变总体结论。</p>
+<p><img alt="图4：对模型混合的非对称敏感性：HR@1000。Day-30（左）与Day-37（右）权重混合消融。实线为HR@1000（左轴），虚线为MRR（右轴）。两个指标均随新模型权重的增加单调上升，证实纯新checkpoint为最优或近最优。" src="https://arxiv.org/html/2610.26105v1/fig_soup.png" /></p>
+<h3>3.5 线上效果验证</h3>
+<p>在TmallAPP搜索系统的召回阶段，生成式检索器以7天为周期进行warm-start训练。采用拓扑保持策略，现有商品SID保持不变，新商品通过RQ-VAE生成前两层、按业务价值确定第三层。系统以动态束宽[50, 200, 1000]运行，平均端到端延迟约50ms。三周线上A/B测试（20%流量）与两个月前训练、冻结旧商品但无周期训练的基线对比，<strong>UCTCVR提升0.29%，GMV提升1.16%</strong>。</p>
+<h2>四、展望</h2>
+<p>该研究确立了一个可能广泛适用于生成式检索系统的运维原则：<strong>SID拓扑的稳定性是比训练策略更根本的性能决定因素</strong>。在对抗式局部修复或复杂持续性学习框架被引入之前，最简单的预防性策略——不产生损伤——就已经足够有效。这一发现对推荐系统、文档检索等所有采用生成式标识符范式的动态场景具有直接的方法论价值。</p>
+<p>一个值得进一步探讨的问题随之浮现：当新商品的累积达到一定规模后，旧商品的SID空间是否终将需要一次“结构性重构”？如果是，这种重构应该以多大的时间粒度和范围进行，才能在拓扑破裂的代价与新商品覆盖收益之间找到真正的平衡点？</p>
+<p><strong>论文标题</strong>：Don't Rewrite the SID Map: Topology Preservation for Generative Retrieval in Dynamic E-Commerce Search</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.26105.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-19_Dont-Rewrite-the-SID-Map-Topology-Preservation-for-Generative-Retrieval-in-Dynamic-E-Commerce-Search.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-19_Dont-Rewrite-the-SID-Map-Topology-Preservation-for-Generative-Retrieval-in-Dynamic-E-Commerce-Search.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
