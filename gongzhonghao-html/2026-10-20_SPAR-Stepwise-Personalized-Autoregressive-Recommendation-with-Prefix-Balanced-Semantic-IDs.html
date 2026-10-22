@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPAR: Stepwise Personalized Autoregressive Recommendation with Prefix-Balanced Semantic IDs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SPAR: Stepwise Personalized Autoregressive Recommendation with Prefix-Balanced Semantic IDs</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-22</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h2>阿里优酷SPAR生成式推荐框架：前缀平衡语义ID驱动，用户播放时长提升3.95%</h2>
+<p>在视频流媒体、电商等超大规模推荐场景中，生成式检索正在改写传统“召回-排序”的底层逻辑。但一个棘手的问题始终存在：当推荐系统尝试像生成文本一样逐token生成物品的语义ID时，任何一个早期分支选择错误都会导致目标物品被不可逆地剪枝。阿里优酷团队在论文《SPAR: Stepwise Personalized Autoregressive Recommendation with Prefix-Balanced Semantic IDs》中给出了针对性解法——通过<strong>逐步个性化解码</strong>与<strong>前缀平衡的语义ID构建</strong>协同发力，在优酷首页真实流量中实现用户平均播放时长提升3.95%、播放转化率提升3.38%。</p>
+<h2>一、引言</h2>
+<p>生成式推荐正在经历一场范式迁移。以TIGER、OneRec为代表的语义ID（Semantic ID, SID）方案，将物品编码为离散token序列，把推荐问题转化为自回归生成问题。然而，SID解码的层级结构带来两个被长期低估的挑战。</p>
+<p><strong>第一个挑战是前缀依赖的证据选择问题。</strong> 在SID树的不同深度，解码器需要区分不同粒度的候选分支：靠近根节点时需要粗粒度兴趣信号，进入深层子树后则需要精细的行为线索。固定的用户表征或静态长期摘要难以在不同解码步骤中动态调整注意力焦点。</p>
+<p><strong>第二个挑战是前缀局部的交互负载失衡。</strong> 历史行为流量向热门路径高度集中——论文统计显示，在SID路径深度为1、2、3时，Top 1%热门路径分别占据了47.3%、63.17%和71.26%的历史流量。这种“马太效应”在自回归解码中会被持续放大。</p>
+<p><img alt="图1：前缀条件兴趣提取示例" src="https://arxiv.org/html/2610.27898v1/Problem.png" /></p>
+<p>论文提出的SPAR框架，从解码器架构和SID构建两个层面联合解决上述问题。其核心思路是：让个性化信号真正进入每一个token决策步骤，同时让SID树的每一个父前缀下的子分支竞争格局更加均衡。</p>
+<h2>二、核心方法</h2>
+<p>SPAR框架包含两个互补的技术组件：<strong>PATH Decoder</strong>负责逐步个性化的分支选择，<strong>RQ-PIB</strong>负责前缀感知的交互负载均衡。</p>
+<h3>2.1 PATH Decoder：前缀条件记忆检索</h3>
+<p>PATH Decoder的设计出发点非常清晰——不同SID层级、不同前缀条件下，解码器需要的历史证据是不同的。为此，论文构建了三层<strong>粗到细的长期历史视图</strong>，每种视图保留不同深度的SID前缀信息：</p>
+$$ \mathbf{x}_{u,j}^{(k)} = \sum_{r=1}^{k} \mathbf{E}_{r}[s_{r}(v_{u,j})] + \mathbf{e}_{\text{pos}}(j) + \mathbf{e}_{\text{level}}(k) $$
+
+<p>其中 $k \in {1, 2, 3}$ 表示SID层级。三个视图分别捕获用户在一词、两词、三词前缀分辨率下的兴趣表征。每个视图通过Q-Former压缩为紧凑的记忆bank：</p>
+$$ \mathbf{Z}_{u,k} = \text{QFormer}_{\omega}(\mathbf{Q}_{k}, \mathbf{H}_{u,k}) $$
+
+<p>真正的差异化在于<strong>前缀条件记忆读取</strong>机制。在预测SID第 $\ell$ 个token时，解码器当前状态 $\mathbf{h}_{u,\ell}$ 已经编码了已生成的前缀 $\mathbf{s}_{<\ell}$，该状态作为query对压缩后的长期记忆执行交叉注意力：</p>
+$$ a_{u,\ell,t} = \frac{\exp(\mathbf{q}_{u,\ell}^{\top} \mathbf{k}_{u,t} / \sqrt{d_a})}{\sum_{t'}\exp(\mathbf{q}_{u,\ell}^{\top} \mathbf{k}_{u,t'} / \sqrt{d_a})}, \quad \mathbf{r}_{u,\ell} = \sum_{t} a_{u,\ell,t} \mathbf{v}_{u,t} $$
+
+<p>这意味着每一步检索到的历史证据都<strong>针对当前树节点定制</strong>，而非共享一个固定的用户表示。进一步，PATH Decoder通过<strong>混合决策token</strong>引入用户画像（User Token）和请求上下文（Event Token），将“用户是谁”和“在什么场景下请求”纳入分支决策路径。</p>
+<p><img alt="图2：SPAR总体框架" src="https://arxiv.org/html/2610.27898v1/Framework.png" /></p>
+<h3>2.2 RQ-PIB：前缀平衡的语义ID构建</h3>
+<p>仅仅优化解码器架构是不够的——如果SID树本身的结构就让热门分支拥有天然优势，任何解码器都难以抵抗频率偏差。RQ-PIB的核心洞察是：<strong>真正的竞争发生在同一父前缀下的兄弟分支之间</strong>，因此负载均衡必须以前缀为单位进行，而非全局编码均衡。</p>
+<p>RQ-PIB首先通过残差K-Means学习共享语义码本，然后在冻结码本的前提下，对每个父前缀组执行最小失真重平衡。每个父前缀 $p$ 的有效负载上界定义为：</p>
+$$ B_p = \max\left{\tau_{\ell} C_p, ; C_p + \left(1 - \frac{1}{K_{\ell}}\right) m_p\right} $$
+
+<p>其中 $C_p$ 是平均分支负载，$m_p$ 是单个物品的最大权重，$\tau_{\ell}$ 是层级特定的容忍系数。第二项保证了上界在物品权重不可分割的现实约束下依然可行。</p>
+<p>对于超载分支中的物品，RQ-PIB选择移动到最近的可接受目标分支，其移动代价定义为：</p>
+$$ \Delta_i = |\mathbf{r}_i^{(\ell)} - \boldsymbol{\mu}_{\ell,q_i^*}|_2^2 - |\mathbf{r}_i^{(\ell)} - \boldsymbol{\mu}_{\ell,k}|_2^2 $$
+
+<p>贪婪地选择 $\Delta_i$ 最小的物品进行迁移，在最小化语义失真的同时逐步收敛到负载平衡状态。整个过程针对每个父前缀独立执行，移除了全局编码均衡可能掩盖的局部分支偏斜。</p>
+<p><img alt="图3：SID路径历史流量集中度分析" src="https://arxiv.org/html/2610.27898v1/Problem.png" /></p>
+<h2>三、实验评估</h2>
+<p>论文在优酷首页推荐场景的真实生产数据上进行了大规模离线评估和在线A/B测试。</p>
+<p><strong>离线检索性能。</strong> 与最强基线OneRec相比，SPAR在HR@10上从0.4648提升至0.4831（相对提升3.94%），在HR@20上从0.5492提升至0.5662，四个指标平均相对提升2.66%。方法 HR@10 HR@20 HR@50 HR@100 SASRec 0.3630 0.4707 0.5103 0.5381 TIGER 0.4424 0.5284 0.5674 0.5879 OneRec 0.4648 0.5492 0.5828 0.6013 SPAR 0.4831 0.5662 0.5947 0.6108</p>
+<p><strong>消融实验。</strong> 逐步记忆读取（Stepwise）相对固定记忆复用（First-step Reuse）带来0.85个百分点的额外提升，验证了前缀条件注意力的核心价值。在SID构建维度，全局容量受限的RQ-KMeans甚至略逊于普通RQ-KMeans，而RQ-PIB在HR@10上相对全局方案提升5.17个百分点，证明<strong>前缀局部的负载均衡才是关键</strong>，全局编码均衡无法解决层级解码中的局部分支支配问题。</p>
+<p><strong>前缀保持率分析。</strong> 在束搜索过程中，SPAR将目标前缀在第三层解码的保持率从56.24%提升至超过62%，平均提升5.79个百分点。这意味着更多正确候选路径在解码过程中被保留下来，而非在早期被不可逆地剪除。</p>
+<p><img alt="图4：SID层级解码与前缀条件流量集中度分析" src="https://arxiv.org/html/2610.27898v1/Framework.png" /></p>
+<p><strong>在线A/B测试。</strong> 在优酷首页10%生产流量上的7天实验中，SPAR相对生产基线实现播放转化率+3.38%、用户平均播放时长+3.95%、总播放时长+3.98%的联合提升。指标 相对提升 播放转化率 +3.38% 用户平均播放时长 +3.95% 总播放时长 +3.98%</p>
+<h2>四、展望</h2>
+<p>SPAR的贡献不仅在于提出了两个有效组件，更在于揭示了一个系统性的设计原则：<strong>生成式推荐中的ID结构组织与解码器架构必须协同优化，而非分而治之</strong>。前缀平衡确保了候选空间在统计学意义上对所有用户偏好保持足够的区分度，逐步个性化解码则确保用户信号能够在正确的层级产生决策影响。这套思路对于其他采用层级结构做生成式检索的场景——如电商类目导航、知识图谱路径推断——同样具有借鉴价值。当生成式推荐从学术界走向工业部署，如何让分支决策的每一个步骤都兼具结构合理性与证据充分性，将是决定其能否真正替代传统召回范式的关键命题。</p>
+<p><strong>论文标题</strong>：SPAR: Stepwise Personalized Autoregressive Recommendation with Prefix-Balanced Semantic IDs</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.27898.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-20_SPAR-Stepwise-Personalized-Autoregressive-Recommendation-with-Prefix-Balanced-Semantic-IDs.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-20_SPAR-Stepwise-Personalized-Autoregressive-Recommendation-with-Prefix-Balanced-Semantic-IDs.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
