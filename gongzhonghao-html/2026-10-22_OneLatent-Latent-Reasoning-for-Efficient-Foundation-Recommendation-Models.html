@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneLatent: Latent Reasoning for Efficient Foundation Recommendation Models</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">OneLatent: Latent Reasoning for Efficient Foundation Recommendation Models</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-24</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手OneLatent：3枚潜在token替代显式CoT，SID@64提升17.44%，推理吞吐17.5倍？</h1>
+<p>推荐系统进入大模型时代后，显式 Chain-of-Thought（CoT）逐渐暴露出两类问题：简单请求生成冗长推理，造成“过思考”和低推理 ROI；固定单路径推理可能过度强调历史偏好，忽略短期上下文，产生“兴趣漂移”。快手团队提出 <strong>OneLatent</strong>，将显式推理压缩为三个可学习潜在 token，使推荐基础模型以固定开销完成“潜在推理后回答”，不生成自然语言 rationale。</p>
+<p><img alt="图1：显式CoT的局限性" src="https://arxiv.org/html/2610.30675v1/fig/intro.png" /></p>
+<h2>一、核心方法</h2>
+<p>OneLatent 的训练流程包含三部分：多视角自适应 CoT 监督、三阶段潜在 token 对齐、课程式后训练。其核心思想是：显式 CoT 仅作为训练监督，不被解码；教师模型生成的推理痕迹通过若干可学习潜在 token 压缩进模型内部。</p>
+<p><img alt="图2：OneLatent总体架构" src="https://arxiv.org/html/2610.30675v1/fig/OneLatent.png" /></p>
+<h3>1. MV-ACoT：多视角自适应 CoT 监督</h3>
+<p>MV-ACoT 从三个互补视角构建教师监督：</p>
+<ul>
+<li><strong>Exploration</strong>：只给用户画像和历史行为，生成需求假设和商业意图列表；</li>
+<li><strong>Evaluation</strong>：额外给出真实交互的正样本，生成匹配评估 rationale 及 1–5 分；</li>
+<li><strong>Attribution</strong>：把正交互作为已知事实，解释是哪些前置信号促成转化。</li>
+</ul>
+<p>对于每个视角，教师模型根据当前证据复杂度动态调节推理过程，而不是套用固定模板。其生成目标可写为：</p>
+$$
+Y_{u}^{(v)}\sim p_{\mathrm{T}}\!\left(\cdot\mid\pi_{v}^{\mathrm{adapt}}(G_{u}^{(v)})\right)
+$$
+
+<p>简单请求被要求快速收敛，复杂请求则进行多维度比较，从而减少低回报的冗余推理。</p>
+<h3>2. 潜在 token 对齐</h3>
+<p>OneLatent 在 FRM 词表中增加三个固定潜在 token：</p>
+$$
+\mathbf{L}=[\langle L_{1}\rangle;\langle L_{2}\rangle;\langle L_{3}\rangle].
+$$
+
+<p>三阶段对齐依次进行：</p>
+<ul>
+<li><strong>Stage I 单视角对齐</strong>：用保留的单个视图输出热身，序列为 $[X_u;\langle v_u^\star\rangle;\mathbf{L};\widetilde{Y}_u^{(v_u^\star)}]$，只在输出 token 上计算损失；</li>
+<li><strong>Stage II 多视角对齐</strong>：对每个可用视图独立构造 $[P_u;H_u;\langle v\rangle;\mathbf{L}]$，平均 token 级损失；</li>
+<li><strong>Stage III 推荐对齐</strong>：去掉文本监督，直接建立 latent-token 条件到下一个 SID 的映射。推荐对齐阶段的输入定义为 $X_u^{\mathrm{ctx}}=[P_u;H_u;\mathcal{C}_u;\mathbf{L}]$，其目标如下：</li>
+</ul>
+$$
+\mathcal{L}_{\mathrm{align}}=-\mathbb{E}\left[\log p_{\phi}\left(\mathcal{S}_{u}^{+}\mid X_{u}^{\mathrm{ctx}}\right)\right]
+$$
+
+<h3>3. 课程后训练与在线服务</h3>
+<p>后训练采用从高活跃用户到低活跃用户的课程策略，并以 1:1 比例混合标准 SFT 和潜在推理 SFT，使模型既能直接预测，也能在 latent token 条件下预测。在线推理时，模型只解码三个 SID token：</p>
+$$
+\widehat{\mathcal{S}}_{u}=\operatorname*{arg\,max}_{\mathcal{S}}p_{\phi}(\mathcal{S}\mid P_{u},H_{u},\mathcal{C}_{u},\mathbf{L})
+$$
+
+<p><img alt="图3：生产在线推理架构" src="https://arxiv.org/html/2610.30675v1/fig/serving_architecture.png" /></p>
+<p>生产环境中，即使潜在推理已削减解码开销，同步调用全量流量仍超过延迟预算。OneLatent 采用行为触发准入、容量感知调度和异步结果物化，将 FRM 推理保持在在线请求关键路径之外。更新后的候选进入现有检索管道，与现有候选在精排阶段竞争。</p>
+<h2>二、实验</h2>
+<p>实验覆盖快手本地生活工业数据集和公开的 Kuaishou LLM-Rec 基准，主模型使用 Qwen3.5-0.8B。</p>
+<p><strong>OneLatent-Merge</strong> 在公共和工业数据集的所有指标上均取得最佳。工业 SID@64 相比 OneReason-CoT Think 提升 17.44%，相比 No-Think 提升 9.33%；推理吞吐达到 274.29 QPS，是显式 CoT 的 17.49 倍。公共基准 SID@64 达到 0.0239，相比匹配的显式 Think 配置相对提升 169%。</p>
+<p>在 9B 骨干规模上，OneLatent 的 SID@64 达 0.2008，比同规模非隐式最优值高出 8.13%，说明收益可跨模型规模迁移。</p>
+<p>教师 CoT 质量方面，LLM-as-a-Judge 评分显示 Evaluation 视角综合分 4.33，Exploration 为 4.16，均明显高于 OneReason-CoT 的 3.14。自适应策略将平均 CoT 长度降低 35%，复杂轨迹语义相似度约 0.92。</p>
+<p><img alt="图4：不同CoT策略下OneReason-Think与OneLatent的SID@64对比" src="https://arxiv.org/html/2610.30675v1/sid_trend_mixed_vs_latent_side_www.png" /></p>
+<p>在线 A/B 测试持续 7 天，在快手本地服务广告子场景中，OneLatent 曝光提升 2.566%，广告花费提升 5.157%，全局后验估计收入提升 9.6%。</p>
+<h2>三、展望</h2>
+<p>OneLatent 为推荐基础模型的大规模工业化提供了一条可行的潜在推理路径。固定 token 开销、离线 CoT 监督和异步服务架构共同降低了显式推理的部署负担。未来若将潜在 token 与强化学习或更强的多视图监督结合，有望在保持可扩展性的同时进一步提升推荐决策质量。</p>
+<p>在推荐系统中，显式可解释性与推理效率是否必然冲突？</p>
+<p><strong>论文标题</strong>：OneLatent: Latent Reasoning for Efficient Foundation Recommendation Models</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.30675.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-22_OneLatent-Latent-Reasoning-for-Efficient-Foundation-Recommendation-Models.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-22_OneLatent-Latent-Reasoning-for-Efficient-Foundation-Recommendation-Models.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
