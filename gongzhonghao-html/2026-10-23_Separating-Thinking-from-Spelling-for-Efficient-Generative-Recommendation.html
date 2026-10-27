@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separating Thinking from Spelling for Efficient Generative Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Separating Thinking from Spelling for Efficient Generative Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-27</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Deco：把SID束搜索交给轻量解码器，50 ms p95延迟预算下吞吐达全骨干基线3.2–8.6倍</h1>
+<h2>一、引言</h2>
+<p>推荐系统的候选检索通常要在几十毫秒内从大规模目录中选出数百到数千个物品。生成式推荐把这一过程建模为序列生成：每个物品对应一个<strong>语义ID（SID）</strong>，即由内容嵌入经残差量化得到的短离散码元组；模型读取用户历史后，按码位逐个生成SID，并用受trie约束的<strong>束搜索（beam search）</strong>保留若干候选。问题在于，标准自回归接口让重骨干网络同时承担“读历史”和“拼写SID”两件事：长度为$T$的历史若每物品有$K$个码，扁平输入就是$TK$个token；束宽为$B$时，每个解码步还要让骨干网络处理$O(BK)$个解码token。实测中，束搜索可占生成时间的91%。</p>
+<p>论文提出<strong>Deco（Decoding from Concepts）</strong>，把用户建模与SID拼写分开：骨干网络只读一次历史，压成紧凑的“下一物品概念”；完整的trie约束束搜索交给一个带KV缓存的轻量解码器。该研究在七个数据集上报告，Deco在精度匹配或超过全骨干教师的同时，于50 ms p95延迟预算的生产式服务流程中实现3.2–8.6倍吞吐。</p>
+<h2>二、核心方法</h2>
+<h3>1. 语义ID生成的计算瓶颈与融合历史</h3>
+<p>生成式推荐将下一物品分布分解到SID的各个码位：</p>
+$$p\big(s(i)\mid H\big)=\prod_{k=1}^{K}p\big(c_{i}^{k}\mid c_{i}^{<k},H\big)$$
+
+<p>其中$H$是用户历史，$c_i^k$是物品$i$的第$k$个SID码。束搜索在每一层用trie限制合法子节点，保留得分最高的$B$个前缀，最终由完整SID解析出候选物品。</p>
+<p><strong>FlatGR</strong>把历史展开为$TK$个码token，骨干网络预填充后缓存历史KV；但后续每个束搜索层仍要经过骨干网络。其每用户计算量可近似为：</p>
+$$C_{\mathrm{AR}}\approx F_{\mathrm{bb}}(L_{\mathrm{in}})+B\,(K-1)\,D_{\mathrm{bb}}(L_{\mathrm{in}})$$
+
+<p>该式表明，自回归全骨干生成的成本由一次预填充和每个beam步的骨干解码组成，束宽$B$和SID长度$K$共同放大了解码开销。</p>
+<p><strong>FusedGR</strong>用一个MLP把每个历史物品的$K$个码嵌入融合成一个item token，使输入从$TK$降到$T$，显著降低预填充成本。但融合只改变“读”的部分，解码仍然在骨干网络中完成。在BPC-23、batch size 128的测量中，融合把预填充从4.4 ms降到1.5 ms，束搜索仍占生成时间的91%。</p>
+<p><img alt="图1：FlatGR、FusedGR与Deco的输入和束搜索路径对比" src="https://arxiv.org/html/2610.32980v1/fig1_teaser_beam_search.svg" /></p>
+<h3>2. 概念解码：一次骨干前向，轻量解码器承担束搜索</h3>
+<p>Deco的核心是将骨干网络的输出压缩为一个<strong>下一物品概念</strong>。骨干网络$f_\theta$读取融合后的历史$x_{1:T}$，取最后状态$h_T$，经线性映射得到$M\times d$的概念表示：</p>
+$$z=\operatorname{reshape}\big(W_{z}\,h_{T}\big)$$
+
+<p>概念不直接指定某个物品，而是条件化一个“下一物品可能是什么”的分布。实验中$M=2$，$M$从1到8表现相近。</p>
+<p>轻量解码器$g_\phi$只接收经MLP适配后的概念$u=\psi(z)$，以及当前已生成的前缀码嵌入；第$k$层用层级头$W_k$在trie合法子节点上做softmax。束搜索完全在轻解码器内运行，使用自己的KV缓存，复用父beam的缓存，不再访问历史，也不保留骨干网络缓存。概念是两阶段之间唯一的接口。</p>
+<p>其每用户计算量近似为：</p>
+$$C_{\mathrm{Deco}}\approx F_{\mathrm{bb}}(T)+F_{\mathrm{dec}}(M)+B\,(K-1)\,D_{\mathrm{dec}}(M{+}K{-}1)$$
+
+<p>含义是：骨干网络只做一次$T$个融合token的预填充，后续$B\times K$规模的解码由轻量解码器完成，且只关注概念和已生成前缀。</p>
+<p>由于解码器只通过$z$看到用户，适配后的概念本身就是完整的每用户状态：在bf16下仅约1 KiB，而全骨干模型的历史KV缓存为0.4–7.8 MiB。概念可在历史变化时预先计算，在线请求只剩轻量解码。默认轻解码器为2层、宽256，骨干为8层、宽640；前者明显更小。</p>
+<h3>3. 训练轻量解码器：交叉熵、蒸馏与历史复制</h3>
+<p>骨干、融合器和解码器联合稠密训练：在每个历史位置读取概念$z_t$，解码器并行预测下一物品的各个SID码。仅用交叉熵即可得到<strong>Deco-CE</strong>，不需要教师模型。为进一步提升质量，Deco从冻结的全骨干教师蒸馏：教师在每个码位给出合法子节点上的下一码分布，学生同时学习观测码和教师分布。该目标可写成对“教师信念与观测码混合目标”的交叉熵，等价于<strong>教师知情标签平滑</strong>——平滑质量只分配给同一金前缀下trie合法且教师认为合理的延续，教师只在训练时需要。</p>
+<p>针对音乐流媒体等重复消费明显的场景，Deco加入历史复制指针：</p>
+$$P(s\mid H)=(1-\lambda)\,p_{\phi}(s\mid z)+\lambda\sum_{t:\,s(i_{t})=s}a_{t}$$
+
+<p>该式将生成分布与历史物品注意力分布混合，$\lambda$是由最后骨干状态学习的门控，$a_t$是历史物品的注意力权重。指针只保留历史SID、注意力权重和门控，解码器仍不直接访问历史；混合分布在同一SID空间内分解，因此trie约束束搜索可原样运行。</p>
+<h2>三、实验</h2>
+<p>实验覆盖七个数据集：Amazon 2014的Toys、Beauty、Sports，Amazon 2023的BPC-23、Books-23，以及MovieLens和音乐流媒体Yambda。评价采用全局时间切分，报告NDCG@10、Recall@50/100，主结果使用beam width 100；NDCG@10衡量前10排序质量，Recall@100衡量前100候选的覆盖能力。效率在单张H100上测量，使用bf16、编译、CUDA graphs和beam-shared history cache的生产式管线。</p>
+<p>精度上，Deco在Amazon-2014上把NDCG@10相对FusedGR提高5–19%，在四个更大数据集上提高0.5–2.3%；Deco-flat也在所有数据集上匹配或超过FlatGR。仅用交叉熵的Deco-CE与FusedGR的NDCG@10差距在10%以内、Recall@100差距在8%以内，并在Sports和BPC-23的召回上超过FusedGR。外部基线中，Deco在Sports和BPC-23的NDCG@10领先所比较的生成式推荐模型；在更大的BPC-23目录上，Deco比SASRec+的NDCG@10高27%、Recall@100高15%。</p>
+<p>服务效率方面，融合压缩了预填充，概念解码则把候选扩展从骨干网络移走。BPC-23、batch size 128下，Deco把束搜索从14.9 ms降到2.1 ms，约7倍缩减。在50 ms p95预算内，Deco在BPC-23、MovieLens和Yambda上分别比FusedGR多服务7.1、3.9和3.2倍用户，比FlatGR多6.5–8.6倍；batch size 128时相较FusedGR的吞吐提升为2.8–5.1倍。</p>
+<p><img alt="图2：beam 100下p95批量延迟与吞吐的服务曲线" src="https://arxiv.org/html/2610.32980v1/fig4b_serving.svg" /></p>
+<p>候选预算的扩展性更直接：在BPC-23上，beam从10加宽到100，Deco吞吐只下降34%，FusedGR下降73%；Deco生成1000个候选的速度仍快于FusedGR生成100个候选，召回目标数约为后者的3倍（0.267对0.088）。SID深度从$K=2$增加到8时，Deco吞吐下降2.9倍，FusedGR下降7.3倍，相对教师的速度优势从2.7倍扩大到6.8倍。历史变长会抬高两者的预填充成本，Deco相对教师的速度优势从4.7–5.1倍降至2.8–3.3倍，但相对FlatGR仍保持5.5–6.5倍；若排除预填充，Deco的解码比教师快6.7–7.7倍。</p>
+<p><img alt="图3：BPC-23上候选预算与Recall@k、吞吐的关系" src="https://arxiv.org/html/2610.32980v1/fig5cd_budget.svg" /></p>
+<p>骨干规模扩展是Deco的关键收益。BPC-23上从4M到69M参数、再到Qwen2.5的0.5B、1.5B和3B，FusedGR从73k users/s降到281 users/s，约258倍变慢；Deco从52k降到4.5k，只慢12倍，因为骨干只运行一次。相对FusedGR的速度优势从69M的4.8倍增至0.5B的9.7倍、1.5B的14倍和3B的16倍；1.5B骨干的Deco与69M的FusedGR吞吐相当，NDCG@10还高11%。</p>
+<p><img alt="图4：BPC-23上骨干规模扩展与相对FusedGR的加速" src="https://arxiv.org/html/2610.32980v1/fig6ab_backbone.svg" /></p>
+<p>紧凑概念是否足够？在低重复数据集上，把概念替换为全部物品状态前缀、逐层交叉注意力，甚至全部SID-token状态，NDCG@10变化不到5%，且更多时候下降；Recall@100最多提升约3%，但延迟增加最多20%，每用户状态从$O(1)$增至$O(T)$或$O(TK)$。这说明在骨干已将历史压缩为下一物品期望后，逐物品细节对轻解码器帮助有限。Yambda的重复消费则暴露了概念的边界：没有指针时，Deco的NDCG@10为0.079，低于FlatGR的0.153，超过90%的差距来自重复目标；加入复制指针后，Deco的NDCG@10升至0.171，四个模型在重复目标上的Recall@100都在约0.90，Deco最高为0.421。门控均值0.27接近测试目标中29%的重复比例，重复目标前均值为0.63、新目标前为0.12，AUC为0.90。</p>
+<p><img alt="图5：Yambda上复制指针对全体、重复与新目标的影响" src="https://arxiv.org/html/2610.32980v1/fig_yambda_copy_narrow.svg" /></p>
+<p>轻解码器的规模也不需要很大：1–4层、宽128–512的配置在Sports和BPC-23上与默认配置的NDCG@10、Recall@100差距约3%以内，单层可进一步降低20–28%延迟。蒸馏则在每个数据集上提高N@10；在小规模Amazon-2014数据集上带来16–23%的N@10增益，在四个更大数据集上带来4–11%的增益。</p>
+<p><strong>论文标题</strong>：Separating Thinking from Spelling for Efficient Generative Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.32980.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-23_Separating-Thinking-from-Spelling-for-Efficient-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-23_Separating-Thinking-from-Spelling-for-Efficient-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
