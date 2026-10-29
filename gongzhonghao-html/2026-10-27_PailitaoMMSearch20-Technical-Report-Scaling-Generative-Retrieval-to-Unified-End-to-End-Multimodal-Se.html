@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PailitaoMMSearch2.0 Technical Report: Scaling Generative Retrieval to Unified End-to-End Multimodal Search</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">PailitaoMMSearch2.0 Technical Report: Scaling Generative Retrieval to Unified End-to-End Multimodal Search</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-29</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>淘天PailitaoMMSearch2.0：统一VLM直接生成商品Semantic ID，拍立淘线上成交笔数提升27.04%</h1>
+<h2>一、引言</h2>
+<p>生成式检索把商品编码为token序列，检索过程变成自回归生成标识符，从而避免对全量商品逐一打分。工业界已有系统证明Semantic ID（SID）生成可以承载大规模搜索与推荐流量。但已部署的生成式检索模型大多与某个固定的线上场景紧密耦合，这种耦合体现在三处：训练监督被现有入口的交互日志主导，新意图上线前几乎没有监督信号；一个模型只拟合一种检索关系，换一种关系就要加意图分类器、路由规则或专家模型；模型规模、解码策略与推理预算按单一服务目标选定，难以在高吞吐召回服务与延迟容忍的复杂搜索之间复用。</p>
+<p>开放式图文明商品搜索同时暴露这三种限制。用户可能上传一件衬衫要求"配一条运动短裤"，拍一双凉鞋要求"这个牌子的女款"，或拍一件家居用品要求"儿童可折叠款"。这些请求共用图像—文本接口，却表达不同的检索关系：保持商品主体、修改部分属性，或寻找互补品类；查询复杂度也在同一应用内波动。</p>
+<p>淘宝拍立淘团队提出的PailitaoMMSearch2.0把该问题形式化为<strong>统一开放式多模态生成式检索</strong>：一个原生视觉语言模型（VLM）直接消费原始图像与自由文本指令，自行推断隐式检索关系，并生成一组商品SID，沿数据、意图、场景三个维度扩展。</p>
+<h2>二、核心方法</h2>
+<p><img alt="图1：PailitaoMMSearch2.0总体框架，数据规模化扩展监督、意图规模化学习统一策略、场景规模化在不同资源包络下暴露能力" src="https://arxiv.org/html/2610.36958v1/overview.png" /></p>
+<h3>统一问题形式化：从图像与指令直接生成商品SID</h3>
+<p>请求记为 $x=(I,Q,C)$，其中 $I$ 为查询图像，$Q$ 为自由文本指令，$C$ 为可选的应用上下文。每件商品 $v$ 被赋予三级层级SID $s(v)=(s_1,s_2,s_3)$，每级码本规模为8192。检索被定义为解码操作本身：</p>
+$$\mathcal{Y}=\operatorname{Decode}_{B}\bigl(\pi_{\theta}(\cdot\mid x)\bigr)$$
+
+<p>即模型在宽度为 $B$ 的beam下生成候选SID集合，每条合法序列确定性映射回一件商品；检索不再是为另一个召回器做查询改写的前置步骤。</p>
+<p>请求背后存在未观测的检索关系 $z$（相似、编辑、匹配三类）与合适的推理预算 $b$，但它们都不是服务端输入，模型必须从 $x$ 中自行推断。对具体部署场景 $a$，令 $c=(m,b,B)$ 表示由模型规模、推理预算与beam宽度构成的服务配置，系统求解：</p>
+$$(\theta^{*},c_{a}^{*})=\arg\max_{\theta,c}\;\mathbb{E}_{x\sim\mathcal{D}_{a}}\bigl[r_{z}(x,\mathcal{Y}_{\theta,c})\bigr]\quad \text{s.t.}\;\; L_{95}(c)\leq\tau_{a},\; M(c)\leq\mu_{a}$$
+
+<p>该式的含义是：在P95延迟与显存的服务约束下，同时寻找一套共享策略参数与一个场景配置，使该场景的检索收益最大；它是系统级表述而非单一可微损失。</p>
+<h3>数据规模化：可组合的五工具数据生产流程</h3>
+<p>开放式图文明搜索无法只依赖成熟交互日志。新意图上线前没有直接流量，只能借助商品相似、共现、搭配等代理关系，而这些来源结构与可靠性参差不齐；上线后的早期交互又稀疏且含拼写错误、误点击与探索行为。数据规模化因此按体量、查询与意图覆盖、生命周期覆盖和质量四个方向展开。</p>
+<p>工具集包含五种操作，成本与精度各不相同，可组成可配置的处理图：</p>
+<ul>
+<li><strong>Coarse-Filter</strong>：用类目、属性、行为与轻量多模态信号低成本剔除不合理配对，阈值按意图条件化；</li>
+<li><strong>Fine-Filter</strong>：校验保留配对是否真正表达目标关系，例如编辑对是否保持商品同一性、匹配对是否互补而非仅相似；</li>
+<li><strong>Query-Text-Gen</strong>：把代理关系转写为自由文本请求；对真实流量则做拼写、残缺表达与冲突约束的最小修复，保留原意图；</li>
+<li><strong>CoT-Gen</strong>：按SFT配置生成简洁或详细的思维链监督，将目标关系锚定在可见证据与商品知识上；</li>
+<li><strong>Quality-Control</strong>：终端门控，多模态评估器按意图专属评分标准审核完整实例，阈值用独立人工标注校准，被拒或存疑样本可回退至上游工具。</li>
+</ul>
+<p>编排采用级联而非对每个原始配对调用最强模型：先用廉价结构化与文本校验压缩候选池，再对保留样本调用细粒度视觉语言校验与查询生成；无用户文本的商品对需要合成查询，真实流量记录通常保留原指令并在质检发现可修复缺陷时才触发修复。</p>
+<p>这些工具被组合成三类重复出现的工作流：<strong>冷启动合成</strong>从代理商品关系出发，经粗筛、细筛、指令生成与可选推理标注，最终过质检；<strong>真实流量精修</strong>从观测到的查询—商品交互出发，剔除不可靠行为、按需修复查询并可选标注推理；<strong>持续生产</strong>混合代理来源与累积流量，定期采样困难或覆盖不足区域。三条路径中质量门控始终强制执行，使不同来源的语料仍可比较。论文给出的编辑示例是：红色短袖衬衫为查询商品、红色长袖衬衫为目标商品，粗筛因类目与主色相容而保留，细筛输出结构化关系——类目与颜色为不变量、袖长为待编辑项、其余差异须低于阈值，指令生成只描述被支持的变换，质检则拒绝改变类目、违反保留颜色或存在额外未说明差异的配对。</p>
+<h3>意图与场景规模化：三阶段训练与Sample–Beam rollout</h3>
+<p>通用VLM对平台特有的商品分类体系、属性模式与SID词表先验有限。<strong>持续预训练（CPT）</strong> 在电商与通用语料混合上训练，任务包括商品标题理解、SID预测、属性预测、用户行为预测与通用语言建模，为后续指令微调提供更强的SID输出空间初始化。</p>
+<p><strong>多意图、混合预算SFT</strong> 把样本组织为相似、编辑、匹配三个子集，但共同更新同一个模型并共享统一输入输出接口；服务时不给意图标签。按思维链形态与粒度定义三种提示控制的推理模式：No-think直接输出SID，Low-think给出聚焦决定性视觉与文本约束的简短分析，High-think允许更长的关系推理、约束求解与候选比较。该阶段让RL拿到的单个检查点中，多种检索与推理行为已可触及。</p>
+<p><strong>意图均衡的统一RL</strong> 从各业务切片采样，$\mathcal{D}_{\mathrm{RL}}=\sum_{t=1}^{T}\beta_{t}\mathcal{D}_{t}$，权重 $\beta_t$ 防止高体量意图主导优化；切片只决定采样与评估规则，所有rollout更新同一策略。关键设计是<strong>Sample–Beam rollout</strong>：标准GRPO对完整回复做自回归采样，而线上生成式检索对SID部分做beam解码。为缩小训练—服务错配，先从冻结旧策略采样 $N$ 条推理前缀 $h_g$，再对每条前缀以宽度 $B$ 做beam搜索生成SID序列，奖励在候选级计算并在分支间归一化，共享前缀聚合其SID分支的优势：</p>
+$$h_{g}\sim\pi_{\theta_{\mathrm{old}}}(\cdot\mid x,p),\qquad \{y_{g,b}\}_{b=1}^{B}=\operatorname{Beam}_{B}\bigl(\pi_{\theta_{\mathrm{old}}}(\cdot\mid x,p,h_{g})\bigr),\qquad R_{g,b}=r_{t}(x,y_{g,b})$$
+
+<p>其含义是：推理轨迹保持采样以保留探索，商品标识符按服务时的beam方式生成，让策略优化对齐在线候选集生成；由于SID分支由确定性beam选出，这是一个beam条件化的代理目标，而非无偏的on-policy估计。</p>
+<p><strong>场景规模化</strong>用同一架构与训练框架构建0.8B、2B、4B三种原生VLM，模型规模对应应用稳定的延迟、显存与吞吐约束，推理预算在选定模型内提供更细的quality–cost工作点。服务端把原始图像与指令送入选定模型，模型输出可选推理轨迹，think块闭合后固定轨迹并beam解码一组SID，候选集直接进入应用的检索或曝光接口，全程没有意图分类器挑选专家模型。</p>
+<h2>三、实验</h2>
+<p>离线评估使用人工校准的多模态评估器对top-10结果打0–3分，报告Good Rate（≥2分比例）、Excellent Rate（3分比例）与NDCG@10，三项意图宏平均。评估器与人工标注的精确率在Good判定上为92.4%–93.5%，Excellent判定上为93.6%–93.9%。训练语料规模为冷启动相似/编辑/匹配各24M、24M、12M，真实流量精修1M、8M、1M。</p>
+<p>在整体多意图质量上，2B模型Low-think配置取得表中最高宏平均NDCG 0.918与宏平均ER 55.1%，平均响应时间278ms、单GPU；相对Qwen3.8-Flash-Next、GPT6-luna与内部多路召回—排序流水线，宏ER分别高2.9、3.3、5.6个百分点，平均RT分别降低74.1%、92.4%、64.4%，且只用1块GPU（对比Qwen3.8-Flash-Next的4块）。优势集中在匹配意图：NDCG 0.955、ER 74.3%，比两个改写式系统高13.2与7.0个百分点，比内部流水线高30.1个百分点；但内部流水线在相似与编辑意图的ER上仍更强，两个改写式系统在编辑意图的ER上也高于2B模型——收益并非各意图均匀。</p>
+<p>数据侧，接受语料从30%扩到100%使宏ER从46.32%升至49.03%（+2.71个百分点），相似意图获益最大（+5.08），编辑与匹配分别+1.70与+1.33；满量下移除真实流量数据使宏ER降0.78个百分点，再移除质量控制又降0.28个百分点，两者同时移除共降1.06个百分点。</p>
+<p>意图侧，CPT相对仅SFT使宏ER提升1.2个百分点、宏GR提升0.8个百分点。跨意图迁移呈非对称：在仅编辑训练中加入相似监督，编辑ER从33.11%升至35.88%；再加入匹配监督后匹配ER达66.09%，相似ER进一步从44.63%升至45.56%，编辑ER小幅回落至35.43%但仍高于仅编辑设定。RL阶段，标准统一RL把宏ER从49.03%推到52.70%，换成Sample–Beam rollout再提升2.30个百分点至55.00%，相对SFT累计+5.97个百分点，相似、编辑、匹配分别+4.09、+5.05、+8.79；Sample–Beam的增量收益主要落在编辑与相似意图。</p>
+<p><img alt="图2：三种推理预算在代表性查询上的对比，No-think直接作答，Low-think隔离决定性视觉与文本约束，High-think给出更长轨迹" src="https://arxiv.org/html/2610.36958v1/think_case_study.png" /></p>
+<p>场景侧的质量—成本空间并不单调。0.8B模型下No-think即取得最高宏ER 50.78%且延迟最低（136ms），增加推理反而降至50.31%与49.60%；2B模型Low-think为最佳折中，宏ER从No-think的54.62%升至55.13%，仅消耗8.6个推理token、278ms，High-think使匹配ER升至74.88%但宏ER反而降0.13个百分点、RT接近翻倍至544ms；4B模型最受益于长推理，High-think达到表中最高宏ER 55.41%、编辑ER 41.27%与匹配ER 75.57%，代价是54.99个推理token与1133ms延迟。合适的工作点取决于目标意图与质量—延迟要求，而非一味选最大模型或最大预算。</p>
+<p>线上验证在淘宝拍立淘多模态搜索等应用中开展，每个实验约10%流量、运行约14天。多模态搜索场景下，PailitaoMMSearch2.0使商品详情页浏览量提升17.90%、去重用户商品详情页浏览量提升13.62%、成交笔数提升27.04%、GMV提升8.94%，点击率提升0.58个百分点、转化率提升0.37个百分点，全部在 $p<0.05$ 下统计显著；该指标为整套部署配置（含与既有召回排序结果的最终混排）的系统级结果，无法归因到单一组件。</p>
+<p><strong>论文标题</strong>：PailitaoMMSearch2.0 Technical Report: Scaling Generative Retrieval to Unified End-to-End Multimodal Search</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.36958.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-27_PailitaoMMSearch20-Technical-Report-Scaling-Generative-Retrieval-to-Unified-End-to-End-Multimodal-Se.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-27_PailitaoMMSearch20-Technical-Report-Scaling-Generative-Retrieval-to-Unified-End-to-End-Multimodal-Se.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
