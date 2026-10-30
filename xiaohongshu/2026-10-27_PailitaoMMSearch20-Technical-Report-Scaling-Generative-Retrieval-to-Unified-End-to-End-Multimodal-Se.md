@@ -1,23 +1,24 @@
-三维扩展统一多模态检索
+原生VLM直出商品SID
 
-今天给大家带来的是PailitaoMMSearch2.0，一篇把生成式检索做成统一端到端多模态搜索的工作：输入原图和自由文本指令，模型直接生成商品Semantic IDs，并用数据、意图、场景三个维度做扩展。
+今天给大家带来淘宝拍立淘PailitaoMMSearch2.0技术报告，它用原生VLM把图像加自由文本查询直接生成商品Semantic ID，做成统一端到端多模态生成式检索。
 
 🔑关键方法
-1️⃣可组合数据工具链：把粗筛、细筛、查询生成与修复、CoT生成、质量控制串成冷启合成、真实流量精炼和持续生产工作流。
-2️⃣多阶段意图训练：先做电商CPT适配商品与SID词表，再做多意图混合预算SFT，最后用意图均衡的统一RL，把相似、编辑、搭配检索放进一个策略。
-3️⃣场景缩放：用0.8B/2B/4B模型容量加No-think/Low-think/High-think推理预算，给不同业务暴露质量与成本操作点，不额外加意图路由。
+1️⃣ 数据扩展：一套可复用工具链做粗筛、细筛、查询生成、CoT和质量控制，按意图和生命周期拼成冷启动、真实流量精修、持续生产流程。
+2️⃣ 意图扩展：先CPT补电商商品和SID词表知识，再做多意图混合预算SFT，把相似、编辑、匹配和no/low/high-think装进同一个模型，最后统一RL联合优化。
+3️⃣ 场景扩展：用0.8B/2B/4B模型容量加推理预算和beam配置，切出不同质量-成本操作点，线上不用额外意图分类器选专家。
 
 💡核心创新
-1️⃣统一开放多模态生成检索：不显式输入意图，也不靠意图分类器分专家，模型自己从图文指令推断检索关系。
-2️⃣Sample-Beam Rollouts：推理前缀采样、商品SID用beam解码，让RL rollout更贴近线上候选集生成。
-3️⃣三维scaling框架：数据扩监督、意图扩策略、场景扩部署，把“怎么学”和“怎么用”拆开。
+1️⃣ 统一开放多模态生成式检索：查询不显式给意图，模型从图和指令里自己推断相似、编辑、匹配关系，直接解码商品SID。
+2️⃣ 三维scaling框架：数据工具集、多阶段训练、场景操作点串成一条工业落地链路，不是只改SID构造。
+3️⃣ Sample–Beam RL：推理前缀采样、SID部分beam解码，让RL rollout更贴近线上候选集生成；相比SFT macro ER提升5.97点。
 
 📊实验效果
-✅离线2B Low-think配置macro NDCG 0.918、macro ER 55.1%，平均RT 278ms，单GPU可跑。
-✅Sample-Beam RL比SFT的macro ER高5.97个点，编辑和相似检索的增量尤其明显。
-✅淘宝拍立淘在线A/B显著：商品页浏览+17.90%，交易+27.04%，GMV+8.94%。
+✅ 离线2B Low-think拿到macro NDCG 0.918、macro ER 55.1%，平均响应278ms、单卡；对比内部召回排序pipeline，ER高5.6点、RT低64.4%。
+✅ 匹配意图很能打：2B模型匹配NDCG 0.955、ER 74.3%，比两个rewrite系统高13.2和7.0点，比内部pipeline高30.1点。
+✅ Sample–Beam RL比SFT的macro ER高5.97点；标准RL先加3.67点，Sample–Beam再补2.30点。
+✅ 淘宝拍立淘线上A/B：商品页浏览+17.90%，交易+27.04%，GMV+8.94%，统计显著。
 
-你们更想看这套三维扩展怎么落地，还是Sample-Beam RL的训练细节？
+你们更想看数据工具链怎么控质、Sample–Beam RL怎么对齐，还是线上A/B怎么设计？评论区聊聊。
 
 论文：PailitaoMMSearch2.0 Technical Report: Scaling Generative Retrieval to Unified End-to-End Multimodal Search
 
