@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UGR: Unified Generative Ranking for Heterogeneous E-commerce Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">UGR: Unified Generative Ranking for Heterogeneous E-commerce Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-10-31</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里巴巴UGR：统一生成多业务推荐列表，线上GMV较生产基线提升2.10%</h1>
+<h2>一、引言</h2>
+<p>电商推荐位上，自然商品、广告和其他业务候选往往同时竞争有限的展示位置。排序系统不仅要判断用户是否感兴趣，还要考虑广告价值，以及商品之间的相互影响。</p>
+<p>常见的生成式排序方案先为单一业务生成列表，再通过混排加入其他业务内容。但混排可能改变商品位置和上下文：模型生成时认为合适的列表，最终展示时已经变了。与此同时，历史曝光序列受到旧排序策略影响，直接模仿这些序列，也难以充分利用点击、交易等曝光后反馈。</p>
+<p>阿里巴巴提出的<strong>统一生成式排序框架UGR</strong>，尝试把多业务候选放进同一个生成过程：既学习列表顺序，也在训练和线上服务中分别处理历史广告曝光效应与当前广告价值。</p>
+<p><img alt="图1：单业务生成后混排与多业务统一生成的流程对比" src="https://arxiv.org/html/2610.39426v1/Fig1.svg" /></p>
+<h2>二、核心方法</h2>
+<h3>UGR生成器：在完整候选集上逐位构造列表</h3>
+<p>UGR接收上游召回和打分阶段提供的请求级候选集，而不是先截取某个业务的一小部分。对每次请求，它依次选择尚未入选的候选，生成长度为 $L$ 的列表：</p>
+$$p_{\theta}(Y\mid x,C)=\prod_{t=1}^{L}p_{\theta}(y_t\mid y_{<t},x,C)$$
+
+<p>这表示每个位置的选择都依赖用户与请求上下文 $x$、候选集 $C$ 和已经生成的列表前缀 $y_{<t}$。</p>
+<p>生成器包含三个衔接环节：</p>
+<ul>
+<li><strong>请求上下文编码</strong>：将用户属性、请求特征和历史行为序列聚合成上下文表示。</li>
+<li><strong>异构候选编码</strong>：将商品特征、业务类型及候选侧预测信号映射到共同表示空间，保留业务差异。</li>
+<li><strong>自回归解码</strong>：结合请求上下文和已选商品，计算当前前缀下每个合法候选的得分；选中后更新前缀，并排除已选商品。</li>
+</ul>
+<p>候选之间也需要交互。面对通常约千级规模的请求候选集，UGR采用<strong>低秩候选注意力</strong>，先压缩候选维度上的键和值，再让各候选与压缩表示交互，以降低完整两两注意力的计算开销。候选交互表示只需计算一次，解码器则在每一步重新判断候选与当前列表前缀的匹配程度。</p>
+<p><img alt="图3：UGR的生成器、训练目标与线上服务流程" src="https://arxiv.org/html/2610.39426v1/Fig3.png" /></p>
+<h3>NTP、WSFT与PermPO：结合曝光模仿和反馈偏好</h3>
+<p>UGR的训练由三种目标组成，分别解决“学习历史列表”“利用单商品反馈”和“比较列表顺序”三个问题。</p>
+<p><strong>下一项预测NTP</strong>以历史曝光列表为监督，基于已曝光的前缀预测下一件商品。它让模型掌握历史列表的基本结构，但历史曝光不等同于用户偏好的完整表达。</p>
+<p><strong>加权监督微调WSFT</strong>保持原曝光顺序和前缀不变，按照点击、交易等已观察反馈，为曝光商品的预测损失赋予不同权重。反馈价值越高，对应预测项的训练贡献越大；没有反馈权重的曝光商品仍由NTP提供基础监督。</p>
+<p><strong>排列偏好优化PermPO</strong>进一步比较同一组曝光商品的不同排列。它以商品的固定反馈权重作为收益，计算位置折损后的列表价值：</p>
+$$\operatorname{DCG}(Y)=\sum_{t=1}^{L}\frac{\operatorname{Gain}(y_t)}{\log_2(t+1)}$$
+
+<p>这个指标让靠前位置获得更高权重，因此反馈价值更高的商品排在前面时，列表通常得到更高分。</p>
+<p>PermPO将DCG较高和较低的排列组成偏好对，训练生成器提高前者相对于后者的序列概率；DCG相同的排列不构成严格偏好。它使用的仍是历史曝光商品的已观察反馈，并不是对其他排列展示效果的直接观测。</p>
+<p><img alt="图4：NTP、WSFT与PermPO提供互补监督" src="https://arxiv.org/html/2610.39426v1/Fig4.png" /></p>
+<h3>广告去偏塔与多价值序列检索：兼容现有广告规则</h3>
+<p>历史广告曝光既反映用户兴趣，也受到出价和旧广告策略影响。如果生成器直接吸收这些影响，线上再加入当前广告价值时，推荐分可能混入历史广告效应。</p>
+<p>UGR在训练阶段增加<strong>广告去偏塔</strong>：它读取广告特征和历史eCPM，为广告生成与位置相关的得分调整；非广告候选的调整为零。NTP和WSFT使用生成器得分与塔调整之和计算训练概率，PermPO则只使用生成器得分。线上服务时去偏塔被移除。</p>
+<p>当前广告价值在线上按原有约定加入推荐分：</p>
+$$S_t(i)=z_{\theta,t}(i)+\alpha\,\mathrm{eCPM}_i$$
+
+<p>这表示候选的综合得分由当前前缀下的推荐得分和广告价值共同决定，其中非广告候选的广告价值为零。</p>
+<p>UGR随后进行<strong>多价值序列检索</strong>：每一步扩展保留的列表前缀，按各位置综合得分之和保留得分最高的若干条路径，最终交由现有下游评估器选出曝光列表。这相当于按固定宽度搜索多个列表，而不是每一步只保留一个候选。</p>
+<p>广告价值的加性组合沿用现有分配与广义第二价格（GSP）定价约定。在前缀和其他竞争条件固定时，提高广告出价会提高该步综合得分；这一条件不应被直接推广为对整个多路径检索过程的无条件保证。</p>
+<h2>三、实验</h2>
+<p>离线实验使用淘宝“猜你喜欢”两个场景连续30天的日志，按请求时间划分训练、验证和测试集。配置中每次请求的候选容量为1000，生成四件商品的列表，检索宽度为4。</p>
+<p>在场景1中，UGR的互动指标IPV NDCG为<strong>0.3666</strong>，高于该指标上最强基线UniRank的0.3496；IPV MAP为<strong>0.3169</strong>，高于该指标上最强基线DEGR的0.2947。UGR在两个场景的六项反馈排序指标上均居首，但其与历史曝光列表重合程度的Hitrate并非最高，说明更贴近旧曝光顺序不一定意味着反馈排序更好。</p>
+<p>消融实验中，场景1的IPV NDCG从仅使用NTP时的0.3382提升至完整UGR的0.3666；移除PermPO后降至0.3453，移除广告去偏塔后降至0.3614。去偏塔分析还显示，塔调整与eCPM呈正相关，而生成器得分与eCPM的相关性转为负值；这支持两者对历史广告效应进行了不同程度的分工，但不足以单独证明偏差已被完全消除。</p>
+<p>统一排序分析也给出了边界：在保持其他业务候选不变时，只保留10或20个自然商品候选会降低离线IPV NDCG；保留全部自然商品与保留30至200个候选的结果相差约0.5%以内，因此不能简单认为候选越多就一定显著更好。</p>
+<p><img alt="图6：自然商品候选截断与统一生成的对比" src="https://arxiv.org/html/2610.39426v1/Fig6.svg" /></p>
+<p>线上A/B测试持续超过14天，UGR组覆盖至少5%的推荐流量，并保持下游评估器及其余服务流程不变。相对生产基线，<strong>Core IPV提升1.76%、交易量提升3.29%、GMV提升2.10%</strong>，均达到统计显著性要求。同期，将UGR限制为自然商品排序、再进行跨业务混排的版本，三项指标分别提升1.13%、2.84%和1.38%；统一生成在直接比较中也显著优于该分阶段方案。UGR平均推理延迟增加12毫秒，广告指标满足既有保护线。</p>
+<p><strong>论文标题</strong>：UGR: Unified Generative Ranking for Heterogeneous E-commerce Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2610.39426.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-10-29_UGR-Unified-Generative-Ranking-for-Heterogeneous-E-commerce-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-10-29_UGR-Unified-Generative-Ranking-for-Heterogeneous-E-commerce-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
