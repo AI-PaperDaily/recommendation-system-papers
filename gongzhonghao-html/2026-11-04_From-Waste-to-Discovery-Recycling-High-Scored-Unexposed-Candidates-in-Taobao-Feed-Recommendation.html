@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Waste to Discovery: Recycling High-Scored Unexposed Candidates in Taobao Feed Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">From Waste to Discovery: Recycling High-Scored Unexposed Candidates in Taobao Feed Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-06</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里巴巴 URED：回收高分未曝光内容，淘宝信息流线上新发现类目增长3.47%</h1>
+<h2>一、引言</h2>
+<p>在短视频信息流中，推荐系统通常优先展示用户最可能感兴趣的内容。这种策略有利于短期观看，却容易让曝光集中在熟悉的类目中：用户看到的内容越来越相似，接触新兴趣的机会也随之减少。</p>
+<p>一个直接的办法是提高陌生类目的曝光，但“更陌生”不等于“更适合”。当用户与类目之间缺少交互信号时，排序模型可能高估候选内容的吸引力；强行注入这类内容，既可能影响观看，也未必能带来有效探索。</p>
+<p>阿里巴巴研究者提出的 <strong>URED</strong>（Unexposed Recycling for Efficient Discovery，高效发现的未曝光样本回收）换了一个切入点：利用排序阶段已经打过高分、却因位置限制和竞争而没有展示的内容，建立新的召回通道。该系统无需重新训练模型，已在淘宝信息流中部署超过六个月。其价值在于展示：如何通过数据链路改造，将原本被丢弃的排序结果转化为探索候选。</p>
+<h2>二、核心方法</h2>
+<h3>高分未曝光样本：从排序结果中筛选候选</h3>
+<p>推荐系统通常先召回大量候选，再由排序和重排阶段决定最终展示位置。即使一个内容获得较高分数，也可能因为展示位置有限而落选。URED关注的正是这些<strong>已评分但未曝光</strong>的内容，并进一步筛选其中属于发现类目的候选。</p>
+<p>论文将目标候选集合定义为：</p>
+$$
+\mathcal{D}^{\text{high}}_{\text{unexp}}
+=\{i\in\mathcal{D}:\hat{y}(u,i)\geq\tau,\ i\text{ never exposed to }u\}
+$$
+
+<p>其中，$\mathcal{D}$ 是用户的发现内容集合，$\hat{y}(u,i)$ 是排序模型对用户与内容的互动概率预测，$\tau$ 是高分门槛；该式表示保留属于发现类目、预测得分较高且从未向该用户曝光的内容。</p>
+<p>这个选择同时考虑了<strong>新颖性</strong>和<strong>相关性</strong>：类目对用户足够新，内容又曾获得模型认可。高分未曝光内容也与随机冷内容不同——前者至少已经过现有排序模型评估，后者可能缺少足够的用户侧信号。</p>
+<p>但高分本身并不自动证明预测准确或误差更低。URED依赖的前提是：排序分数在这部分候选上具有可用的相关性信息；系统效果也会受原排序模型盲点的限制。</p>
+<p><img alt="图1：URED在现有推荐链路中增加高分未曝光内容回收通道" src="https://arxiv.org/html/2611.05997v1/URED_framework.png" /></p>
+<h3>时间聚合与发现挖掘：积累并过滤候选池</h3>
+<p>单次请求中，符合条件的候选可能不多，因此URED没有只看最近一次排序，而是先积累，再统一筛选。</p>
+<p>首先，在每次排序后，系统从未展示的候选中保留每个会话得分最高的200条，附带类目、时间戳和分项得分，异步写入分布式存储。曝光记录也会并行保存，供后续判断内容是否仍可回收。</p>
+<p>随后，离线任务按用户汇总最近30天的未曝光样本，按内容ID去重、按时间排序，每位用户最多保留1万条。与此同时，系统维护用户近期曝光过的类目集合。</p>
+<p>最后，<strong>发现挖掘</strong>环节将候选池与类目曝光记录关联，只保留在指定时间范围内未向用户曝光过的类目。这个时间范围可以配置；论文的线上实验使用的是15天。</p>
+<p>这里的两个时间窗口职责不同：<strong>30天窗口负责积累候选，15天窗口负责判断类目是否足够新</strong>。前者解决候选供给不足，后者让召回目标与业务中的发现指标保持一致。</p>
+<h3>在线服务：作为额外召回通道参与排序</h3>
+<p>过滤后的候选按用户ID存入在线键值系统。请求到来时，URED作为额外召回通道查询候选，每次最多合并1000条到统一候选池，再与其他通道的内容一起经过原有排序和重排。</p>
+<p>因此，URED增加的是<strong>候选机会</strong>，不是强制曝光：被召回的内容仍需与其他内容竞争最终位置。在线阶段复用既有模型和服务链路，无需重新训练模型；单次请求只增加一次用户级键值查询。</p>
+<p>这一设计也有边界。候选来源依赖用户已有的排序流量，低活跃和冷启动用户积累的高分未曝光样本可能较少，仍需要其他召回通道补充。</p>
+<h2>三、实验</h2>
+<p>实验覆盖淘宝信息流生产流量：用户随机进入对照组和实验组，对照组占10%流量，实验组占5%—10%；各组实验均持续超过一周。显著性检验采用结合 <strong>CUPED方差缩减</strong>的Z检验。</p>
+<p>先看为什么需要筛选候选。生产日志中的离线分析使用预测点击与实际点击之比 <strong>PCOC</strong> 衡量校准程度，并用均方根误差 <strong>RMSE</strong> 衡量预测误差。非发现候选的PCOC和RMSE分别为1.042、0.325；发现候选分别为1.147、0.368。这说明在该日志统计中，发现候选整体上更容易被高估，预测误差也更大。直接提升发现内容权重后，两项数值进一步升至1.241和0.378。</p>
+<p>消融实验则检验了候选积累和高分筛选的作用。相对于不使用URED的对照组，完整方案使发现类目数增长3.47%，达到统计显著；将聚合窗口从30天缩短至1天后，增长降至0.55%，未达到显著。另一组保持注入配额、改为随机选择发现候选的实验中，发现类目数增长0.12%，总视频观看量下降0.17%，两项变化均不显著。结果支持长期积累与候选筛选的组合，但不能仅凭随机组的负向波动断言观看量确实下降。</p>
+<p><img alt="图2：不同聚合窗口下的发现类目增长" src="https://arxiv.org/html/2611.05997v1/window_sensitivity.svg" /></p>
+<p>窗口敏感性实验显示，发现类目增长从14天的2.72%提升到30天的3.47%，延长至60天后为3.51%，增益趋于饱和。30天配置下，有88.3%的日活用户拥有非空候选池；延长至60天，覆盖率升至93.1%，但存储和批处理成本随之增加。因此，30天是该平台效果与成本之间的折中点。</p>
+<p>在线召回通道对比也呈现了URED的定位。其<strong>已曝光内容</strong>中，85.9%属于发现类目，高于平台整体的6.2%和近线召回通道MNR的13.6%；有效观看率为平台平均值的1.03倍，MNR则为1.13倍。URED的发现内容占比更高，但单条内容的有效观看率低于MNR。该通道对比是线上流量观察，不能单独作为不同通道间的随机因果比较。</p>
+<p><img alt="图3：不同召回通道的有效观看率与发现内容占比" src="https://arxiv.org/html/2611.05997v1/channel_quality_discovery.svg" /></p>
+<p>在完整线上A/B实验中，相对于原推荐链路，URED使发现类目数显著增长3.47%，内容丰富度显著增长8.47%，完播视频观看量显著增长2.62%；总视频观看量增长0.36%，但未达到统计显著。也就是说，在这项实验中，系统取得了可观测的发现指标提升，而总观看量没有出现显著变化。</p>
+<p><strong>论文标题</strong>：From Waste to Discovery: Recycling High-Scored Unexposed Candidates in Taobao Feed Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.05997.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-04_From-Waste-to-Discovery-Recycling-High-Scored-Unexposed-Candidates-in-Taobao-Feed-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-04_From-Waste-to-Discovery-Recycling-High-Scored-Unexposed-Candidates-in-Taobao-Feed-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
