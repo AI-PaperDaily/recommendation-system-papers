@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beyond Independent Predictions: Learning the Browsing Journey for Sequence-Level Re-ranking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Beyond Independent Predictions: Learning the Browsing Journey for Sequence-Level Re-ranking</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-08</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里巴巴ICE：建模浏览深度与序列点击，淘宝线上点击提升0.70%</h1>
+<h2>一、引言</h2>
+<p>推荐系统的重排序阶段，需要从多个候选商品序列中选出最适合展示的一组。常见的<strong>生成器—评估器</strong>框架先生成候选序列，再由评估器预测每个序列的价值并选出最优结果。</p>
+<p>问题在于，系统排出的商品不一定都会被用户看到。用户可能浏览几条后就离开；即使看到多个商品，它们也会竞争有限的注意力。若评估器主要依靠逐商品的独立点击预测，就可能高估尾部商品价值，也难以反映序列内部的行为依赖。</p>
+<p>针对这一问题，阿里巴巴等机构提出<strong>联合行为建模（JBM）</strong>视角，并设计<strong>Impression-Click Evaluator（ICE）</strong>，将展示后的曝光和点击过程纳入序列评估。该方法关注的是如何让评估器更准确地判断整条候选序列，而非改变候选序列的生成方式。</p>
+<h2>二、核心方法</h2>
+<p><img alt="图1：独立行为建模与联合行为建模的区别" src="https://arxiv.org/html/2611.07591v1/fig1.png" /></p>
+<p>传统的<strong>独立行为建模（IBM）</strong>会结合商品及其序列上下文预测各位置的响应，但通常没有显式描述用户是否浏览到该位置，也没有直接刻画前序行为对后续行为的影响。即使模型能编码商品之间的关系，也不等于它描述了用户实际经历的浏览过程。</p>
+<p>JBM将序列价值理解为用户浏览行为产生的结果，重点处理两类关系：一是点击以商品实际曝光为前提；二是商品之间会因注意力和需求满足程度产生竞争。ICE则把这一思路拆成曝光建模、曝光感知上下文过滤和点击分布匹配三个环节。</p>
+<p><img alt="图2：ICE的曝光分支、点击分支与三个核心组件" src="https://arxiv.org/html/2611.07591v1/fig2.png" /></p>
+<h3>1. 浏览深度建模：估计每个位置的曝光概率</h3>
+<p>对于顺序浏览的信息流，ICE假设用户看到后面的位置之前，会先经过前面的位置。因此，越靠后的商品，曝光概率不应高于前面的商品。</p>
+<p>曝光分支不直接为每个位置独立预测曝光率，而是先预测用户最后浏览到的位置 $T$ 的概率分布，再计算各位置的曝光概率：</p>
+$$p^{itr}_{k}=\mathbb{P}(T\geq k\mid S,U)=\sum_{t=k}^{L}P_{\theta}(T=t\mid S,U)$$
+
+<p>这一公式表示：位置 $k$ 被曝光的概率，等于用户浏览深度达到或超过该位置的概率。</p>
+<p>其中，$S$ 是候选序列，$U$ 是用户及上下文，$L$ 是序列长度。通过对浏览深度分布求和，得到的曝光概率天然随位置向后单调不增，也能够随用户和候选内容变化，而不是只依赖固定的位置衰减规则。</p>
+<h3>2. 曝光感知动态掩码：过滤未曝光商品带来的上下文噪声</h3>
+<p>点击分支需要利用序列上下文判断商品吸引力，但完整候选序列中，有些商品可能根本不会被用户看到。若模型把它们都当作有效邻居，就可能引入与真实浏览过程不符的上下文。</p>
+<p>ICE利用曝光分支输出的概率，为点击分支提供<strong>软掩码</strong>：曝光可能性越低，商品对上下文的影响越弱。它提供两种适配方式：</p>
+<ul>
+<li>对于Transformer，在自注意力分数中加入由位置曝光概率构成的偏置，降低低曝光概率商品作为上下文的影响。</li>
+<li>对于DNN类骨干网络，通过特征门控按曝光概率调节位置表示，抑制潜在的无效信息。</li>
+</ul>
+<p>这不是用预测结果硬性删除商品，而是按置信度连续调整。掩码使用<strong>停止梯度</strong>处理，使点击任务不会通过该路径反向改变曝光分支。训练点击分支时，逐商品点击损失只在实际曝光的位置计算，避免把未看到商品误当作“看过但未点击”。</p>
+<h3>3. 点击分布匹配：学习序列内的注意力竞争</h3>
+<p>曝光解决的是“用户能否看到”，但看到之后，多个商品仍会争夺点击。ICE在逐位置点击损失之外，增加<strong>序列级点击分布匹配</strong>。</p>
+<p>具体做法是：对一条序列的点击得分做softmax，得到位置之间的预测点击分配；再将真实点击标签归一化，得到目标分布，并用KL散度缩小两者差距。对于没有点击的序列，目标采用均匀分布。由于softmax会让各位置共享概率预算，一个位置的相对得分提高，会压低其他位置的相对份额。</p>
+<p>需要区分的是，这一目标为模型加入了序列竞争约束，并不意味着ICE在推理时逐次模拟用户每一次点击。最终，曝光概率与曝光条件下的点击概率相乘，得到从展示到点击的概率：</p>
+$$\hat{p}^{itctr}_{k}=\hat{p}^{itr}_{k}\cdot\hat{p}^{ctr}_{k}$$
+
+<p>这一公式表示：商品被点击，既要求用户浏览到它，也要求用户在看到后产生点击。</p>
+<p>训练时，曝光损失、曝光位置上的点击损失和序列级分布匹配损失共同优化；推理时，再将各位置的预测点击概率按业务权重加总，比较候选序列。以总点击为目标时，各位置权重均设为1。</p>
+<h2>三、实验</h2>
+<p>离线实验使用电商重排序数据集：约4838万用户、1.4179亿条序列，每条序列包含20个展示位置。数据中约28.36亿次展示对应约16.52亿次实际曝光，显示出明显的展示到曝光落差。实验使用前6天训练、第7天测试。</p>
+<p>除曝光和点击预测指标外，研究者还提出<strong>SeqAUC</strong>：比较测试集中实际总点击数不同的序列对，衡量模型是否给点击更多的序列更高分。该指标直接关注序列价值排序，但仍是基于日志的离线评估。</p>
+<p>在Transformer评估器上，加入ICE后，覆盖全部展示位置的点击预测GAUC从<strong>62.53%提升至73.91%</strong>，SeqAUC从<strong>81.31%提升至85.84%</strong>。在DNN、DCN、PRM、BiGRNN和NLGR-E等其余五种骨干上，ICE也带来了序列评估指标提升，说明该框架并不依赖单一网络结构。</p>
+<p>以PRM为骨干的消融实验进一步区分了各组件的作用：完整ICE的SeqAUC为85.65%；移除浏览深度建模后降至83.29%，移除曝光感知掩码后为85.58%，移除点击分布匹配后为85.50%。其中，去掉曝光建模带来的下降最明显，说明估计用户是否到达各位置，是该实验中序列价值评估的重要基础。</p>
+<p><img alt="图3：单点击与多点击序列上的模型表现对比" src="https://arxiv.org/html/2611.07591v1/box_long.png" /></p>
+<p>在单点击和多点击序列的分组分析中，加入ICE的模型在六种骨干上均改善了整体表现，并缩小了两类序列之间的性能差距；多点击组的提升更明显。这一结果支持ICE对复杂序列行为的建模价值，但属于完整框架的对比，不能单独归因于某一个组件。</p>
+<p>线上实验在淘宝App“猜你喜欢”信息流中进行，以Transformer评估器为基线、保持生成器不变，使用5%流量开展14天A/B测试。与基线相比，ICE使<strong>曝光量提升0.58%、点击量提升0.70%、商业收入提升3.67%</strong>，14天生命周期价值指标提升0.23%；平均响应时间增加不到0.5毫秒。论文报告，该方法随后完成了线上全流量部署。</p>
+<p><strong>论文标题</strong>：Beyond Independent Predictions: Learning the Browsing Journey for Sequence-Level Re-ranking</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.07591.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-05_Beyond-Independent-Predictions-Learning-the-Browsing-Journey-for-Sequence-Level-Re-ranking.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-05_Beyond-Independent-Predictions-Learning-the-Browsing-Journey-for-Sequence-Level-Re-ranking.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
