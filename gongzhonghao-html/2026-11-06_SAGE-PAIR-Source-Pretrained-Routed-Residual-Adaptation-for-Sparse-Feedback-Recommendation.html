@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAGE-PAIR: Source-Pretrained Routed Residual Adaptation for Sparse-Feedback Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">SAGE-PAIR: Source-Pretrained Routed Residual Adaptation for Sparse-Feedback Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-10</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>SAGE-PAIR：用源窗口预训练残差，在0.5%反馈下使KuaiSAR-v2的NDCG@10相对PAIR提升1.77%</h1>
+<h2>一、引言</h2>
+<p>推荐系统需要持续应对用户活跃度、物品热度和反馈延迟的变化。但新一轮推荐开始时，系统往往只能拿到极少量已曝光物品的点击结果，距离支撑完整模型重训还有很大差距。此时直接微调，容易让少量样本主导高维参数更新；即便采用参数高效微调，目标窗口中的更新方向也未必能被可靠估计。</p>
+<p>SAGE-PAIR关注的正是这一时间分布变化场景：保留已有推荐模型，先用相邻源窗口的数据学习紧凑的<strong>残差校正空间</strong>，再用少量目标反馈调整校正幅度，并通过用户画像决定不同用户如何共享校正方向。该设计的核心不是单纯减少参数，而是限制稀疏反馈需要识别的更新范围。</p>
+<h2>二、核心方法</h2>
+<p><img alt="图1：SAGE-PAIR的冻结主干、残差适配与分阶段训练流程" src="https://arxiv.org/html/2611.09728v1/architecture.png" /></p>
+<h3>PAIR：用源行为统计构造全局残差</h3>
+<p>SAGE-PAIR首先冻结已有推荐模型，只在原始打分之外增加轻量校正。校正不重新学习物品向量，而是使用源数据中可计算的点击率和点赞率。</p>
+<p>对于曝光次数为$n_i$、某类正向行为次数为$c_{ik}$的物品，方法先计算平滑后的行为率：</p>
+$$\widehat{p}_{ik}=\frac{c_{ik}+\alpha\bar{p}_{k}}{n_i+\alpha}$$
+
+<p>实际含义是用全局行为率$\bar{p}_{k}$对物品统计做收缩，避免曝光很少的物品因偶然点击或点赞产生过大的校正。</p>
+<p>平滑后的点击率和点赞率再经过标准化，组成二维物品特征$\mathbf{x}_i$。全局PAIR为两种行为分配权重，同时允许对原模型分数做受约束的整体校准。由于只需要估计少数系数，目标反馈不必承担重新训练推荐模型的任务。</p>
+<p>训练分两步：先在相邻源窗口预训练残差，再从该状态出发，用目标窗口中选出的少量反馈继续更新。两阶段均采用二元交叉熵，并通过正则化限制残差和分数缩放幅度；<strong>主干模型与源特征始终冻结</strong>。</p>
+<h3>SAGE-PAIR：用软路由区分用户校正</h3>
+<p>全局残差对所有用户使用相同的物品行为权重，但不同用户对点击和点赞信号的依赖程度可能不同。SAGE-PAIR因此加入基于用户画像的软路由。</p>
+<p>用户画像由源推荐行为的类别点击直方图和活跃度摘要构成。路由器将画像$\mathbf{h}_u$转换为多个专家的混合权重：</p>
+$$\boldsymbol{\pi}_u=\operatorname{softmax}(W\mathbf{h}_u)$$
+
+<p>实际含义是让每个用户按画像组合多个专家，而不是被硬分配到单一用户群。</p>
+<p>加入专家后的核心版本打分为：</p>
+$$s_{ui}=az_{ui}+\mathbf{x}_i^{\top}\boldsymbol{\beta}+\mathbf{x}_i^{\top}(\boldsymbol{\pi}_u^{\top}R)$$
+
+<p>实际含义是：在原模型分数$z_{ui}$和全局残差之外，再叠加由用户画像决定的个性化残差。</p>
+<p>其中，$R$保存专家的残差系数；专家并不是完整推荐模型，而是在同一个二维物品行为空间里提供不同的系数锚点。KuaiSAR-v2的Core版本使用8个专家、39维用户画像，共有<strong>331个参与打分的参数</strong>。Full版本另外使用搜索画像通道和一个控制专家项强度的门控；消融实验中，这两项的影响相对较小。</p>
+<h3>Staged Optimization：分阶段校准与持续更新</h3>
+<p>部署流程先使用历史交互训练主干，再利用紧邻目标期的源窗口预训练全局残差和路由专家。目标窗口开始后，系统在不知道结果标签的情况下抽取曝光记录，获得反馈后只更新残差模块，最后对未来候选集打分。</p>
+<p>这种分工让源窗口提供初始校正方向，让目标反馈负责校准；预训练提供的是初始化，并非禁止目标阶段继续调整参数。若缺少用户画像或预训练路由器，可退回源预训练的全局PAIR；若连相邻源窗口也不可用，则可使用仅由目标反馈训练的PAIR。</p>
+<p>对于连续到来的窗口，方法还可以把上一次更新后的残差状态作为下一次的起点，同时保持源用户画像和物品特征固定，从而累积先前窗口的适配信息。</p>
+<h2>三、实验</h2>
+<p>主要验证使用KuaiSAR-v2：主干由5月22日至26日的数据训练，5月27日预训练残差，5月28日从曝光池中抽取<strong>0.5%</strong>的反馈，5月29日至31日的数据用于评估。评估指标包括按用户分组的<strong>NDCG@10</strong>，即衡量前10个结果排序质量的归一化折损累计增益。</p>
+<p>相邻窗口之间确实存在明显变化：5月28日出现的物品中，只有29.0%也出现在5月27日；未适配主干的Macro-AUC从0.553135降至0.546759。不过，两个窗口的NDCG@10略有上升，不能简单地把漂移描述为NDCG下降。</p>
+<p>在锁定的25组配对实验中，Full版本相对于<strong>仅用目标反馈训练的PAIR</strong>，将NDCG@10从0.615217提升至0.626115，相对提升<strong>1.77%</strong>，25组差值均为正；Recall@10、NDCG@20、Recall@20和Macro-AUC也同步提升。</p>
+<p><img alt="图2：源预训练与路由增益拆分，以及不同反馈预算下的结果" src="https://arxiv.org/html/2611.09728v1/results_metrics.svg" /></p>
+<p>更直接的Core对照拆开了两部分贡献：在相同的0.5%反馈条件下，目标反馈版PAIR的NDCG@10为0.624800；加入源窗口预训练后达到0.631008，相对提升0.99%；再加入软路由专家达到0.632608，较源预训练PAIR进一步相对提升0.25%。因此，<strong>源预训练是主要增益来源，路由带来较小但额外的用户条件化收益</strong>。在0.05%至1.0%的反馈预算测试中，SAGE-PAIR也始终高于目标反馈版PAIR。</p>
+<p>外部参数高效微调对比提供了补充证据：在相同目标反馈预算的Core评估协议中，仅目标训练的Adapter-Tuning相对源模型有小幅提升；相邻源窗口预训练的LoRA和Adapter-Tuning则分别出现小幅下降。结果并不说明所有参数高效微调方法都无效，而是表明在这一设置中，直接预训练表示层变换不如源行为支持的残差空间可靠。</p>
+<p>效率测试在RTX 4090上进行：包含源残差预训练和目标热更新的SAGE-PAIR流程耗时0.606秒，重训推荐模型耗时22.166秒；对约225.6万条记录的端到端批量推理，中位耗时从冻结主干的18.472毫秒增加至183.201毫秒。这些是离线批量测量，不能直接视为线上单请求延迟。</p>
+<p><strong>论文标题</strong>：SAGE-PAIR: Source-Pretrained Routed Residual Adaptation for Sparse-Feedback Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.09728.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-06_SAGE-PAIR-Source-Pretrained-Routed-Residual-Adaptation-for-Sparse-Feedback-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-06_SAGE-PAIR-Source-Pretrained-Routed-Residual-Adaptation-for-Sparse-Feedback-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
