@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecoGEM: A Serving System for Production-Scale Generative Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">RecoGEM: A Serving System for Production-Scale Generative Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-11</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>快手等提出RecoGEM：按解码步优化生成式推荐，OneModel批量32吞吐较GeneralGen提升2.88倍</h1>
+<h2>一、引言</h2>
+<p>推荐系统需要在海量内容中快速找到用户感兴趣的条目。传统方案通常分多级筛选、打分：早期阶段必须足够便宜，却也可能过早丢失值得推荐的内容。<strong>生成式推荐</strong>换了一条路径：根据用户上下文，逐步生成代表物品的语义标识，让模型直接参与物品发现。</p>
+<p>但模型能生成，不代表服务容易部署。一条请求需要在严格的延迟预算内完成多轮相互依赖的解码，每轮还要筛选大量候选；模型、物品词表和筛选策略也需要在线更新。传统推荐服务缺少生成状态管理，直接套用大语言模型服务框架又难以适配这些特点。</p>
+<p>RecoGEM针对这一问题，将推荐特有的状态管理和更新机制交给运行时，并按照生成式推荐的计算形态优化执行引擎。其设计展示了从模型推理到线上运维的完整服务链路。</p>
+<p><img alt="图1：传统推荐与生成式推荐流程对比" src="https://arxiv.org/html/2611.12296v1/intro.png" /></p>
+<h2>二、核心方法</h2>
+<p>生成式推荐为每个物品分配一段短的<strong>语义标识符</strong>（SID）。服务先编码用户信息和行为，再逐步生成SID：前面的token用于粗略划分物品空间，后面的token继续细化，最终将完整SID映射为物品。</p>
+<p>一次请求通常需要返回多个物品，因此每一步不会只保留一条路径，而是通过<strong>束搜索</strong>（beam search）保留一组较有希望的候选前缀，再进入下一步。这使候选选择、状态迁移和模型计算共同处于延迟关键路径上。</p>
+<p><img alt="图2：用户上下文编码与SID逐步解码" src="https://arxiv.org/html/2611.12296v1/request_full.svg" /></p>
+<h3>1. Runtime–Engine解耦：管理候选状态与在线更新</h3>
+<p>RecoGEM将服务拆成两层：<strong>执行引擎</strong>负责张量计算；<strong>运行时</strong>负责请求编排、候选状态迁移和线上更新。两者之间通过自动生成的<strong>部署契约</strong>连接。</p>
+<p>契约由模型计算图和服务策略共同生成，记录权重绑定、输入输出映射、批处理方式及各步骤的执行流程。运行时加载部署版本时，会检查契约与编译后的引擎是否匹配，再据此组织请求。这样，新增模型或调整策略时，不必把大量模型专属逻辑写死在运行时代码中。</p>
+<p>一次请求中，用户上下文经编码生成的<strong>Cross-KV</strong>在各解码步之间复用；候选前缀对应的<strong>Self-KV</strong>则随束搜索不断变化。一条前缀可能产生多个保留分支，也可能被完全淘汰。</p>
+<p>为此，运行时使用<strong>双缓冲压缩</strong>：根据幸存候选的索引，从当前缓冲区收集所需的Self-KV，复制到备用缓冲区，再将后者作为下一步输入。复制当前切片时，系统还会准备下一个切片的源地址，以重叠部分操作。</p>
+<p><img alt="图3：部署契约连接模型计算图、服务策略与运行时" src="https://arxiv.org/html/2611.12296v1/arch_overview.png" /></p>
+<p>在线更新遵循同一原则：新版本先在活跃请求路径之外准备，并通过契约检查。切换时，运行时短暂停止接纳新请求，让已发出的请求在旧版本上完成，再原子切换引擎指针；契约变化时，也同步切换契约指针。这样可以让单个请求在一致的模型、词表和策略版本下完成解码，而不必通过整体停服完成更新。</p>
+<h3>2. Row-Tiled Self-Attention与Step-Granular Planning：适配短前缀和固定步骤</h3>
+<p>生成式推荐的注意力计算有一个显著特点：<strong>候选很多，但每个候选的SID前缀很短</strong>。若请求批量为 $B_{\mathrm{req}}$、束宽为 $W$，则束扩展后的有效序列数为：</p>
+$$B=B_{\mathrm{req}}\times W$$
+
+<p>这表示束宽越大，同一批请求中需要独立计算注意力的候选序列越多。</p>
+<p>面向长序列的注意力内核擅长沿较长的KV维度分块；面对大量只有少量位置的候选行时，每行计算不足以摊薄调度和数据搬运开销。RecoGEM因此采用<strong>按行分块</strong>：把多条独立的短注意力行放进同一个执行块，在片上完成每行的打分、Softmax和加权求和，并保持各行之间的归一化隔离。计算当前块时，系统还可预取下一块的数据。</p>
+<p><img alt="图4：长序列分块与短注意力行分块的区别" src="https://arxiv.org/html/2611.12296v1/tiling.svg" /></p>
+<p>不同SID位置的前缀长度、候选数量和束宽并不相同，但在给定部署配置下通常可以提前推导。<strong>按步骤规划</strong>利用这一规律：先构建覆盖全部步骤的宽范围计算图，再在编译期逐步推演张量形状，最后为各步骤生成范围更窄的执行配置。</p>
+<p>因此，注意力内核可以针对特定步骤的前缀长度选择实现，候选选择也能针对该步骤的束宽和候选宽度优化；请求批量等受流量影响的维度仍然保持动态。</p>
+<h3>3. Fast Candidate Selection：两阶段精确筛选</h3>
+<p>每个解码步都要从大量扩展候选中选出进入下一步的路径。假设一个请求有 $W$ 条候选前缀，每条扩展出 $C$ 个续写，候选分数就形成 $W\times C$ 的矩阵。直接将整个矩阵展开做一次Top-K虽然正确，却会产生很宽的选择任务，并带来较重的全局内存访问。</p>
+<p>RecoGEM采用两阶段精确筛选：</p>
+<ul>
+<li><strong>行内预裁剪</strong>：每条前缀对应一行，先从该行保留局部前 $K$ 个候选。</li>
+<li><strong>请求级筛选</strong>：再从所有行的保留结果中选出全局前 $K$ 个。</li>
+</ul>
+<p>被行内裁掉的候选，已经有至少 $K$ 个同一行内候选排在它前面，因此不会改变最终Top-K的分数结果。第一阶段有大量独立、宽度受限的行，适合用共享内存和Radix Top-K做局部选择；第二阶段则对缩小后的候选集合使用多线程块Radix选择。按步骤规划提供具体形状，使这两条路径能够匹配不同解码步的工作量。</p>
+<h2>三、实验</h2>
+<p>实验使用两个生产模型：<strong>OneRec-v2</strong>约40亿参数，<strong>OneModel</strong>约2亿参数。对比系统包括使用统一形状配置和通用GPU内核的GeneralGen，以及PyTorch Eager和适配生成式推荐的TensorRT-LLM。实验报告吞吐量QPS和<strong>P99延迟</strong>，后者反映99%的请求延迟不超过的水平。</p>
+<p>在请求批量为32时，OneModel上的RecoGEM达到<strong>1,053 QPS、P99延迟30.8毫秒</strong>；GeneralGen为366 QPS、89.0毫秒，RecoGEM吞吐提升2.88倍。同样在批量32下，OneRec-v2上的RecoGEM达到526 QPS、P99延迟61.5毫秒；GeneralGen为286 QPS、112.5毫秒。</p>
+<p><img alt="图5：OneModel在不同请求批量下的P99延迟与吞吐对比" src="https://arxiv.org/html/2611.12296v1/onemodel_p99_latency_qps.svg" /></p>
+<p>消融实验进一步区分了优化来源：在OneModel、批量32的设置下，保留专用内核但使用统一形状配置的HomoGen，平均解码延迟为39.5毫秒；加入按步骤规划后降至30.4毫秒。收益主要出现在较早步骤，而专用注意力和候选选择内核对后期束扩展后的步骤更重要。</p>
+<p>在候选选择单算子测试中，词表大小为8,192、批量为32、束宽为512时，RecoGEM耗时0.618毫秒，分别比ATen和标准Radix方案快2.08倍、1.70倍。这是特定算子和形状下的结果，不能直接等同于端到端吞吐增益。</p>
+<p><img alt="图6：不同批量和束宽下的候选选择延迟" src="https://arxiv.org/html/2611.12296v1/topk_twostep_latency.svg" /></p>
+<p>线上验证显示，RecoGEM集群历史峰值达到60,000 QPS，平均模型计算利用率（MFU）为55.3%。一段代表性24小时轨迹中，流量从低谷约5,000 QPS变化到高峰超过50,000 QPS，P99延迟始终低于80毫秒。对照的早期更新实现会在发布期间产生明显延迟尖峰；RecoGEM通过预先准备和校验新版本，在该轨迹中未出现可见的服务等级协议违约。</p>
+<p><img alt="图7：24小时生产流量与P99延迟" src="https://arxiv.org/html/2611.12296v1/24h_qps_p99_naive_update.svg" /></p>
+<p><strong>论文标题</strong>：RecoGEM: A Serving System for Production-Scale Generative Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.12296.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-09_RecoGEM-A-Serving-System-for-Production-Scale-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-09_RecoGEM-A-Serving-System-for-Production-Scale-Generative-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
