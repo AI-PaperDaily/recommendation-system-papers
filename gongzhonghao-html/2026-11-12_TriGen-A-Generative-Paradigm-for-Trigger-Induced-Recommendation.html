@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriGen: A Generative Paradigm for Trigger-Induced Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">TriGen: A Generative Paradigm for Trigger-Induced Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-14</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>阿里国际 TriGen：让触发商品持续引导生成式推荐，六国线上收入加权提升3.27%</h1>
+<h2>一、引言</h2>
+<p>用户在商品流中点击一块手表，进入后续推荐页面后，平台应该推荐什么？手表和表带与这次点击直接相关；但如果用户长期偏爱运动装备，运动手环也可能值得推荐。此时，系统既要理解点击带来的<strong>即时意图</strong>，也不能完全丢掉用户的历史偏好。</p>
+<p>这种由一次交互打开后续商品流的场景，被称为<strong>触发式推荐</strong>（Trigger-Induced Recommendation，TIR）。传统生成式推荐通常依据用户历史，逐步生成目标商品的语义 ID；而既有触发式推荐方法主要面向点击率打分，难以直接控制逐 token 的生成过程。</p>
+<p>TriGen 针对这一缺口，在编码、偏好融合和解码三个阶段引入触发信息，尝试解决“延续历史兴趣”与“响应当前点击”之间的矛盾。</p>
+<p><img alt="图1：用户点击商品后进入触发式推荐信息流" src="https://arxiv.org/html/2611.16395v1/intro.png" /></p>
+<h2>二、核心方法</h2>
+<p>生成式推荐首先将商品映射为多级离散的<strong>语义 ID</strong>（Semantic ID）。模型按顺序预测各级 token，再将生成的 ID 映射回商品。语义 ID 通常通过残差量化获得：前面的 token 提供初步表示，后面的 token 逐级补充细节，但各级并不一定对应人工定义的品类或属性标签。</p>
+<p>TriGen 沿用这一生成方式，同时将触发商品作为明确的条件信号。其关键不只是“把点击商品加入输入”，而是让触发信息在不同阶段承担不同作用。</p>
+<p><img alt="图2：TriGen的编码、双路径融合与逐位置解码结构" src="https://arxiv.org/html/2611.16395v1/trigen.png" /></p>
+<h3>Calibrated Tail Injection：在序列尾部校准触发强度</h3>
+<p>一条长历史中只有一个触发商品时，它的信号可能被大量历史行为稀释。TriGen 的做法是：将触发表示重复放在历史序列尾部，并保持上下文窗口长度不变。</p>
+<p>设历史窗口长度为 $M$，触发表示为 $e^{trg}$，重复次数为 $N$，输入序列为：</p>
+$$\tilde{H}=(h_{N+1},\dots,h_{M},\underbrace{e^{trg},\dots,e^{trg}}_{N\text{ times}}).$$
+
+<p>这个操作用最早的 $N$ 个历史位置换取触发信息，使模型能够在自注意力中联合处理触发商品和近期行为。</p>
+<p>这里有两个互补设计。首先，触发商品位于序列尾部，与近期行为在位置上相邻；编码器使用 <strong>RoPE 旋转位置编码</strong>建模相对位置信息，以支持它们之间的交互。其次，重复次数控制触发表示在注意力计算中所占的容量：次数太少可能不足以突出即时意图，太多则可能挤占历史上下文。</p>
+<p>处理后的序列进入双向 Transformer 编码器，得到包含触发上下文的表示，并供后续解码器进行交叉注意力。</p>
+<h3>Adaptive Dual-Path Fusion：按请求平衡历史与触发意图</h3>
+<p>序列编码解决了触发信息如何进入上下文的问题，但不同点击需要的触发强度并不相同。一次偶然点击可能不应覆盖长期偏好；一次明确的购物意图则需要更强的触发引导。</p>
+<p>TriGen 因此从<strong>未经过尾部注入的历史表示</strong>中提取两条条件路径：</p>
+<ul>
+<li><strong>触发路径</strong>：将触发商品映射为不同解码位置的查询，从历史中关注与当前点击相关的行为。</li>
+<li><strong>历史路径</strong>：使用可学习的默认查询汇总历史偏好，不直接依赖触发商品。</li>
+</ul>
+<p>随后，门控路由器先分别汇总两条路径，再为每个语义 ID 位置预测融合权重：</p>
+$$\mathbf{w}=\sigma\left(\mathbf{W}_{r}\left[\frac{1}{L}\sum_{j=1}^{L}t_{j}\;\|\;\frac{1}{L}\sum_{j=1}^{L}h_{j}\right]+\mathbf{b}_{r}\right),\quad c_{l}=w_{l}t_{l}+(1-w_{l})h_{l}.$$
+
+<p>该公式表示：对每个生成位置，模型根据当前请求自适应地混合触发路径 $t_l$ 与历史路径 $h_l$，得到条件向量 $c_l$。</p>
+<p>因此，同一触发商品面对不同历史时，可以产生不同的条件表示；同一次请求的不同生成位置，也可以使用不同权重。</p>
+<h3>Position-Specific Trigger-PFFN：在每一步维持触发引导</h3>
+<p>语义 ID 是逐级生成的。如果只在起始位置加入触发条件，后续生成步骤可能逐渐受到已生成前缀的主导。TriGen 使用 <strong>Position-Specific Trigger-PFFN</strong>，为每一级设置独立的前馈网络，将融合条件 $c_l$ 转换为对应位置的条件向量 $\tilde{c}_l$。</p>
+<p>训练时，模型采用教师强制：上一位置输入真实 token，同时在当前位置加入对应条件：</p>
+$$x_{l}^{dec}=\begin{cases}e(BOS)+\tilde{c}_{1},&l=1,\\e(y_{l-1})+\tilde{c}_{l},&l\in\{2,\dots,L\}.\end{cases}$$
+
+<p>这意味着每个解码位置都同时接收前缀信息和位置专属条件，而不只在生成开始时看到触发信号。</p>
+<p>独立投影允许不同位置学习不同的条件变换，以适应残差量化各级表示的差异。之后，解码器通过因果自注意力处理生成前缀，并通过交叉注意力读取编码后的历史与触发上下文，逐步预测目标商品的语义 ID。</p>
+<h2>三、实验</h2>
+<p>离线实验使用真实电商触发式推荐数据，以及 Amazon Reviews 2018 的 Industrial_and_Scientific 类目。后者没有原生触发标注，因此以用户历史中最近一次交互模拟触发商品，预测下一件商品；其结果需要放在这一模拟设定下理解。</p>
+<p>评估采用 <strong>Recall@K</strong> 和 <strong>NDCG@K</strong>：前者衡量目标商品是否进入前 K 个结果，后者同时考虑命中商品的排名。推理使用<strong>束搜索</strong>（beam search），即每一步保留多个较优生成前缀，继续搜索候选语义 ID。</p>
+<p>在工业数据上，TriGen 的 Recall@5 和 Recall@10 分别为 <strong>5.58%</strong> 和 <strong>15.50%</strong>。相比共享生成骨干、码本和参数预算的简单触发基线，最好的对应结果分别为 <strong>4.46%</strong> 和 <strong>12.15%</strong>。这说明在该数据集上，收益不只是来自“加入触发商品”，还与触发强度、双路径融合和解码方式有关。</p>
+<p>在 Amazon 模拟触发数据上，TriGen 的 Recall@5 为 <strong>10.83%</strong>，高于简单触发基线中的 <strong>10.27%</strong>；但 Recall@10 为 <strong>13.22%</strong>，略低于简单追加触发基线的 <strong>13.26%</strong>。因此，公开数据上的结果是多数指标领先或具有竞争力，而非所有指标均为第一。</p>
+<p>消融实验进一步检验了各组件。在工业数据上，移除尾部注入后 Recall@10 从 <strong>15.50%</strong> 降至 <strong>11.04%</strong>；移除双路径融合、改用原始触发表示作为解码条件后，降至 <strong>14.51%</strong>。移除 Trigger-PFFN 的变体同时取消了解码阶段的触发条件，Recall@10 为 <strong>11.10%</strong>，因此这一对比支持解码侧条件注入的作用，但不能单独归因于逐位置投影。</p>
+<p>更细的设计对比显示，固定平均两条路径、只在起始位置注入条件、以及所有位置共享投影层，均低于完整模型。触发重复次数测试中，工业数据上的各项指标在重复 <strong>3 次</strong>时达到峰值，继续增加则下降；这个最优值属于该实验设置，不代表其他场景也应固定使用 3 次。</p>
+<p><img alt="图3：工业数据上触发商品重复次数对离线指标的影响" src="https://arxiv.org/html/2611.16395v1/fig_repeat_new.svg" /></p>
+<p>案例分析也展示了历史上下文的作用：面对相同的肩包触发商品，有旅行穿搭历史的用户得到服饰、包和旅行护理用品等结果；历史与肩包关联较弱的用户则得到更集中的包类推荐。案例说明了输出差异，但不能仅凭结果直接确认门控权重如何变化。</p>
+<p><img alt="图4：六个国家市场的线上A/B测试结果" src="https://arxiv.org/html/2611.16395v1/fig_ab.svg" /></p>
+<p>线上 A/B 测试以已部署的 <strong>GR + trigger append</strong> 生成式模型为对照，在六个国家的触发推荐信息流中进行，每组分配随机抽取的 <strong>10%</strong> 生产流量，上下游服务流程保持一致。TriGen 在六国均取得收入提升，四国 GMV 提升；按流量加权汇总后，收入相对提升 <strong>3.27%</strong>、GMV 相对提升 <strong>0.90%</strong>，汇总指标达到论文报告的统计显著性水平（双侧检验，$p<0.05$）。线上推理延迟约 <strong>10.5 毫秒</strong>，与对照模型接近；随后 TriGen 已全面部署并服务主要线上流量。</p>
+<p><strong>论文标题</strong>：TriGen: A Generative Paradigm for Trigger-Induced Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.16395.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-12_TriGen-A-Generative-Paradigm-for-Trigger-Induced-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-12_TriGen-A-Generative-Paradigm-for-Trigger-Induced-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
