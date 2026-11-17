@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RACE: Ranking-Uncertainty Aware Capacity-Adaptive Customization for Efficient Sequential Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">RACE: Ranking-Uncertainty Aware Capacity-Adaptive Customization for Efficient Sequential Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-17</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>华为参与的 RACE：根据排序不确定性动态裁剪模型和序列，在四个数据集上提升推荐精度与计算效率</h1>
+<h2>一、引言</h2>
+<p>手机上的本地推荐需要快速理解用户最近的兴趣，但设备的计算资源有限。如果对所有用户使用同一个大模型，兴趣明确、行为稳定的请求可能消耗了过多算力；如果统一压缩模型，兴趣多变的请求又可能得不到足够的表达能力。</p>
+<p>这种<strong>模型容量与实例复杂度不匹配</strong>的问题，使固定压缩率难以兼顾精度和效率。RACE 的思路是：先预测当前排序任务有多不确定，再决定应当保留多少模型通道和历史交互。它利用模型自身的中间特征完成资源分配，在推理时不需要针对每个用户进行反向传播。</p>
+<p>这项工作为端侧顺序推荐提供了一种动态计算方案：将原本用于判断预测可信度的不确定性，转化为决定计算预算的信号。</p>
+<h2>二、核心方法</h2>
+<p>RACE 将一次推荐请求划分为三个相互衔接的步骤：预测裁剪比例、选择适合当前兴趣的子网络，以及逐层过滤历史序列。</p>
+<p><img alt="图1：RACE 的不确定性资源分配、子网络识别与序列过滤流程" src="https://arxiv.org/html/2611.18244v1/race_main_0519.png" /></p>
+<h3>排序不确定性感知资源分配：提前决定裁剪力度</h3>
+<p>历史物品是否热门、用户兴趣是否稳定，看起来都可能反映预测难度，但实验中的这类输入侧启发式指标与模型表现没有呈现可靠关联。RACE 转而衡量模型自身对<strong>候选物品相对顺序</strong>的把握。</p>
+<p>方法在预测头使用<strong>变分贝叶斯层</strong>，一次前向计算即可得到每个候选物品得分的预测均值和方差。在不同物品预测分量条件独立的假设下，物品 $i$ 排在物品 $j$ 之前的概率为：</p>
+$$p_{i\succ j}=\Phi\!\left(\frac{\mu_i-\mu_j}{\sqrt{\sigma_i^2+\sigma_j^2}}\right)$$
+
+<p>这个概率综合考虑了两个物品的平均得分差距和预测方差：差距越大、方差越小，相对顺序通常越稳定。</p>
+<p>接着，RACE 按预测均值选取前 $K$ 个物品，汇总其中所有物品对的排序不确定性：</p>
+$$\mathcal{U}_{\text{rank}}=-\sum_{i=1}^{K-1}\sum_{j=i+1}^{K}\log p_{k_i\succ k_j}$$
+
+<p>该指标越大，表示模型对前 $K$ 个物品之间的相对顺序越不确定；实验使用 $K=20$，以覆盖比最终评估截断位置更宽的候选范围。</p>
+<p>需要注意，这一汇总衡量的是<strong>物品对概率的综合得分</strong>，并不意味着所有两两比较事件彼此独立，也不直接等同于整个排序发生的联合概率。</p>
+<p>完整排序不确定性只有执行到预测头后才能获得，无法直接决定前面各层的计算量。为此，RACE 使用早期层最后一个有效位置的表示作为上下文，训练一个轻量双层 MLP 来预测裁剪比例。训练时，先用当前批次统计量标准化完整前向得到的不确定性，再构造自监督目标：</p>
+$$\tau^{*}=\sigma\!\left(-\tilde{\mathcal{U}}+b_{\text{center}}\right)$$
+
+<p>负号使较高的不确定性对应较低的目标裁剪比例，从而为困难实例保留更多容量；偏置项用于围绕目标裁剪率调整比例分布。</p>
+<p>预测器通过均方误差学习这个目标，目标值在训练预测器时停止梯度传播。部署时，系统直接根据早期特征预测比例，而不需要先执行一次完整推理来计算不确定性。</p>
+<h3>兴趣兼容子网络识别：确定裁剪哪些通道</h3>
+<p>裁剪比例回答了“压缩多少”，但没有回答“压缩哪里”。不同用户对模型参数的依赖可能不同，因此 RACE 为每个实例选择不同的前馈网络通道。</p>
+<p>具体做法是复用各 Transformer 层最后一个有效交互的隐藏表示，将其送入轻量的<strong>敏感度提取器</strong>，为前馈网络的每个通道生成得分。随后，根据预测裁剪比例确定分位数阈值，屏蔽得分较低的通道，保留与当前上下文更匹配的子网络。</p>
+<p>这种设计不需要额外的重型用户特征提取器。训练阶段，方法使用直通估计器处理离散掩码的梯度；推理阶段则按掩码执行对应的结构裁剪。</p>
+<h3>渐进式序列过滤：减少历史输入冗余</h3>
+<p>除了模型参数，历史序列也可能包含与当前兴趣关联较弱的交互。RACE 利用已有的多头注意力图计算物品重要性，而不是重新训练一个完整的序列分析模型。</p>
+<p>每一层先对注意力头求平均，再累计后续查询对某个历史物品的注意力贡献，并引入随查询位置变化的因子。方法希望借此保留持续影响当前兴趣的交互。随后，系统根据由预测比例线性变换得到的序列裁剪比例，逐层保留得分较高的物品。</p>
+<p>训练时，未选中的位置通过掩码模拟过滤，以维持批次处理的稳定性；推理时则直接丢弃相应位置，减少后续计算。整体训练目标同时包含推荐损失、平均通道稀疏度约束和阈值预测损失，使推荐质量与资源分配共同优化。</p>
+<h2>三、实验</h2>
+<p>实验使用 MovieLens-100k、Douban、Amazon-CD 和 Amazon-Game 四个数据集，以及 SASRec、BSARec 两种骨干模型。评估采用全物品排序：<strong>Hit@5</strong> 衡量真实目标是否出现在前五位，<strong>NDCG@5</strong> 进一步考虑命中位置，越靠前得分越高；计算成本以骨干网络的 MFLOPs 衡量。</p>
+<p>在 SASRec 与 MovieLens-100k 的组合下，RACE 的 NDCG@5 为 <strong>0.0427</strong>，高于未压缩模型的 <strong>0.0299</strong>；骨干计算量从 <strong>1.8432 MFLOPs</strong> 降至 <strong>0.8025 MFLOPs</strong>。在 Douban 与 SASRec 的组合下，RACE 的 NDCG@5 为 <strong>0.0261</strong>，高于对比方法 APG 的 <strong>0.0224</strong>。</p>
+<p>消融实验也说明，动态分配与双空间裁剪各有作用。例如，在 Douban 的 BSARec 设置下，同时使用结构和序列裁剪、但固定裁剪比例时，NDCG@5 为 <strong>0.0233</strong>；加入动态比例后提升至 <strong>0.0327</strong>。不过，不确定性本身并不能替代个性化裁剪：只更换贝叶斯预测层而不进行定制时，部分设置的表现反而下降。</p>
+<p><img alt="图2：排序不确定性与推荐表现、预测通道裁剪比例之间的关系" src="https://arxiv.org/html/2611.18244v1/acmart-primary/acmart-primary/figures/relation.png" /></p>
+<p>分组分析显示，在 Amazon-CD 的 SASRec 实验中，较高排序不确定性的实例通常具有较低推荐表现；预测通道裁剪比例总体也随不确定性上升而下降。两者的 Pearson 相关系数为 <strong>-0.319</strong>，Spearman 相关系数为 <strong>-0.496</strong>，说明这种分配趋势存在，但预测信号并非完全准确。</p>
+<p>效率测试模拟了云端预取 <strong>50 个候选物品</strong>后的本地重排。在四核 CPU 上，SASRec 版本的 RACE 报告延迟为 <strong>5.780 毫秒</strong>，低于 Finetune 的 <strong>9.732 毫秒</strong>和 DIET 的 <strong>10.518 毫秒</strong>；RACE 的辅助模块开销为 <strong>0.0490 MFLOPs</strong>。这些结果来自所述测试环境，不能直接等同于所有移动设备或线上业务的收益，论文也未报告线上 A/B 测试。</p>
+<p>在测试时改变资源约束的实验中，Douban 上采用比训练时更严格的约束后，RACE 的骨干计算量从 <strong>0.7928</strong> 降至 <strong>0.6266 MFLOPs</strong>，NDCG@5 从 <strong>0.0261</strong> 降至 <strong>0.0259</strong>；这展示了该设置下无需重新训练即可调整精度与计算量的能力。</p>
+<p><strong>论文标题</strong>：RACE: Ranking-Uncertainty Aware Capacity-Adaptive Customization for Efficient Sequential Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.18244.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-13_RACE-Ranking-Uncertainty-Aware-Capacity-Adaptive-Customization-for-Efficient-Sequential-Recommendati.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-13_RACE-Ranking-Uncertainty-Aware-Capacity-Adaptive-Customization-for-Efficient-Sequential-Recommendati.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
