@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EE-Motion: An EEG-based Web Architecture for Live Affective Music Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">EE-Motion: An EEG-based Web Architecture for Live Affective Music Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-18</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Wideverse 等参与的 EE-Motion：浏览器接入脑电调节音乐推荐，本地测试单轮平均低于 125 毫秒</h1>
+<h2>一、引言</h2>
+<p>音乐推荐通常依赖播放记录、收藏和历史偏好，但一次听歌过程中的状态并不固定：同一个人可能刚开始需要安静的背景音乐，过一段时间又希望听节奏更强的歌曲。如果推荐系统只使用长期画像，就很难及时响应这种变化。</p>
+<p><strong>EE-Motion</strong> 尝试将可穿戴脑电设备接入浏览器，把持续变化的生理信号转换成推荐时可用的控制坐标。系统还允许匿名访客通过少量喜欢的歌曲初始化偏好，不必为新用户重新训练模型。</p>
+<p>这项工作的重点是打通“浏览器采集—信号处理—候选排序”的链路，而不是证明机器已经准确读懂情绪。原论文使用的脑电指标未经个体校准，应理解为与情绪维度相关的<strong>代理信号</strong>，不能当作经过验证的情绪识别结果。</p>
+<h2>二、核心方法</h2>
+<h3>Web 架构：把脑电采集与推荐排序分开</h3>
+<p>EE-Motion 将系统拆成四个服务：前端负责交互，曲库服务提供歌曲元数据，<strong>bci-processor</strong> 处理脑电信号，推荐服务则通过 WarpRec 对候选歌曲排序。服务之间通过 HTTP 和 WebSocket 通信，因此既可以部署在本地，也可以拆分到不同节点。</p>
+<p><img alt="图1：EE-Motion 的脑电采集、信号处理与推荐服务架构" src="https://arxiv.org/html/2611.21032v1/architecture.png" /></p>
+<p>在脑电模式下，浏览器通过 <strong>Web Bluetooth</strong> 连接 Muse 2 头带，采集的数据被送往 bci-processor；后者输出二维坐标，再交给推荐服务。这样，排序模型不需要直接处理蓝牙通信或原始脑电波形。</p>
+<p>二维坐标采用 Russell 情绪环模型中的两个维度：</p>
+<ul>
+<li><strong>效价 Valence</strong>：描述情绪正负方向。</li>
+<li><strong>唤醒度 Arousal</strong>：描述生理激活程度。</li>
+</ul>
+<p>系统将两个代理指标映射到 $[0,1]\times[0,1]$ 范围。只要输入遵循相同格式，下游推荐服务就可以接收其他来源的坐标。演示中的手动模式正是利用这一点：访客拖动二维平面上的光标，就能观察不同坐标对推荐列表的影响，无须佩戴设备。</p>
+<h3>BCI 处理流程：从脑电波形得到二维代理坐标</h3>
+<p>Muse 2 使用 TP9、AF7、AF8、TP10 四个通道，以 <strong>256 Hz</strong> 采样。后端为每个通道维护 1024 个采样点，即约 4 秒的数据窗口；窗口填满后，系统将数据转换为 MNE 格式，利用 LOF 检测信号特征异常的通道，并结合人工观察检查噪声和佩戴位置。</p>
+<p>预处理使用 1—40 Hz 的因果带通滤波，再估计 theta、alpha 和 beta 频段功率。第二个环形缓冲区保存连续 20 次特征观测，并分别按通道和频段取平均，以减弱短时波动；该缓冲区填满后才计算代理指标。</p>
+<p>其中，<strong>额叶 alpha 不对称性</strong>用于构造效价相关指标：</p>
+$$\mathrm{FAA}=\log\left(\frac{\alpha_{\mathrm{AF8}}}{\alpha_{\mathrm{AF7}}}\right)$$
+
+<p>该式比较左右额叶通道的平滑 alpha 功率，作为效价相关的生理代理，而不是对正负情绪的直接测量。</p>
+<p><strong>唤醒度指数</strong>则由额叶 beta 与 alpha 功率之比得到：</p>
+$$\mathrm{AI}=\frac{\beta_{\mathrm{AF7}}+\beta_{\mathrm{AF8}}}{\alpha_{\mathrm{AF7}}+\alpha_{\mathrm{AF8}}}$$
+
+<p>该式用两个额叶通道的 beta 功率总和相对于 alpha 功率总和的比例，提供唤醒度相关的控制信号。</p>
+<p>两个指标经过固定系数的 Sigmoid 映射后，成为归一化坐标。演示中，稳定后的坐标以 <strong>8 Hz</strong> 显示在二维平面上；这不意味着系统每 125 毫秒就能独立完成一次经过验证的情绪判断。4 秒采样窗口、连续观测平滑以及个体差异，都需要与显示刷新频率区分开看。</p>
+<p><img alt="图2：系统中的脑电通道信号质量检查界面" src="https://arxiv.org/html/2611.21032v1/images/journey/signal.png" /></p>
+<h3>Affective Adapter：让匿名偏好和实时坐标共同参与排序</h3>
+<p>实时坐标解决的是“当前控制信号从哪里来”，却不能单独回答“这个人喜欢什么”。EE-Motion 的 <strong>Affective Adapter（情感适配器）</strong>因此同时接收三类输入：访客选择的歌曲、当前 V/A 坐标，以及预计算的歌曲嵌入和歌曲级 V/A 画像。</p>
+<p>访客最多选择 10 首喜欢的歌曲。适配器通过聚合选中歌曲的嵌入来表示匿名偏好，其中使用均值投影到潜在空间的方式，绕过依赖固定用户嵌入表的限制。底层推荐模型仍需预先训练，但新访客进入时不需要重新训练模型或建立持久用户嵌入。</p>
+<p>适配器还为不同模型提供统一的在线接口。演示支持具有不同结构的 ACE 和 SASRec：前者提供情感建模基础，后者属于通过交互序列建模的推荐架构。无论选择哪一种，系统都使用访客选曲和当前代理坐标生成 Top-10 列表。</p>
+<p>原文没有给出完整的在线打分公式或各输入的权重，因此不宜把结果简单理解成“只按歌曲与当前坐标的距离排序”。推荐页支持播放、三级评价，以及按需使用当前坐标重新排序。会话重置时，系统会清除内存中的缓冲区、连接和用户数据；这些信号也不用于临床情绪评估。</p>
+<p><img alt="图3：结合当前 V/A 代理坐标生成的推荐列表" src="https://arxiv.org/html/2611.21032v1/images/recommendations/results.png" /></p>
+<h2>三、实验</h2>
+<p>性能测试在 <strong>MacBook Pro M4 本地环境</strong>进行，以减少网络延迟的干扰；曲库使用带有推断歌曲级 V/A 画像的 Lastfm-VADS。测试关注一次从浏览器请求开始的推荐周期，并比较接入适配器的 ACE 与 SASRec。</p>
+<p>两种模型的单轮平均耗时分别为 <strong>80.0±7.4 毫秒</strong>和 <strong>90.3±7.0 毫秒</strong>，均低于 8 Hz 更新周期对应的 125 毫秒；候选评分所在的推荐服务占据主要耗时。这说明在该本地测试条件下，平均处理速度能够跟上演示所需的更新频率，但这些结果不代表跨网络部署或高并发场景下的延迟表现。</p>
+<p>推荐质量方面，研究使用 <strong>nDCG@10</strong> 衡量前 10 个推荐结果的排序质量。ACE 的在线版本与离线版本分别为 <strong>0.0231 和 0.0236</strong>，SASRec 分别为 <strong>0.0164 和 0.0148</strong>；Wilcoxon 符号秩检验均为 $p>0.05$。在该对比中未发现统计显著差异，但这并不等同于证明两种部署方式质量完全相同，也不能替代对真实情绪识别准确率的验证。</p>
+<p><strong>论文标题</strong>：EE-Motion: An EEG-based Web Architecture for Live Affective Music Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.21032.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-16_EE-Motion-An-EEG-based-Web-Architecture-for-Live-Affective-Music-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-16_EE-Motion-An-EEG-based-Web-Architecture-for-Live-Affective-Music-Recommendation.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
