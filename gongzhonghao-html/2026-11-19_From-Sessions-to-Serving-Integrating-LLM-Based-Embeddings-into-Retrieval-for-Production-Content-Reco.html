@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Sessions to Serving: Integrating LLM-Based Embeddings into Retrieval for Production Content Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">From Sessions to Serving: Integrating LLM-Based Embeddings into Retrieval for Production Content Recommendation</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-21</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>Autodesk LSER：在内容召回中加入LLM行为向量，未启用LLM时线上产品试用启动率+17.1%</h1>
+<h2>一、引言</h2>
+<p>大型网站的内容推荐往往面对混合候选集：用户可能在产品页了解功能，也可能在客户案例、行业页面和学习内容之间切换。推荐系统通常先通过召回选出候选，再交给排序模型细排；如果召回阶段没有捕捉到用户当前意图，相关内容就可能无法进入后续排序。</p>
+<p>这个问题在用户行为稀疏、兴趣变化快的场景中更加突出。传统序列编码器可以从已识别的内容序列中学习兴趣，但部分页面行为无法映射到目录中的内容，容易被丢弃或归为未知项。Autodesk 提出的 <strong>LSER</strong>（LLM Session Embedding Retrieval）保留原有序列编码器，增加从原始行为文本生成的会话和历史向量，并通过近线更新让这些向量参与内容召回。</p>
+<h2>二、核心方法</h2>
+<p>LSER 接收用户近期会话、较早历史和请求上下文，输出用于检索内容的用户向量。它并不让大模型直接生成推荐列表，而是让原有序列编码器和大模型各自总结用户行为，再将两者的结果与其他用户特征融合；内容侧向量则提前计算，供双塔模型做近邻检索。</p>
+<p><img alt="图1：LSER的近线向量更新与双塔召回架构" src="https://arxiv.org/html/2611.26096v1/figures/architecture.png" /></p>
+<h3>先保留已有序列，再补充行为语义</h3>
+<p>训练和请求都按同一时间边界构造行为：当前会话只包含会话开始到目标时刻之前的事件，历史序列包含当前会话之前、回看窗口内的事件。训练时排除标签时刻及之后的行为，避免把未来信息带入特征。</p>
+<p>原有路径先将行为映射到内容目录中的条目，再用 BGE 文本编码器把条目的标题和描述转成向量，交给类似 BERT4Rec 的序列编码器。会话和历史分别得到定长表示；无法映射的事件则被丢弃或映射为未知项。</p>
+<p>大模型路径使用相同时间窗口，却直接处理事件的<strong>行为类型和页面内容描述</strong>，因此可以保留一些没有目录条目 ID 的页面信息。两条路径不是替换关系：前者继续学习内容序列，后者提供额外的行为语义。</p>
+<p>用户塔将这两类序列表示与非序列特征融合。设 $\mathbf e_u^{\text{sess}}$、$\mathbf e_u^{\text{hist}}$ 为原有序列向量，$\mathbf e_u^{\text{LLM}}$ 为拼接后的大模型会话和历史向量，$x_u$ 表示用户画像、页面上下文、产品使用等其他特征，则最终用户向量为：</p>
+$$
+\mathbf e_u=f_{\text{user}}\big(
+\mathbf e_u^{\text{sess}},
+\mathbf e_u^{\text{hist}},
+\mathbf e_u^{\text{LLM}},
+\mathrm{Emb}_{\text{other}}(x_u)
+\big).
+$$
+
+<p>这一步让用户塔自行学习如何组合原有序列、补充语义和请求上下文，而不是直接拿大模型向量替代用户向量。</p>
+<p>内容塔使用 BGE 编码标题与描述，再融合内容类型等元数据，生成与用户向量同维度的内容向量。线上不启用可选的内容 ID 记忆向量；召回时按用户与内容向量的余弦相似度检索，候选再交给下游排序。</p>
+<h3>让大模型向量学会概括行为</h3>
+<p>大模型路径先把每个事件表示为“行为类型、行为值”两段文本，用冻结的 Qwen3-0.6B-embedding 分别编码并拼接。按时间排列后的事件向量进入改造过的 Qwen3 风格解码器：原来的词表查找被线性映射替换，使模型可以直接接收事件向量；最终通过末尾位置的隐藏状态和线性投影得到定长表示。</p>
+<p>会话和历史编码器从同一个预训练检查点初始化，但分别训练、使用不同权重。微调时，模型要根据一段事件前缀识别紧接着发生的事件：真实下一事件是正样本，另外采样的事件是负样本。前缀和候选事件经过对应的编码器，得到前缀向量 $\mathbf h_i$ 和事件向量 $\mathbf e_j^{\text{evt}}$，以内积和 sigmoid 计算概率 $\hat p_{i,j}$。训练目标是二元交叉熵：</p>
+$$
+\mathcal L_{\text{seq}}^{\text{LLM}}
+=-\frac{1}{N}\sum_{i=1}^{N}\sum_{j\in\mathcal C_i}
+\left[
+y_{i,j}\log\hat p_{i,j}
++(1-y_{i,j})\log(1-\hat p_{i,j})
+\right].
+$$
+
+<p>这个目标促使前缀表示接近真实下一事件、远离采样负事件，而不必对完整事件词表做分类。</p>
+<p>随后，两个大模型编码器被加载到用户塔，与双塔召回目标一起微调。召回训练使用统一的标签记录构造用户与正向内容对；一个批次中，其他样本的正向内容充当当前用户的负样本。设批次大小为 $N$，$\tau$ 为温度参数，用户与内容的余弦相似度为 $\mathrm{score}$，单样本 InfoNCE 损失为：</p>
+$$
+\mathcal L_k=-\log
+\frac{\exp(\mathrm{score}(u_k,i_k^+)/\tau)}
+{\sum_{j=1}^{N}\exp(\mathrm{score}(u_k,i_j^+)/\tau)}.
+$$
+
+<p>它让用户向量更接近对应的正向内容，并相对远离批次中的其他内容。</p>
+<h3>用近线更新避开请求时的重计算</h3>
+<p>行为向量需要及时反映兴趣变化，但每次请求都同步运行序列编码器和大模型，会挤占线上延迟预算。LSER 因而将重编码移到<strong>近线链路</strong>：新行为进入特征存储后触发异步推理，生成原有序列向量和可选的大模型向量，再写入按用户 ID 查询的向量存储。</p>
+<p><img alt="图2：行为触发近线推理并向实时召回提供用户向量" src="https://arxiv.org/html/2611.26096v1/figures/serving.jpg" /></p>
+<p>请求到来时，实时服务读取最近的向量，结合请求时特征完成用户塔融合，并在预先建立的内容向量索引上检索。系统的延迟目标为整体 P95 不超过 100 毫秒、P99 不超过 200 毫秒，其中模型推理预算不超过 50 毫秒。异步更新存在短暂滞后；新向量尚未就绪时，系统使用最近缓存，或省略可选的大模型特征。论文也指出，后续架构已将近线计算扩展到整个用户塔。</p>
+<h2>三、实验</h2>
+<p>离线消融要回答的是：<strong>在已有学习式序列编码器之上，大模型向量是否还有增量价值？</strong> 对照组和实验组使用相同数据划分、特征构造及召回协议，差别是后者额外加入两个各 64 维的大模型会话和历史向量。</p>
+<p>样本按时间划分为训练、验证和测试集；每条测试记录只有一个已记录的正向内容，并在对应推荐位允许的候选集合中评估。<strong>HR@K</strong> 衡量正向内容进入前 $K$ 个结果的记录比例，<strong>MRR</strong> 衡量其排名的倒数平均值。热门产品推荐位上，加入大模型向量后 HR@10 提高 <strong>9.6 pp</strong>、MRR 提高 <strong>0.021</strong>；客户成功案例推荐位上，HR@1 提高 <strong>6.0 pp</strong>、MRR 提高 <strong>0.030</strong>。这里的 pp 指百分点差值。其他推荐位和指标基本持平；收益可能与大模型路径能保留更多页面行为有关，但这属于论文提出的解释，而非已单独验证的原因。</p>
+<p>线上 A/B 验证的是另一件事：<strong>学习式、会话感知的召回系统能否优于原有规则引擎</strong>。50%/50% 分流的实验组使用 BERT4Rec 风格序列编码器和近线服务，<strong>没有启用大模型辅助向量</strong>。相对规则对照组，首页产品与行业推荐位的点击率提升 <strong>10.3%</strong>，AutoCAD 客户案例点击率提升 <strong>36.1%</strong>，产品试用启动率提升 <strong>17.1%</strong>；这些线上指标均达到论文报告的统计显著性标准 $p<0.05$。因此，线上结果支持学习式召回优于规则引擎，但不能归因于大模型向量；后者的独立线上增益仍有待验证。</p>
+<p><strong>论文标题</strong>：From Sessions to Serving: Integrating LLM-Based Embeddings into Retrieval for Production Content Recommendation</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.26096.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-19_From-Sessions-to-Serving-Integrating-LLM-Based-Embeddings-into-Retrieval-for-Production-Content-Reco.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-19_From-Sessions-to-Serving-Integrating-LLM-Based-Embeddings-into-Retrieval-for-Production-Content-Reco.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
