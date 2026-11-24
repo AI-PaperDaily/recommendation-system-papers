@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Cross-Division Network for Product-and-Ratio Feature Interactions in Industrial Ranking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #f59e0b;
+            --bg-start: #ffffff;
+            --bg-end: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --card-bg: #ffffff;
+            --card-bg-light: #f1f5f9;
+            --border: rgba(148, 163, 184, 0.3);
+            --code-bg: rgba(99, 102, 241, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+        
+        .back-link::before {
+            content: '←';
+            font-size: 1.1rem;
+        }
+        
+        .article-header {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .article-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .article-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-content h1 {
+            font-size: 1.6rem;
+            color: #1e293b;
+            margin: 40px 0 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, var(--primary), transparent) 1;
+        }
+        
+        .article-content h2 {
+            font-size: 1.35rem;
+            color: #1e293b;
+            margin: 32px 0 16px;
+            padding-left: 16px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .article-content h3 {
+            font-size: 1.15rem;
+            color: #6366f1;
+            margin: 28px 0 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .article-content h4 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin: 24px 0 10px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 28px;
+        }
+        
+        .article-content li {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .article-content ul li::marker {
+            color: var(--primary);
+        }
+        
+        .article-content ol li::marker {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .article-content code {
+            background: var(--code-bg);
+            color: #4f46e5;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88em;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        
+        .article-content pre {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .article-content pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .article-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #1e293b;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .article-content blockquote {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 12px 12px 0;
+            padding: 20px 24px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .article-content blockquote p {
+            margin-bottom: 0;
+        }
+        
+        .article-content .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        .article-content th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white !important;
+            padding: 16px 20px;
+            text-align: left !important;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        
+        .article-content td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            text-align: left !important;
+            font-size: 0.95rem;
+        }
+        
+        .article-content tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .article-content tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .article-content tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .article-content th,
+        .article-content td {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .article-content th:last-child,
+        .article-content td:last-child {
+            border-right: none;
+        }
+        
+        .article-content a {
+            color: #6366f1;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .article-content a:hover {
+            color: #4f46e5;
+            border-bottom-color: #6366f1;
+        }
+        
+        .article-content hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 40px 0;
+        }
+        
+        .article-content img {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+        }
+        
+        .article-content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .article-content em {
+            color: #8b5cf6;
+        }
+        
+        .highlight {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-radius: 12px;
+        }
+        
+        .article-links {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px 48px;
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .article-links h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .links-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .link-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .link-icon {
+            font-size: 1.2rem;
+        }
+        
+        .link-text {
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content, .article-links {
+                padding: 28px 24px;
+            }
+            
+            .links-grid {
+                flex-direction: column;
+            }
+            
+            .link-item {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+            
+            .article-header, .article-content {
+                padding: 28px 24px;
+            }
+            
+            .article-title {
+                font-size: 1.6rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+            }
+            
+            .article-meta {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">
+            ← 返回首页
+        </a>
+        
+        <header class="article-header">
+            <div class="header-content">
+                <span class="platform-badge">📝 公众号深度解读</span>
+            </div>
+            <h1 class="article-title">Deep Cross-Division Network for Product-and-Ratio Feature Interactions in Industrial Ranking</h1>
+            <div class="article-meta">
+                <span class="meta-item">📅 2026-11-24</span>
+            </div>
+        </header>
+        
+        <article class="article-content">
+            <h1>VK 的 DCDN：用倒数交叉学习比例特征，短视频分享量线上 +16.26%</h1>
+<h2>一、引言</h2>
+<p>在短视频推荐的精排阶段，模型需要结合用户、视频和上下文信号，为候选视频预测观看、点赞等行为。除了原始计数，特征系统通常还会提供点击率等人工构造的比例：它们把行为次数除以曝光次数，让模型直接看到经过归一化的关系。</p>
+<p>问题是，比例特征依赖人工定义，而且会增加模型输入宽度。常用的特征交叉网络 DCNv2 擅长构造乘积，却不能直接生成倒数：即使点击数和曝光数都在输入中，也不能仅靠交叉层直接形成二者的比值。</p>
+<p><strong>DCDN</strong> 针对这一点修改交叉算子：保留乘法交叉，同时加入倒数交叉，让模型从保留下来的分子、分母中学习比例关系。目标不是替换整个精排系统，而是在减少人工比例特征的同时，保留它们所提供的有效信号。</p>
+<h2>二、核心方法</h2>
+<p>DCDN 接收的仍是用户、内容和上下文等特征构成的表示，输出则是供后续排序模块使用的交叉表示。关键变化发生在交叉层内部：同一份当前表示既与原始输入相乘，也与原始输入中允许作分母的坐标的倒数相乘，再合并到输出中。</p>
+<h3>从乘法交叉到倒数交叉</h3>
+<p>设原始输入表示为 $x^{(0)}$，第 $\ell$ 层的表示为 $x^{(\ell)}$。DCNv2 先对当前表示做线性变换，再逐元素乘以原始输入，并通过残差连接保留当前表示：</p>
+$$
+x^{(\ell+1)}
+=x^{(\ell)}+\bigl(W_{\ell}x^{(\ell)}+b_{\ell}\bigr)\odot x^{(0)}.
+$$
+
+<p>这个过程能够逐层形成更高阶的乘积，但输入坐标的指数始终是非负整数。</p>
+<p>DCDN 在原有乘法路径旁增加一条倒数路径，用另一组可训练参数处理当前表示：</p>
+$$
+x^{(\ell+1)}
+=x^{(\ell)}
++\bigl(W_{\ell}x^{(\ell)}+b_{\ell}\bigr)\odot x^{(0)}
++\bigl(\widetilde W_{\ell}x^{(\ell)}+\widetilde b_{\ell}\bigr)\odot\frac{\mathbf{1}}{x^{(0)}}.
+$$
+
+<p>新增项使当前表示可以与原始输入坐标的倒数交叉，从而在一层中形成 $x_a/x_b$ 这类比例，偏置项也允许产生 $1/x_b$。</p>
+<p><img alt="图1：DCDN 在乘法交叉旁增加倒数交叉" src="https://arxiv.org/html/2611.27514v1/fig1_naming.svg" /></p>
+<p>图1中两条交叉路径共享原始输入，但使用各自的线性变换；它们共同更新交叉层表示，而不是分别建立独立的预测分支。</p>
+<p>直接取倒数会让接近零的输入产生过大数值。实际实现只对已知可作分母的坐标启用倒数分支，其余坐标在该分支贡献为零；启用坐标使用稳定化倒数：</p>
+$$
+\rho_{\varepsilon}(x)
+=\operatorname{sgn}(x)/\max(|x|,\varepsilon),
+\qquad \varepsilon=10^{-2}.
+$$
+
+<p>当输入绝对值小于阈值时，分母不再继续缩小，从而限制倒数激活值。</p>
+<h3>倒数路径能表达什么</h3>
+<p>乘法交叉使某个输入坐标的指数加一，倒数交叉使其减一，残差连接则保留原项。因此，DCDN 表达的不只是普通多项式，还包括带负整数指数的<strong>洛朗多项式</strong>：例如 $x_a^2/x_b$ 和 $x_a/(x_bx_c)$。</p>
+<p>对于理想的精确倒数算子，论文证明：堆叠 $K$ 层后，单项式的指数绝对值之和不超过 $K+1$，带符号的指数之和位于 $[-K,K+1]$。全部指数非正的项还有更严格的阶数限制。图2将每次交叉看成指数坐标上的一步，说明更深的网络如何组合乘积与倒数。</p>
+<p><img alt="图2：两维输入下 DCDN 可到达的指数范围" src="https://arxiv.org/html/2611.27514v1/fig2monoms.svg" /></p>
+<p>这一定理描述的是<strong>精确倒数</strong>的表达范围；实际模型使用掩码和稳定化倒数，在截断区域不能直接等同于理想算子。论文所有实验均使用单层 DCDN：这一层已经能形成两两乘积，以及以掩码坐标为分母的比例。</p>
+<h3>在现有精排模型中使用</h3>
+<p>线上改造保留了比例特征的原始操作数和上游模型预测，只移除目标人工比例特征，并把原来的 DCNv2 交叉层替换为一层 DCDN。连续特征经过分段线性编码，稀疏类别特征经过 embedding 查表后进入交叉层。</p>
+<p><img alt="图3：线上精排模型中的 DCDN 与后续预测路径" src="https://arxiv.org/html/2611.27514v1/fig3infrascheme.svg" /></p>
+<p>如图3所示，DCDN 之后仍有处理更一般异构特征关系的 Hiformer；交叉表示再进入观看时长、点赞、分享等任务的预测塔，用户历史 transformer 也向任务预测提供序列信息。下游校准和多目标分数融合逻辑在实验组与对照组保持一致。</p>
+<p>训练时，线上模型通过共享表示和多个任务头学习各项用户反馈，每次使用连续六天的日志训练、随后一天的数据验证。DCDN 不需要单独训练一个比例预测任务：倒数路径的参数随精排目标共同学习，生成的交叉表示直接服务于后续预测。</p>
+<h2>三、实验</h2>
+<p>首先需要验证的是：即使比例没有作为输入，倒数路径是否真的容易学到它。受控任务给模型多个跨数量级的正数操作数，目标是其中一组分子与分母的比值，另含干扰变量。参考区间内，DCDN 的归一化均方误差为 $4.25\times10^{-7}$，DCNv2 为 $5.47\times10^{-5}$；在四种测试条件中 DCDN 有三种误差最低。共同放大操作数时，AutoInt+ 和 EulerNet 的误差更低。测试范围均在训练数据覆盖范围内，因此不能据此推断任意范围外的算术泛化。</p>
+<p>公开数据实验检验排序效果。四个数据集按时间切分，历史统计特征只使用目标交互之前的数据；每个配置运行八个随机种子。完整特征对比中，所有模型都拿到人工比例特征，DCDN 在四个数据集上均优于 DCNv2，但并非全面最优。例如 KuaiRec 上，DCDN 的 AUC 为 0.80774，DCNv2 为 0.80482；而在 KuaiRand 上，衡量连续观看时长排序正确性的 XAUC 以 AutoInt+ 更高。</p>
+<p>为了排除“只是参数更多”的解释，另一组实验让 DCDN 与加深后的 DCNv2 使用相同的精简输入和近似参数量。在四个数据集上，DCDN 的 nDCG@10 均更高；该指标衡量前十个位置的排序质量。例如 KuaiRec 分别为 0.4441 和 0.4375。A100、批大小 8192 的模型执行测试中，DCDN 比这个容量匹配对照快 1.15～1.47 倍；这属于模型级测量，不等同于线上请求延迟。</p>
+<p>上线前的生产验证还区分了特征和模型的作用：完整输入与精简输入下，DCDN 均在四个目标上优于同输入的 DCNv2。实际部署组合是<strong>精简输入 DCDN 对比完整输入 DCNv2</strong>；尽管前者移除了 40.1% 的输入特征，四个目标的会话内 XAUC 仍均有提升。</p>
+<p><img alt="图4：生产验证中不同模型与特征视图的 XAUC 差异" src="https://arxiv.org/html/2611.27514v1/fig8industschema_XAUC.svg" /></p>
+<p>在生产服务中，模型计算时间下降 42.4%，排序服务时间下降 10.5%。这些是同时改变特征路径与交叉层后的整体结果，不能解释为倒数运算本身更便宜；实际收益还受到动态批处理和算子融合影响。</p>
+<p>最终的线上 A/B 持续两周，用户随机分组，对照组使用完整特征 DCNv2，实验组使用精简特征 DCDN。统计检验基于用户级指标，并使用实验前数据降低方差。图5展示每日变化：点赞、分享和总观看时长在 14 天中均为正，点击打开全屏在 13 天中为正。</p>
+<p><img alt="图5：线上实验中分享与点赞的每日变化" src="https://arxiv.org/html/2611.27514v1/fig6LikeShare.svg" /></p>
+<p><img alt="图5：线上实验中总观看时长、全屏打开与展示次数的每日变化" src="https://arxiv.org/html/2611.27514v1/fig7tvtshowfullscreen.svg" /></p>
+<p>相对对照组，实验组总观看时长提升 <strong>0.33%</strong>、点赞提升 <strong>3.25%</strong>、分享提升 <strong>16.26%</strong>、点击打开全屏提升 <strong>0.38%</strong>，视频展示次数下降 <strong>0.24%</strong>；这些变化均达到统计显著。结果反映的是该短视频服务两周实验中的整体用户指标，不代表不同用户或创作者群体都获得相同收益。</p>
+<p><strong>论文标题</strong>：Deep Cross-Division Network for Product-and-Ratio Feature Interactions in Industrial Ranking</p>
+<p>欢迎投稿！欢迎合作！</p>
+        </article>
+        
+        
+        <div class="article-links">
+            <h3>📎 相关资源</h3>
+            <div class="links-grid">
+
+                <a href="https://arxiv.org/pdf/2611.27514.pdf" class="link-item" target="_blank">
+                    <span class="link-icon">📄</span>
+                    <span class="link-text">论文 PDF</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/gongzhonghao/2026-11-20_Deep-Cross-Division-Network-for-Product-and-Ratio-Feature-Interactions-in-Industrial-Ranking.md" class="link-item" target="_blank">
+                    <span class="link-icon">📝</span>
+                    <span class="link-text">公众号原文</span>
+                </a>
+
+                <a href="https://github.com/AI-PaperDaily/recommendation-system-papers/blob/main/xiaohongshu/2026-11-20_Deep-Cross-Division-Network-for-Product-and-Ratio-Feature-Interactions-in-Industrial-Ranking.md" class="link-item" target="_blank">
+                    <span class="link-icon">📕</span>
+                    <span class="link-text">小红书原文</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
