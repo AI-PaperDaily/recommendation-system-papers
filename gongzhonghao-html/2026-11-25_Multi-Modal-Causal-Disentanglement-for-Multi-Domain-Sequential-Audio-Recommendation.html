@@ -463,109 +463,89 @@
             </div>
             <h1 class="article-title">Multi-Modal Causal Disentanglement for Multi-Domain Sequential Audio Recommendation</h1>
             <div class="article-meta">
-                <span class="meta-item">📅 2026-11-27</span>
+                <span class="meta-item">📅 2026-11-28</span>
             </div>
         </header>
         
         <article class="article-content">
-            <h1>网易 CAMAR：多模态因果解耦多域用户偏好，云音乐播客播放时长+1.6%</h1>
+            <h1>网易CAMAR：多模态因果解耦跨域用户偏好，网易云音乐播客播放时长+1.6%</h1>
 <h2>一、引言</h2>
-<p>音乐平台的召回任务往往需要同时服务歌曲、歌单和播客等内容域。用户可能在不同域里表现出相通的情绪或主题偏好，也可能分别关注歌曲节奏、歌单场景和播客叙事。</p>
-<p>多域序列推荐尝试联合利用这些行为，但直接共享模型参数有两个困难：歌曲域交互量通常更大，训练时容易主导共享表示，给其他域带来<strong>负迁移</strong>；而只依赖物品 ID 的方法，需要足够多的跨域用户行为，才能发现不同域内容之间的关联。</p>
-<p>CAMAR 面向这一问题，把可跨域复用的偏好与域内特有偏好分开建模，同时用文本、图片和音频建立内容语义联系，让不同域既能共享信息，也保留各自的判断依据。</p>
+<p>音乐平台通常同时推荐歌曲、歌单和播客。多域序列推荐要利用用户在这些内容域中的历史行为，分别预测用户接下来可能消费的内容，并为各域召回候选。</p>
+<p>已有方法会联合训练多个域，但歌曲行为往往远多于播客等域，歌曲产生的训练信号可能主导共享参数；如果把不适合播客的偏好也传过去，反而会造成<strong>负迁移</strong>。另一方面，许多用户只活跃于少数内容域，单靠用户和物品ID的共同出现，很难关联主题相似的跨域内容。</p>
+<p>CAMAR的思路是区分两类偏好：一类可以跨域共享，例如主题和情绪；另一类只用于对应内容域，例如歌曲的节奏偏好。它还利用文本、封面和音频建立内容关联，让缺少共同消费记录的物品也有机会在语义空间中接近。</p>
 <h2>二、核心方法</h2>
-<p>CAMAR 接收用户在各内容域的历史交互序列，输出每个目标域的用户向量，再与该域候选内容打分，生成召回结果。其处理过程分为两步：先用多模态内容和域内序列构造用户表示，补齐没有历史的域；再拆分共享与专属偏好，只让共享部分参与跨域融合。</p>
-<p><img alt="图1：CAMAR 的多模态偏好编码与因果偏好解耦流程" src="https://arxiv.org/html/2611.33628v1/1.png" /></p>
-<h3>用多模态语义连接不同内容域</h3>
-<p>跨域用户行为不足时，一首歌和一档播客即使主题相近，也可能没有共同听众。CAMAR 因而先用预训练模型提取标题、封面和音频片段的特征，将三种特征拼接，再用在所有域物品上联合训练的 <strong>RQ-VAE</strong>，离线生成多级离散语义 ID。</p>
-<p>推荐模型为每一级语义 ID 维护跨域共享、可训练的嵌入表。物品的语义向量由各级码字向量相加，再与该域的物品 ID 向量拼接，经域专属网络得到最终物品表示：</p>
+<p>CAMAR接收用户在各域的历史序列，为每个域生成一个用户向量，再与该域候选物品向量计算召回分数。整个过程先编码内容和域内行为；对没有历史的域补全表示；最后拆分共享偏好与域内偏好，控制哪些信息可以跨域传播。</p>
+<p><img alt="图1：CAMAR整体架构" src="https://arxiv.org/html/2611.33628v1/1.png" /></p>
+<p>图1左侧对应内容与序列编码、缺失域补全，右侧对应偏好拆分和跨域融合。两部分顺序相连：补全发生在偏好拆分之前。</p>
+<h3>用共享语义ID连接跨域内容</h3>
+<p>ID擅长记录协同行为，却不会直接表达一首歌和一期播客是否都与“通勤”有关。CAMAR先用预训练模型提取物品的标题、描述、标签、封面和音频特征，再将各域物品放在一起，离线训练一个<strong>残差量化变分自编码器</strong>（RQ-VAE），把内容特征压成多层离散编码，即语义ID。</p>
+<p>推荐模型不直接训练这些预训练编码器或在线计算量化结果，而是读取离线生成的语义ID。对于物品$i$，模型在各量化层的共享嵌入表$\mathbf E^{(l)}$中查找编码$c_i^{(l)}$，将结果相加；再与该域自己的物品ID嵌入拼接，通过域专属前馈网络得到物品向量：</p>
 $$
-\mathbf e_{\mathrm{sem},i}
-=\sum_{l=1}^{L}\mathrm{onehot}(c_i^{(l)})\mathbf E^{(l)},
-\qquad
-\mathbf e_i^d
-=\mathrm{FFN}^{d}([\mathbf e_{\mathrm{id},i}^{d};\mathbf e_{\mathrm{sem},i}]).
+\mathbf e_{\mathrm{sem},i}=\sum_{l=1}^{L}\mathrm{onehot}(c_i^{(l)})\mathbf E^{(l)},\qquad
+\mathbf e_i^d=\mathrm{FFN}^d([\mathbf e_{\mathrm{id},i}^d;\mathbf e_{\mathrm{sem},i}]).
 $$
 
-<p>其中 $c_i^{(l)}$ 是物品 $i$ 第 $l$ 级的语义码，$\mathbf E^{(l)}$ 是对应的可训练嵌入表；前者提供跨域内容坐标，后者保留域内协同信号。</p>
-<p>各域随后分别用自注意力编码自己的交互序列，并通过注意力池化得到用户在该域的表示。这样得到的表示依赖域内历史，但用户并不一定在每个域都有记录。</p>
-<h3>从已有行为补齐缺失域表示</h3>
-<p>对于目标域没有历史的用户，CAMAR 使用 <strong>TransNet</strong> 从活跃域表示预测目标域表示。每个有方向的域对都有一个两层网络 PCN；多个活跃域都能提供预测时，取其平均：</p>
+<p>这使跨域物品共享可训练的语义坐标，同时保留各域独有的协同信号。</p>
+<p>随后，每个域用独立的自注意力序列编码器处理本域历史，再通过注意力池化得到用户表示$\mathbf h_u^d$。如果用户没有某个域的历史，这一步就无法直接产出该域表示，需要先补全。</p>
+<h3>补全缺失域，再限制跨域信息流</h3>
+<p><strong>TransNet</strong>根据用户已有域的表示，估计缺失域的表示。它为每个有方向的域对配置一个两层网络PCN；源域输入使用停止梯度，使补全损失不会反向改变源域编码器。目标域活跃时保留真实表示，否则取所有活跃源域预测结果的平均：</p>
 $$
-\hat{\mathbf h}_{u}^{d_s\rightarrow d_t}
-=\mathrm{PCN}_{d_s\rightarrow d_t}
-\bigl(\mathrm{sg}(\mathbf h_u^{d_s})\bigr),
-\qquad
 \tilde{\mathbf h}_u^d=
 \begin{cases}
 \mathbf h_u^d,&d\in\mathcal D_u^+,\\
-\frac{1}{|\mathcal D_u^+|}
-\sum_{d_s\in\mathcal D_u^+}\hat{\mathbf h}_u^{d_s\rightarrow d},
-&d\notin\mathcal D_u^+.
+\frac{1}{|\mathcal D_u^+|}\displaystyle\sum_{d_s\in\mathcal D_u^+}
+\mathrm{PCN}_{d_s\rightarrow d}(\mathrm{sg}(\mathbf h_u^{d_s})),&d\notin\mathcal D_u^+.
 \end{cases}
 $$
 
-<p>这里 $\mathcal D_u^+$ 是用户的活跃域集合，$\mathrm{sg}$ 表示停止梯度；有历史的域使用真实序列表示，没有历史的域使用预测结果。</p>
-<p>训练信号来自同时活跃于源域和目标域的用户：一方面，让预测表示接近目标域真实序列表示；另一方面，遮住目标域历史，用预测表示参与后续召回，并根据目标域下一次真实交互计算损失。表示匹配时，源域输入和目标域监督都停止梯度；遮挡训练则让补齐结果不仅数值接近，还能服务召回任务。</p>
-<h3>只让共享偏好参与跨域融合</h3>
-<p>补齐之后，每个域都有用户表示。CAMAR 将其分别投影成<strong>域不变偏好</strong>和<strong>域专属偏好</strong>：前者希望表达跨域可用的主题、情绪等信息，后者保留该域自己的偏好残差。</p>
-<p><img alt="图2：多域偏好的结构因果图及需要抑制的路径" src="https://arxiv.org/html/2611.33628v1/2.png" /></p>
-<p>图2展示了设计依据：共享信息不应混入专属表示，域属性不应污染共享表示，一个域的专属偏好也不应直接参与另一域的预测。对应地，CAMAR 对同一域的两种表示施加正交约束：</p>
+<p>这里$\mathcal D_u^+$是用户活跃域集合，$\mathrm{sg}$表示停止梯度；补全后，每个目标域都有可供后续处理的向量。</p>
+<p>训练补全网络需要同时活跃于源域和目标域的用户：一项损失让预测表示接近目标域真实表示；另一项遮住目标域历史，用目标域下一次真实交互检验补全表示能否完成召回。前者的目标表示也停止梯度，后者不会回传到源域编码器。三个域共有六个有方向的PCN；域数增加时，网络数量按域数平方增长。</p>
+<p>有了完整的域表示，还不能直接混合：补出的表示同样可能包含不适合其他域的信息。CAMAR用因果图描述希望保留和抑制的信息路径。</p>
+<p><img alt="图2：多域偏好生成的结构因果图" src="https://arxiv.org/html/2611.33628v1/2.png" /></p>
+<p>图2中，希望保留的是共享偏好对各域预测的作用，以及域内偏好对本域预测的作用；虚线对应共享与域内表示混杂、域属性泄漏到共享表示、域内偏好直接影响其他域预测三类路径。</p>
+<p>为此，每个域用两个线性投影，将$\tilde{\mathbf h}_u^d$拆成共享候选表示$\mathbf z_{\mathrm{inv},u}^d$和域内表示$\mathbf z_{\mathrm{spec},u}^d$。正交损失约束两者的向量内积：</p>
 $$
-\mathcal L_{\mathrm{ortho}}
-=\frac{1}{|\mathcal D|}
-\sum_{d\in\mathcal D}
+\mathcal L_{\mathrm{ortho}}=
+\frac{1}{|\mathcal D|}\sum_{d\in\mathcal D}
 \mathbb E_{u\in\mathcal U_d}
-\left[\langle\mathbf z_{\mathrm{inv},u}^{d},
-\mathbf z_{\mathrm{spec},u}^{d}\rangle^2\right].
+\left[\langle\mathbf z_{\mathrm{inv},u}^d,\mathbf z_{\mathrm{spec},u}^d\rangle^2\right].
 $$
 
-<p>该损失惩罚两种表示的内积，鼓励它们表达不同方向的信息。</p>
-<p>为了减少共享表示中的域身份信息，域分类器尝试识别表示来自哪个域；<strong>梯度反转层</strong>则让共享表示的编码器朝着更难区分域的方向更新：</p>
+<p>最小化这一项会促使同一用户、同一域的两路向量相互正交，减少表示上的重叠。</p>
+<p>共享表示还要经过<strong>域对抗训练</strong>：域分类器尝试判断向量来自哪个域，梯度反转层则让共享表示朝着更难辨认来源的方向更新。这个约束旨在减少域属性泄漏，但向量正交和分类器难以识别域，并不单独证明模型恢复了真实因果因素。</p>
+<p>跨域自注意力只接收共享表示，并且只在用户的活跃域之间交互；补全域不参与共享偏好的平均，以免估计值污染共享结果。设交互后的表示为$\bar{\mathbf z}_{\mathrm{inv},u}^d$，模型将活跃域结果取平均，再用门控与目标域的域内表示融合：</p>
 $$
-\mathcal L_{\mathrm{adv}}
-=-\frac{1}{N|\mathcal D|}
-\sum_{u=1}^{N}\sum_{d\in\mathcal D}
-\log[\hat{\mathbf p}_u^d]_d,
-\qquad
-\hat{\mathbf p}_u^d
-=\mathrm{Classifier}(\mathrm{GRL}_{\lambda}(\mathbf z_{\mathrm{inv},u}^d)).
-$$
-
-<p>分类器最小化分类损失，而梯度反转层反转传回编码器的梯度，促使共享表示减少可识别的域差异。</p>
-<p>跨域交互时，只有共享分量进入自注意力，并且只在用户的活跃域之间交互；补齐的域不参与共享偏好的池化。最后，门控网络按目标域融合共享偏好和该域专属偏好：</p>
-$$
-\mathbf r_u^d
-=\mathcal N_2\!\left(
-\mathbf g_u^d\odot\mathbf z_{\mathrm{share},u}
-+(1-\mathbf g_u^d)\odot\mathbf z_{\mathrm{spec},u}^d
-\right),
+\mathbf z_{\mathrm{share},u}
+=\frac{1}{|\mathcal D_u^+|}\sum_{d\in\mathcal D_u^+}
+\bar{\mathbf z}_{\mathrm{inv},u}^d,
 \quad
-\mathbf g_u^d
-=\sigma\!\left(\mathbf W_g^d
-[\mathbf z_{\mathrm{share},u};\mathbf z_{\mathrm{spec},u}^d]
+\mathbf r_u^d=\mathcal N_2\!\left(
+\mathbf g_u^d\odot\mathbf z_{\mathrm{share},u}
++(1-\mathbf g_u^d)\odot\mathbf z_{\mathrm{spec},u}^d\right),
+$$
+
+$$
+\mathbf g_u^d=\sigma\!\left(
+\mathbf W_g^d[\mathbf z_{\mathrm{share},u};\mathbf z_{\mathrm{spec},u}^d]
 +\mathbf b_g^d\right).
 $$
 
-<p>门控决定两类偏好在各维度上的占比，归一化后的 $\mathbf r_u^d$ 再与目标域物品向量做内积打分。</p>
-<p>这些约束是抑制负迁移的建模设计，并不等同于证明真实偏好已被完全独立地识别；特别是 TransNet 在解耦前补齐表示，域间仍可能存在间接影响。</p>
-<p>训练总目标结合召回、补齐和解耦三类损失：</p>
+<p>门控逐维决定共享偏好与目标域偏好的占比，归一化后的$\mathbf r_u^d$用于与候选物品向量做内积打分。这里限制的是<strong>域内分支不直接进入其他域的跨域交互</strong>；缺失域表示本身仍由其他活跃域预测得到。</p>
+<p>训练时，召回损失用真实下一次交互和采样负例学习排序；它与补全、正交、域对抗目标共同构成总损失：</p>
 $$
-\mathcal L
-=\mathcal L_{\mathrm{rec}}
+\mathcal L=\mathcal L_{\mathrm{rec}}
 +\alpha\mathcal L_{\mathrm{TN}}
 +\beta\mathcal L_{\mathrm{ortho}}
 +\gamma\mathcal L_{\mathrm{adv}}.
 $$
 
-<p>其中召回损失使用真实下一交互和采样负例，TransNet 损失结合表示匹配与遮挡后的召回监督。训练先稳定召回空间，再加入正交约束，最后启用对抗和补齐监督；使用时去掉域分类器，保留 TransNet 和召回前向路径。</p>
+<p>其中$\mathcal L_{\mathrm{TN}}$包含表示匹配和冷启动召回监督，权重控制各目标的贡献。训练先稳定召回空间，再加入正交约束，最后启用对抗和补全监督；推理时移除域分类器，保留TransNet供缺失域使用。</p>
 <h2>三、实验</h2>
-<p>离线实验使用网易云音乐的歌曲、歌单、播客日志，以及包含三个品类的 Amazon Reviews 数据。工业数据只保留三个域均活跃的用户；Amazon 实验则只使用文本内容。<strong>Hit@10</strong> 衡量真实下一交互是否出现在前十个召回结果中。</p>
-<p>在工业数据的播客域，CAMAR 的 Hit@10 为 <strong>0.3308</strong>，优于最强对比模型 MOSAIC 的 <strong>0.2606</strong>，相对提升 <strong>26.9%</strong>。歌曲和歌单域也优于各自最强对比模型；公共数据的三个域同样取得领先。</p>
-<p>消融实验用来区分各设计的作用：工业播客域去掉正交约束后，Hit@10 从 0.3308 降至 0.3010；去掉域对抗训练后降至 0.3076；去掉全部多模态信息后降至 0.2601。这支持两类解耦约束和内容语义在该设置下均有贡献，但不能仅凭此判断单一模态的贡献。</p>
-<p>冷启动实验将测试用户的一个目标域历史全部遮住，仅使用另外两个域的行为，并在目标域完整物品集合中排序。CAMAR 在三个目标域均优于所比较的多域基线，说明补齐和共享偏好在这一模拟冷启动设置下有效。</p>
-<p><img alt="图3：三个目标域的跨域冷启动表现" src="https://arxiv.org/html/2611.33628v1/3.png" /></p>
-<p>在线上为期两周的网易云音乐 A/B 测试中，实验组是在原有分域召回链路上<strong>新增 CAMAR 召回通道</strong>，两组使用相同的排序和重排模块。相对对照组，歌曲和播客场景的单次会话平均播放时长分别提升 <strong>1.0%</strong> 和 <strong>1.6%</strong>，歌单场景曝光后被收藏的比例提升 <strong>3.0%</strong>；论文报告这些收益均具有统计显著性。</p>
+<p>离线实验首先验证多域召回效果。工业数据来自网易云音乐，覆盖歌曲、歌单和播客；主实验只保留三个域都活跃的用户。<strong>Hit@10</strong>衡量真实下一次交互是否出现在前10个召回结果中。在这一设置下，CAMAR的播客Hit@10为0.3308，最强基线MOSAIC为0.2606，相对提升26.9%。公开Amazon数据使用商品文本特征，覆盖图书、Kindle和影视类别；CAMAR在各域指标上也优于所比较的方法。</p>
+<p>消融用于区分各设计的贡献：工业数据中，去掉正交约束或域对抗训练都会降低三个域的效果；同时去掉两者后，播客Hit@10从0.3308降至0.2878。去掉全部多模态信息和语义ID后，该指标降至0.2601，说明内容语义和偏好约束都对实验结果有贡献。</p>
+<p>冷启动实验则遮住用户目标域的全部历史，只保留另外两个域的行为，并在目标域全量物品中排序。三个目标域中，CAMAR均优于所比较的多域基线；这一测试验证的是已有跨域活跃用户被遮住目标域历史后的表现。</p>
+<p><img alt="图3：三个目标域的跨域冷启动实验" src="https://arxiv.org/html/2611.33628v1/3.png" /></p>
+<p>线上A/B测试持续两周：对照组使用既有分域召回链路，实验组在其基础上增加CAMAR召回通道，两组使用相同的精排和重排模块。相对对照组，网易云音乐歌曲场景的单次会话平均播放时长提升1.0%，播客提升1.6%；歌单场景中，曝光歌单被用户收藏的比例提升3.0%。论文报告这些提升均具有统计显著性。</p>
 <p><strong>论文标题</strong>：Multi-Modal Causal Disentanglement for Multi-Domain Sequential Audio Recommendation</p>
 <p>欢迎投稿！欢迎合作！</p>
         </article>
